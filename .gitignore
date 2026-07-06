@@ -5,3 +5,4 @@ out
 *.local
 .npm-cache
 vendor
+*.tsbuildinfo
