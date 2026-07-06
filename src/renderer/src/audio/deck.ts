@@ -1,3 +1,5 @@
+import { computeWaveformData, type WaveformData } from '../components/Waveform/waveformData'
+
 export type EqBand = 'low' | 'mid' | 'high'
 
 export interface TrackMetadata {
@@ -36,6 +38,7 @@ export class Deck {
 
   duration = 0
   metadata: TrackMetadata = { name: 'No track loaded' }
+  waveform: WaveformData | null = null
 
   constructor(context: AudioContext) {
     this.context = context
@@ -83,6 +86,7 @@ export class Deck {
     this.stop()
     this.buffer = decoded
     this.duration = decoded.duration
+    this.waveform = computeWaveformData(decoded)
     this.metadata = {
       name: file instanceof File ? file.name : 'Loaded audio'
     }

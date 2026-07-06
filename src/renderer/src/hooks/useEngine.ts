@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { EqBand } from '../audio/deck'
 import { getEngine, type DJEngine } from '../audio/engine'
+import type { WaveformData } from '../components/Waveform/waveformData'
 import type { OutputDeviceInfo } from '../audio/output'
 
 export type DeckId = 'A' | 'B'
@@ -11,6 +12,7 @@ interface DeckState {
   position: number
   isPlaying: boolean
   pitch: number
+  waveform: WaveformData | null
 }
 
 interface ChannelState {
@@ -41,7 +43,8 @@ const createDeckState = (): DeckState => ({
   duration: 0,
   position: 0,
   isPlaying: false,
-  pitch: 0
+  pitch: 0,
+  waveform: null
 })
 
 const createChannelState = (): ChannelState => ({
@@ -186,7 +189,8 @@ export function useEngine(): {
           trackName: deck.metadata.name,
           duration: deck.duration,
           position: 0,
-          isPlaying: false
+          isPlaying: false,
+          waveform: deck.waveform
         }
       }))
     },
