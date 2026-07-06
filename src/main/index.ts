@@ -8,6 +8,9 @@ function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
+    minWidth: 1280,
+    minHeight: 800,
+    backgroundColor: '#0a0b0e',
     title: 'NextDJ',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

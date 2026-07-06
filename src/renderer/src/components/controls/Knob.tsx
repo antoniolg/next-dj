@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 interface KnobProps {
   value: number
@@ -14,6 +14,7 @@ interface KnobProps {
 
 const SWEEP_DEGREES = 270
 const START_DEGREES = -135
+const TICK_COUNT = 11
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
@@ -31,14 +32,9 @@ export function Knob({
   valueFormatter = (nextValue) => nextValue.toFixed(1)
 }: KnobProps): JSX.Element {
   const dragRef = useRef<{ y: number; value: number } | null>(null)
+  const [showValue, setShowValue] = useState(false)
   const percentage = (value - min) / (max - min)
   const angle = START_DEGREES + percentage * SWEEP_DEGREES
-  const ringStyle = useMemo(
-    () => ({
-      background: `conic-gradient(from 225deg, ${accent} ${percentage * 75}%, #1d2633 0 75%, transparent 0)`
-    }),
-    [accent, percentage]
-  )
 
   const commitValue = useCallback(
     (nextValue: number): void => {
@@ -52,6 +48,7 @@ export function Knob({
     (event: React.PointerEvent<HTMLButtonElement>): void => {
       event.currentTarget.setPointerCapture(event.pointerId)
       dragRef.current = { y: event.clientY, value }
+      setShowValue(true)
     },
     [value]
   )
@@ -63,41 +60,58 @@ export function Knob({
       }
 
       const delta = dragRef.current.y - event.clientY
-      const range = max - min
-      commitValue(dragRef.current.value + (delta / 160) * range)
+      commitValue(dragRef.current.value + (delta / 160) * (max - min))
     },
     [commitValue, max, min]
   )
 
   const clearDrag = useCallback((): void => {
     dragRef.current = null
+    setShowValue(false)
   }, [])
 
+  const ticks = Array.from({ length: TICK_COUNT }, (_, index) => {
+    const tickAngle = START_DEGREES + (index / (TICK_COUNT - 1)) * SWEEP_DEGREES
+    return (
+      <span
+        key={index}
+        className="knob-tick"
+        style={{
+          transform: `rotate(${tickAngle}deg) translateY(calc(var(--knob-size, 48px) / -2 - 8px))`
+        }}
+      />
+    )
+  })
+
   return (
-    <div className="flex flex-col items-center gap-2">
-      <button
-        aria-label={`${label} ${valueFormatter(value)}`}
-        className="knob-shell group relative grid h-16 w-16 place-items-center rounded-full focus:outline-none focus:ring-2 focus:ring-white/30"
-        style={ringStyle}
-        type="button"
-        onDoubleClick={() => commitValue(defaultValue)}
-        onPointerCancel={clearDrag}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={clearDrag}
-      >
-        <span className="knob-face relative block h-12 w-12 rounded-full">
-          <span
-            className="absolute left-1/2 top-1/2 h-5 w-1 -translate-x-1/2 origin-bottom rounded-full"
-            style={{ backgroundColor: accent, transform: `translate(-50%, -100%) rotate(${angle}deg)` }}
-          />
-          <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-950 shadow-inner" />
-        </span>
-      </button>
-      <div className="text-center">
-        <p className="text-[0.65rem] font-bold uppercase text-slate-300">{label}</p>
-        <p className="font-mono text-[0.65rem] text-slate-500">{valueFormatter(value)}</p>
+    <div className="knob">
+      <div className="knob-well">
+        {ticks}
+        {showValue ? <span className="knob-value-tip">{valueFormatter(value)}</span> : null}
+        <button
+          aria-label={`${label} ${valueFormatter(value)}`}
+          className="knob-shell"
+          style={{ '--knob-accent': accent } as React.CSSProperties}
+          title={`${label}: ${valueFormatter(value)} (doble click: reset)`}
+          type="button"
+          onDoubleClick={() => commitValue(defaultValue)}
+          onPointerCancel={clearDrag}
+          onPointerDown={handlePointerDown}
+          onPointerEnter={() => setShowValue(true)}
+          onPointerLeave={() => {
+            if (!dragRef.current) {
+              setShowValue(false)
+            }
+          }}
+          onPointerMove={handlePointerMove}
+          onPointerUp={clearDrag}
+        >
+          <span className="knob-face">
+            <span className="knob-pointer" style={{ transform: `translateX(-50%) rotate(${angle}deg)` }} />
+          </span>
+        </button>
       </div>
+      <span className="knob-label">{label}</span>
     </div>
   )
 }

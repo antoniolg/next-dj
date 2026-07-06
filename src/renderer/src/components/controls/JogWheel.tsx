@@ -74,16 +74,19 @@ export function JogWheel({
     <button
       aria-label={label}
       className={`jog-wheel ${isPlaying && !dragRef.current ? 'jog-wheel-playing' : ''}`}
-      style={{ '--jog-accent': accent, transform: `rotate(${rotation}deg)` } as React.CSSProperties}
+      style={{ '--jog-accent': accent } as React.CSSProperties}
       type="button"
       onPointerCancel={clearDrag}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={clearDrag}
     >
-      <span className="jog-ridges" />
-      <span className="jog-label">NextDJ</span>
-      <span className="jog-marker" />
+      <span className="jog-platter" style={{ transform: `rotate(${rotation}deg)` }}>
+        <span className="jog-marker" />
+      </span>
+      <span className="jog-cap">
+        <span className="jog-label">NEXTDJ</span>
+      </span>
     </button>
   )
 }

@@ -1,3 +1,4 @@
+import { Headphones, RefreshCw, Volume2, X } from 'lucide-react'
 import type { OutputDeviceInfo } from '../../audio/output'
 
 interface SettingsPanelProps {
@@ -28,23 +29,29 @@ export function SettingsPanel({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm">
-      <aside className="settings-panel ml-auto h-full w-full max-w-md p-6 text-slate-100 shadow-2xl">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <aside
+        className="settings-panel ml-auto flex h-full w-full max-w-md flex-col p-6 text-slate-100 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase text-slate-500">Routing</p>
-            <h2 className="text-2xl font-black">Output Devices</h2>
+            <p className="micro-label">Routing</p>
+            <h2 className="text-xl font-bold">Output Devices</h2>
           </div>
-          <button className="icon-button" type="button" onClick={onClose}>
-            Close
+          <button aria-label="Close settings" className="icon-button" title="Close" type="button" onClick={onClose}>
+            <X size={15} strokeWidth={2.4} />
           </button>
         </div>
 
-        <div className="mt-8 space-y-5">
-          <label className="block text-sm font-bold uppercase text-slate-400">
-            Master output
+        <div className="mt-8 space-y-6">
+          <label className="settings-field">
+            <span className="settings-field-label">
+              <Volume2 size={14} strokeWidth={2.2} />
+              Master output
+            </span>
             <select
-              className="device-select mt-2"
+              className="device-select"
               value={masterDeviceId}
               onChange={(event) => onMasterDeviceChange(event.currentTarget.value)}
             >
@@ -57,10 +64,13 @@ export function SettingsPanel({
             </select>
           </label>
 
-          <label className="block text-sm font-bold uppercase text-slate-400">
-            Headphones output
+          <label className="settings-field">
+            <span className="settings-field-label">
+              <Headphones size={14} strokeWidth={2.2} />
+              Headphones output
+            </span>
             <select
-              className="device-select mt-2"
+              className="device-select"
               value={cueDeviceId}
               onChange={(event) => onCueDeviceChange(event.currentTarget.value)}
             >
@@ -74,17 +84,20 @@ export function SettingsPanel({
           </label>
 
           <button
-            className="transport-button w-full"
+            className="led-button w-full justify-center"
             type="button"
             onClick={() => {
               void onRefreshDevices()
             }}
           >
-            Refresh Devices
+            <RefreshCw size={13} strokeWidth={2.4} />
+            Refresh devices
           </button>
         </div>
 
-        {error ? <p className="mt-6 rounded border border-amber-300/30 bg-amber-300/10 p-3 text-sm text-amber-100">{error}</p> : null}
+        {error ? (
+          <p className="mt-6 rounded border border-amber-300/30 bg-amber-300/10 p-3 text-sm text-amber-100">{error}</p>
+        ) : null}
       </aside>
     </div>
   )

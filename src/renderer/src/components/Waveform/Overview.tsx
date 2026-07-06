@@ -69,6 +69,12 @@ function drawCanvas(
     context.stroke()
   }
 
+  context.save()
+  context.globalAlpha = 0.1
+  context.fillStyle = accent
+  context.fillRect(0, 0, playedX, height)
+  context.restore()
+
   context.fillStyle = 'rgba(255,255,255,0.94)'
   context.fillRect(playedX - dpr / 2, 0, dpr, height)
 }

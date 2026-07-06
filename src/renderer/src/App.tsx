@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Keyboard, Settings, X } from 'lucide-react'
 import { DeckPanel } from './components/Deck/DeckPanel'
 import { LibraryPanel } from './components/Library/LibraryPanel'
 import { MixerPanel } from './components/Mixer/MixerPanel'
@@ -209,35 +210,36 @@ export function App(): JSX.Element {
   ])
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-5 py-5 text-slate-100">
-      <div className="console-shell mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-[1500px] flex-col">
-        <header className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4">
-          <div>
-            <p className="text-xs font-black uppercase text-slate-500">Desktop mixing console</p>
-            <h1 className="text-3xl font-black leading-none text-white">NextDJ</h1>
-            <p className="mt-1 font-mono text-[0.65rem] uppercase text-slate-500">v{APP_VERSION}</p>
+    <main className="flex h-screen flex-col overflow-hidden bg-zinc-950 p-3 text-slate-100">
+      <div className="console-shell flex min-h-0 flex-1 flex-col">
+        <header className="app-header">
+          <div className="app-brand">
+            <span className="app-logo">NEXTDJ</span>
+            <span className="app-version">v{APP_VERSION}</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               aria-label="Show keyboard shortcuts"
-              className="shortcut-button"
+              className="icon-button"
+              title="Keyboard shortcuts (?)"
               type="button"
               onClick={() => setShortcutsOpen(true)}
             >
-              ?
+              <Keyboard size={15} strokeWidth={2.2} />
             </button>
             <button
               aria-label="Open output settings"
-              className="settings-gear"
+              className="icon-button"
+              title="Output devices"
               type="button"
               onClick={() => setSettingsOpen(true)}
             >
-              <span />
+              <Settings size={15} strokeWidth={2.2} />
             </button>
           </div>
         </header>
 
-        <div className="grid flex-1 gap-5 p-5 xl:grid-cols-[minmax(320px,1fr)_minmax(440px,0.95fr)_minmax(320px,1fr)]">
+        <div className="console-grid">
           <DeckPanel
             accent="#22d3ee"
             deckId="A"
@@ -317,7 +319,7 @@ export function App(): JSX.Element {
           />
         </div>
 
-        <div className="px-5 pb-5">
+        <div className="px-3 pb-3">
           <LibraryPanel tracks={tracks} onAddFiles={addFiles} onLoadTrack={loadLibraryTrack} />
         </div>
       </div>
@@ -339,16 +341,16 @@ export function App(): JSX.Element {
           <div className="shortcut-card">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-black uppercase text-slate-500">Keyboard</p>
-                <h2 className="text-xl font-black text-white">Shortcuts</h2>
+                <p className="micro-label">Keyboard</p>
+                <h2 className="text-xl font-bold text-white">Shortcuts</h2>
               </div>
               <button
                 aria-label="Close keyboard shortcuts"
-                className="shortcut-close"
+                className="icon-button"
                 type="button"
                 onClick={() => setShortcutsOpen(false)}
               >
-                x
+                <X size={15} strokeWidth={2.4} />
               </button>
             </div>
             <dl className="shortcut-grid mt-5">

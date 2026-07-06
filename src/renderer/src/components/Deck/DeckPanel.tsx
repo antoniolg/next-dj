@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { FolderOpen, Pause, Play, SkipBack, X, Zap } from 'lucide-react'
 import type { HotCue, LoopState } from '../../audio/deck'
 import { Overview } from '../Waveform/Overview'
 import { ZoomWave } from '../Waveform/ZoomWave'
@@ -49,14 +50,6 @@ function formatTime(seconds: number): string {
 
 function formatBpm(bpm: number): string {
   return bpm > 0 ? bpm.toFixed(1) : '--.-'
-}
-
-function formatLoop(loop: LoopState): string {
-  if (loop.start === null || loop.end === null || loop.end <= loop.start) {
-    return 'Loop idle'
-  }
-
-  return `${loop.active ? 'Loop' : 'Saved'} ${formatTime(loop.start)}-${formatTime(loop.end)}`
 }
 
 export function DeckPanel({
@@ -145,173 +138,168 @@ export function DeckPanel({
 
   return (
     <section
-      className={`console-panel deck-panel min-w-0 ${hasTrack ? '' : 'deck-panel-empty'}`}
+      className={`console-panel deck-panel ${hasTrack ? '' : 'deck-panel-empty'}`}
+      style={{ '--deck-accent': accent } as React.CSSProperties}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase text-slate-500">Deck</p>
-          <h2 className="text-4xl font-black leading-none" style={{ color: accent }}>
-            {deckId}
-          </h2>
-        </div>
-        <label className="load-button">
-          Load
+      <div className="deck-header">
+        <span className="deck-badge">DECK {deckId}</span>
+        <label className="icon-button" title="Load track">
+          <FolderOpen size={15} strokeWidth={2.2} />
           <input accept="audio/*" className="sr-only" type="file" onChange={handleFileChange} />
         </label>
       </div>
 
-      <div className="mt-5">
-        <ZoomWave
-          accent={accent}
-          bpm={bpm}
-          duration={duration}
-          firstBeatOffset={firstBeatOffset}
-          getPosition={getPosition}
-          waveform={waveform}
-        />
-      </div>
+      <ZoomWave
+        accent={accent}
+        bpm={bpm}
+        duration={duration}
+        firstBeatOffset={firstBeatOffset}
+        getPosition={getPosition}
+        waveform={waveform}
+      />
 
-      <div className="led-display mt-5">
-        <p className="truncate text-lg font-bold" title={trackName}>
-          {trackName}
+      <div className="led-display">
+        <p className="led-title" title={trackName}>
+          {hasTrack ? trackName : 'No track loaded'}
         </p>
-        <div className="mt-2 flex justify-between font-mono text-xs text-cyan-200/70">
+        <div className="led-row">
           <span>{formatTime(position)}</span>
-          <span>{formatBpm(effectiveBpm)} BPM</span>
+          <span className="led-bpm">{formatBpm(effectiveBpm)} BPM</span>
           <span>-{formatTime(remaining)}</span>
         </div>
       </div>
 
-      <div className="mt-4">
-        <Overview
-          accent={accent}
-          duration={duration}
-          position={position}
-          waveform={waveform}
-          onSeek={onSeek}
-        />
-      </div>
+      <Overview
+        accent={accent}
+        duration={duration}
+        position={position}
+        waveform={waveform}
+        onSeek={onSeek}
+      />
 
-      <div className="mt-5 grid grid-cols-[1fr_72px] items-center gap-6">
-        <div>
-          <JogWheel
-            accent={accent}
-            duration={duration}
-            isPlaying={isPlaying}
-            label={`Deck ${deckId} jog wheel`}
-            position={position}
-            onSeek={onSeek}
-          />
-          <div className="mt-4 grid grid-cols-4 gap-2">
-            {hotCues.map((cue, index) => (
-              <div key={index} className="hot-cue-slot">
-                <button
-                  aria-label={`Hot cue ${index + 1}`}
-                  className={`hot-cue-button ${cue ? 'hot-cue-button-lit' : ''}`}
-                  disabled={!hasTrack}
-                  style={{ '--hot-cue-color': cue?.color ?? '#64748b' } as React.CSSProperties}
-                  type="button"
-                  onClick={(event) => {
-                    if (event.shiftKey) {
-                      onClearHotCue(index)
-                    } else {
-                      onHotCue(index)
-                    }
-                  }}
-                  onContextMenu={(event) => {
-                    event.preventDefault()
-                    onClearHotCue(index)
-                  }}
-                >
-                  {index + 1}
-                </button>
-                {cue ? (
-                  <button
-                    aria-label={`Clear hot cue ${index + 1}`}
-                    className="hot-cue-clear"
-                    type="button"
-                    onClick={() => onClearHotCue(index)}
-                  >
-                    x
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </div>
+      <div className="deck-center">
+        <div className="deck-jog-area">
+          {hasTrack ? (
+            <JogWheel
+              accent={accent}
+              duration={duration}
+              isPlaying={isPlaying}
+              label={`Deck ${deckId} jog wheel`}
+              position={position}
+              onSeek={onSeek}
+            />
+          ) : (
+            <div className="deck-drop-hint">
+              <p>Drop a track here</p>
+              <p className="deck-drop-sub">or use the folder button</p>
+            </div>
+          )}
         </div>
-        <Fader
-          centerDetent
-          accent={accent}
-          label="Pitch"
-          max={8}
-          min={-8}
-          step={0.1}
-          value={pitch}
-          valueFormatter={(value) => `${value > 0 ? '+' : ''}${value.toFixed(1)}%`}
-          onChange={onPitchChange}
-        />
+        <div className="deck-pitch">
+          <Fader
+            centerDetent
+            accent={accent}
+            disabled={!hasTrack}
+            label="Pitch"
+            max={8}
+            min={-8}
+            step={0.1}
+            value={pitch}
+            valueFormatter={(value) => `${value > 0 ? '+' : ''}${value.toFixed(1)}%`}
+            onChange={onPitchChange}
+          />
+          <button
+            className={`led-button ${syncFlashing ? 'led-button-flash' : ''} `}
+            disabled={!hasTrack || bpm <= 0}
+            title="Match BPM with the other deck"
+            type="button"
+            onClick={handleSyncClick}
+          >
+            <Zap size={12} strokeWidth={2.4} />
+            SYNC
+          </button>
+        </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
+      <div className="hot-cue-row">
+        {hotCues.map((cue, index) => (
+          <button
+            key={index}
+            aria-label={`Hot cue ${index + 1}`}
+            className={`hot-cue-button ${cue ? 'hot-cue-button-lit' : ''}`}
+            disabled={!hasTrack}
+            style={{ '--hot-cue-color': cue?.color ?? '#475569' } as React.CSSProperties}
+            title={cue ? `Jump to ${formatTime(cue.position)} (right click: clear)` : 'Set hot cue'}
+            type="button"
+            onClick={(event) => {
+              if (event.shiftKey) {
+                onClearHotCue(index)
+              } else {
+                onHotCue(index)
+              }
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault()
+              onClearHotCue(index)
+            }}
+          >
+            <span className="hot-cue-led" />
+            {index + 1}
+          </button>
+        ))}
+      </div>
+
+      <div className="transport-row">
         <button
+          aria-label={isPlaying ? 'Pause' : 'Play'}
           className={`transport-button transport-primary ${isPlaying ? 'transport-button-lit transport-button-pulse' : ''}`}
           disabled={!hasTrack}
-          style={{ '--transport-accent': accent } as React.CSSProperties}
+          title={isPlaying ? 'Pause' : 'Play'}
           type="button"
           onClick={handlePlaybackClick}
         >
-          {isPlaying ? 'Pause' : 'Play'}
+          {isPlaying ? <Pause size={18} strokeWidth={2.4} /> : <Play size={18} strokeWidth={2.4} />}
         </button>
         <button
+          aria-label="Cue to start"
           className="transport-button"
           disabled={!hasTrack}
+          title="Back to start"
           type="button"
           onClick={onCueToStart}
         >
-          Cue Start
+          <SkipBack size={18} strokeWidth={2.4} />
         </button>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="loop-row">
         <button
-          className={`transport-button ${syncFlashing ? 'transport-button-sync-flash' : ''}`}
-          disabled={!hasTrack || bpm <= 0}
-          style={{ '--transport-accent': accent } as React.CSSProperties}
-          type="button"
-          onClick={handleSyncClick}
-        >
-          Sync
-        </button>
-        <button
-          className={`transport-button ${loop.start !== null ? 'transport-button-lit' : ''} ${loop.active ? 'transport-button-pulse' : ''}`}
+          className={`loop-button ${loop.start !== null ? 'loop-button-lit' : ''}`}
           disabled={!hasTrack}
-          style={{ '--transport-accent': accent } as React.CSSProperties}
+          title="Loop in"
           type="button"
           onClick={onLoopIn}
         >
-          Loop In
+          IN
         </button>
         <button
-          className={`transport-button ${loop.end !== null ? 'transport-button-lit' : ''} ${loop.active ? 'transport-button-pulse' : ''}`}
+          className={`loop-button ${loop.end !== null ? 'loop-button-lit' : ''}`}
           disabled={!hasTrack}
-          style={{ '--transport-accent': accent } as React.CSSProperties}
+          title="Loop out"
           type="button"
           onClick={onLoopOut}
         >
-          Loop Out
+          OUT
         </button>
-      </div>
-
-      <div className="mt-3 grid grid-cols-5 gap-2">
         {[1, 2, 4, 8].map((beats) => (
           <button
             key={beats}
-            className={`transport-button ${loop.active ? 'transport-button-lit transport-button-pulse' : ''}`}
+            className={`loop-button ${loop.active ? 'loop-button-lit' : ''}`}
             disabled={!hasTrack || bpm <= 0}
-            style={{ '--transport-accent': accent } as React.CSSProperties}
+            title={`${beats}-beat loop`}
             type="button"
             onClick={() => onAutoLoop(beats)}
           >
@@ -319,19 +307,16 @@ export function DeckPanel({
           </button>
         ))}
         <button
-          className={`transport-button ${loop.active ? 'transport-button-lit' : ''}`}
+          aria-label="Exit loop"
+          className={`loop-button ${loop.active ? 'loop-button-exit-lit' : ''}`}
           disabled={!loop.active}
-          style={{ '--transport-accent': accent } as React.CSSProperties}
+          title="Exit loop"
           type="button"
           onClick={onLoopExit}
         >
-          Exit
+          <X size={13} strokeWidth={2.6} />
         </button>
       </div>
-
-      <p className="mt-3 truncate font-mono text-[0.68rem] uppercase text-slate-500">
-        Base {formatBpm(bpm)} BPM - {formatLoop(loop)}
-      </p>
     </section>
   )
 }

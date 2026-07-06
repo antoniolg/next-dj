@@ -1,3 +1,4 @@
+import { Headphones } from 'lucide-react'
 import type { EqBand } from '../../audio/deck'
 import type { DeckId } from '../../hooks/useEngine'
 import { Fader } from '../controls/Fader'
@@ -56,62 +57,60 @@ function ChannelStrip({
 }): JSX.Element {
   return (
     <div className="channel-strip">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-black" style={{ color: accent }}>
-          CH {deckId}
-        </h3>
-        <button
-          aria-pressed={values.cue}
-          className={`cue-button ${values.cue ? 'cue-button-lit' : ''}`}
-          style={{ '--cue-accent': accent } as React.CSSProperties}
-          type="button"
-          onClick={() => onCueToggle(deckId)}
-        >
-          Cue
-        </button>
-      </div>
+      <span className="channel-badge" style={{ color: accent }}>
+        {deckId}
+      </span>
 
-      <div className="mt-4 grid grid-cols-2 gap-4">
+      <Knob
+        accent={accent}
+        defaultValue={1}
+        label="Trim"
+        max={1.5}
+        min={0}
+        step={0.01}
+        value={values.trim}
+        valueFormatter={(value) => value.toFixed(2)}
+        onChange={(value) => onTrimChange(deckId, value)}
+      />
+
+      {EQ_BANDS.map(({ band, label }) => (
         <Knob
+          key={band}
           accent={accent}
-          defaultValue={1}
-          label="Trim"
-          max={1.5}
-          min={0}
-          step={0.01}
-          value={values.trim}
-          valueFormatter={(value) => value.toFixed(2)}
-          onChange={(value) => onTrimChange(deckId, value)}
+          defaultValue={0}
+          label={label}
+          max={6}
+          min={-26}
+          step={0.5}
+          value={values.eq[band]}
+          valueFormatter={(value) => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`}
+          onChange={(value) => onEqChange(deckId, band, value)}
         />
-        <VUMeter analyser={analyser} label="Level" />
-      </div>
+      ))}
 
-      <div className="mt-5 grid grid-cols-3 gap-3">
-        {EQ_BANDS.map(({ band, label }) => (
-          <Knob
-            key={band}
-            accent={accent}
-            defaultValue={0}
-            label={label}
-            max={6}
-            min={-26}
-            step={0.5}
-            value={values.eq[band]}
-            valueFormatter={(value) => `${value > 0 ? '+' : ''}${value.toFixed(1)}`}
-            onChange={(value) => onEqChange(deckId, band, value)}
-          />
-        ))}
-      </div>
+      <button
+        aria-pressed={values.cue}
+        className={`cue-button ${values.cue ? 'cue-button-lit' : ''}`}
+        style={{ '--cue-accent': accent } as React.CSSProperties}
+        title="Listen on headphones"
+        type="button"
+        onClick={() => onCueToggle(deckId)}
+      >
+        <Headphones size={13} strokeWidth={2.4} />
+        CUE
+      </button>
 
-      <div className="mt-5 flex justify-center">
+      <div className="channel-fader-row">
         <Fader
           accent={accent}
-          label="Volume"
+          label=""
           max={1}
           min={0}
           value={values.volume}
+          valueFormatter={(value) => `${Math.round(value * 100)}%`}
           onChange={(value) => onChannelVolumeChange(deckId, value)}
         />
+        <VUMeter analyser={analyser} segments={16} />
       </div>
     </div>
   )
@@ -136,15 +135,15 @@ export function MixerPanel({
 }: MixerPanelProps): JSX.Element {
   return (
     <section className="console-panel mixer-panel">
-      <div className="flex items-center justify-between">
+      <div className="mixer-header">
         <span className="mixer-screw" />
-        <h2 className="text-center text-sm font-black uppercase text-slate-400">Mixer</h2>
+        <h2 className="mixer-title">Mixer</h2>
         <span className="mixer-screw" />
       </div>
 
-      <div className="mt-5 grid grid-cols-[1fr_92px_1fr] gap-4">
+      <div className="mixer-body">
         <ChannelStrip
-          accent="#22d3ee"
+          accent="var(--accent-a)"
           analyser={analyserA}
           deckId="A"
           values={channelA}
@@ -155,7 +154,7 @@ export function MixerPanel({
         />
 
         <div className="master-strip">
-          <VUMeter analyser={masterAnalyser} label="Master" segments={22} />
+          <VUMeter analyser={masterAnalyser} label="Master" segments={20} />
           <Knob
             accent="#f8fafc"
             defaultValue={0.9}
@@ -166,20 +165,26 @@ export function MixerPanel({
             valueFormatter={(value) => `${Math.round(value * 100)}%`}
             onChange={onMasterVolumeChange}
           />
-          <Knob
-            accent="#f59e0b"
-            defaultValue={0}
-            label="Cue Mix"
-            max={1}
-            min={0}
-            value={cueMix}
-            valueFormatter={(value) => `${Math.round(value * 100)}%`}
-            onChange={onCueMixChange}
-          />
+          <div className="phones-mix">
+            <Knob
+              accent="#94a3b8"
+              defaultValue={0}
+              label="Phones Mix"
+              max={1}
+              min={0}
+              value={cueMix}
+              valueFormatter={(value) => `${Math.round(value * 100)}%`}
+              onChange={onCueMixChange}
+            />
+            <div className="phones-mix-scale">
+              <span>CUE</span>
+              <span>MIX</span>
+            </div>
+          </div>
         </div>
 
         <ChannelStrip
-          accent="#f59e0b"
+          accent="var(--accent-b)"
           analyser={analyserB}
           deckId="B"
           values={channelB}
@@ -190,16 +195,22 @@ export function MixerPanel({
         />
       </div>
 
-      <div className="mt-5 rounded border border-black/50 bg-zinc-950/70 p-4 shadow-inner">
+      <div className="crossfader-well">
+        <div className="crossfader-scale">
+          <span>A</span>
+          <span className="crossfader-notch" />
+          <span>B</span>
+        </div>
         <Fader
           accent="#e5e7eb"
-          label="Crossfader"
+          centerDetent
+          label=""
           max={1}
           min={-1}
           orientation="horizontal"
           step={0.01}
           value={crossfade}
-          valueFormatter={(value) => (value < -0.02 ? 'A' : value > 0.02 ? 'B' : 'Center')}
+          valueFormatter={(value) => value.toFixed(2)}
           onChange={onCrossfadeChange}
         />
       </div>

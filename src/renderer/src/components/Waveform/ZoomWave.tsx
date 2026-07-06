@@ -107,15 +107,18 @@ function drawZoom(
       const minY = centerY + min * centerY * 0.9
       const maxY = centerY + max * centerY * 0.9
       const distanceFromNeedle = Math.abs(x - width / 2) / (width / 2)
-      const alpha = 0.9 - distanceFromNeedle * 0.38
+      const alpha = 0.92 - distanceFromNeedle * 0.4
 
-      context.strokeStyle = x < width / 2 ? `rgba(255,255,255,${alpha})` : accent
+      context.globalAlpha = x < width / 2 ? alpha * 0.55 : alpha
+      context.strokeStyle = accent
       context.lineWidth = Math.max(1, dpr)
       context.beginPath()
       context.moveTo(x, minY)
       context.lineTo(x, maxY)
       context.stroke()
     }
+
+    context.globalAlpha = 1
   }
 
   drawBeatGrid(context, width, height, dpr, bpm, firstBeatOffset, startSeconds, windowSeconds)
@@ -124,7 +127,12 @@ function drawZoom(
   context.fillStyle = 'rgba(255,255,255,0.98)'
   context.fillRect(needleX - dpr, 0, dpr * 2, height)
   context.fillStyle = accent
-  context.fillRect(needleX - 4 * dpr, 0, 8 * dpr, 3 * dpr)
+  context.beginPath()
+  context.moveTo(needleX - 5 * dpr, 0)
+  context.lineTo(needleX + 5 * dpr, 0)
+  context.lineTo(needleX, 6 * dpr)
+  context.closePath()
+  context.fill()
 }
 
 export function ZoomWave({
