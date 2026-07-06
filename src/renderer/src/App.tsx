@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { DeckPanel } from './components/Deck/DeckPanel'
 import { LibraryPanel } from './components/Library/LibraryPanel'
 import { MixerPanel } from './components/Mixer/MixerPanel'
@@ -6,8 +6,26 @@ import { SettingsPanel } from './components/Settings/SettingsPanel'
 import { useEngine } from './hooks/useEngine'
 import { useLibrary, type LibraryTrack } from './hooks/useLibrary'
 
+const APP_VERSION = '0.1.0'
+const CROSSFADER_NUDGE = 0.08
+const PITCH_NUDGE = 0.1
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    target.isContentEditable
+  )
+}
+
 export function App(): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const {
     engine,
     decks,
@@ -68,6 +86,128 @@ export function App(): JSX.Element {
   const getDeckAPosition = useCallback((): number => engine.deckA.getPosition(), [engine])
   const getDeckBPosition = useCallback((): number => engine.deckB.getPosition(), [engine])
 
+  useEffect(() => {
+    document.title = 'NextDJ'
+  }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (isEditableTarget(event.target)) {
+        return
+      }
+
+      const isRepeatSensitive =
+        event.code === 'KeyQ' ||
+        event.code === 'KeyW' ||
+        event.code === 'KeyA' ||
+        event.code === 'KeyS' ||
+        event.code === 'KeyC' ||
+        event.code.startsWith('Digit')
+
+      if (event.repeat && isRepeatSensitive) {
+        return
+      }
+
+      if (event.key === '?' || (event.code === 'Slash' && event.shiftKey)) {
+        event.preventDefault()
+        setShortcutsOpen((current) => !current)
+        return
+      }
+
+      if (event.code === 'Escape' && shortcutsOpen) {
+        event.preventDefault()
+        setShortcutsOpen(false)
+        return
+      }
+
+      if (event.code === 'KeyQ') {
+        event.preventDefault()
+        void togglePlayback('A')
+        return
+      }
+
+      if (event.code === 'KeyW') {
+        event.preventDefault()
+        void togglePlayback('B')
+        return
+      }
+
+      if (event.code === 'KeyA') {
+        event.preventDefault()
+        toggleCue('A')
+        return
+      }
+
+      if (event.code === 'KeyS') {
+        event.preventDefault()
+        toggleCue('B')
+        return
+      }
+
+      if (event.code === 'KeyZ') {
+        event.preventDefault()
+        setCrossfade(Math.max(-1, mixer.crossfade - CROSSFADER_NUDGE))
+        return
+      }
+
+      if (event.code === 'KeyX') {
+        event.preventDefault()
+        setCrossfade(Math.min(1, mixer.crossfade + CROSSFADER_NUDGE))
+        return
+      }
+
+      if (event.code === 'KeyC') {
+        event.preventDefault()
+        setCrossfade(0)
+        return
+      }
+
+      if (event.code === 'ArrowUp' || event.code === 'ArrowDown') {
+        const direction = event.code === 'ArrowUp' ? 1 : -1
+
+        if (event.shiftKey) {
+          event.preventDefault()
+          setPitch('A', decks.A.pitch + direction * PITCH_NUDGE)
+          return
+        }
+
+        if (event.altKey) {
+          event.preventDefault()
+          setPitch('B', decks.B.pitch + direction * PITCH_NUDGE)
+          return
+        }
+      }
+
+      const deckAHotCue = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(event.code)
+
+      if (deckAHotCue >= 0) {
+        event.preventDefault()
+        triggerHotCue('A', deckAHotCue)
+        return
+      }
+
+      const deckBHotCue = ['Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(event.code)
+
+      if (deckBHotCue >= 0) {
+        event.preventDefault()
+        triggerHotCue('B', deckBHotCue)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [
+    decks.A.pitch,
+    decks.B.pitch,
+    mixer.crossfade,
+    shortcutsOpen,
+    setCrossfade,
+    setPitch,
+    toggleCue,
+    togglePlayback,
+    triggerHotCue
+  ])
+
   return (
     <main className="min-h-screen bg-zinc-950 px-5 py-5 text-slate-100">
       <div className="console-shell mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-[1500px] flex-col">
@@ -75,15 +215,26 @@ export function App(): JSX.Element {
           <div>
             <p className="text-xs font-black uppercase text-slate-500">Desktop mixing console</p>
             <h1 className="text-3xl font-black leading-none text-white">NextDJ</h1>
+            <p className="mt-1 font-mono text-[0.65rem] uppercase text-slate-500">v{APP_VERSION}</p>
           </div>
-          <button
-            aria-label="Open output settings"
-            className="settings-gear"
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-          >
-            <span />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              aria-label="Show keyboard shortcuts"
+              className="shortcut-button"
+              type="button"
+              onClick={() => setShortcutsOpen(true)}
+            >
+              ?
+            </button>
+            <button
+              aria-label="Open output settings"
+              className="settings-gear"
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <span />
+            </button>
+          </div>
         </header>
 
         <div className="grid flex-1 gap-5 p-5 xl:grid-cols-[minmax(320px,1fr)_minmax(440px,0.95fr)_minmax(320px,1fr)]">
@@ -182,6 +333,43 @@ export function App(): JSX.Element {
         onMasterDeviceChange={setMasterDevice}
         onRefreshDevices={refreshOutputDevices}
       />
+
+      {shortcutsOpen ? (
+        <div className="shortcut-overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+          <div className="shortcut-card">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase text-slate-500">Keyboard</p>
+                <h2 className="text-xl font-black text-white">Shortcuts</h2>
+              </div>
+              <button
+                aria-label="Close keyboard shortcuts"
+                className="shortcut-close"
+                type="button"
+                onClick={() => setShortcutsOpen(false)}
+              >
+                x
+              </button>
+            </div>
+            <dl className="shortcut-grid mt-5">
+              <dt>Q / W</dt>
+              <dd>Play-pause deck A / B</dd>
+              <dt>A / S</dt>
+              <dd>CUE toggle deck A / B</dd>
+              <dt>1-4</dt>
+              <dd>Hot cues deck A</dd>
+              <dt>7-0</dt>
+              <dd>Hot cues deck B</dd>
+              <dt>Z / X / C</dt>
+              <dd>Nudge crossfader left / right / center</dd>
+              <dt>Shift + Up/Down</dt>
+              <dd>Pitch deck A up / down</dd>
+              <dt>Alt + Up/Down</dt>
+              <dd>Pitch deck B up / down</dd>
+            </dl>
+          </div>
+        </div>
+      ) : null}
     </main>
   )
 }

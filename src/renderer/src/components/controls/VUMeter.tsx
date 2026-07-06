@@ -9,6 +9,7 @@ interface VUMeterProps {
 export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.Element {
   const [level, setLevel] = useState(0)
   const dataRef = useRef<Uint8Array<ArrayBuffer> | null>(null)
+  const levelRef = useRef(0)
   const segmentItems = useMemo(
     () => Array.from({ length: segments }, (_, index) => index),
     [segments]
@@ -16,6 +17,7 @@ export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.E
 
   useEffect(() => {
     if (!analyser) {
+      levelRef.current = 0
       setLevel(0)
       return
     }
@@ -35,7 +37,14 @@ export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.E
           sum += centered * centered
         }
 
-        setLevel(Math.min(1, Math.sqrt(sum / data.length) * 3.2))
+        const targetLevel = Math.min(1, Math.sqrt(sum / data.length) * 3.2)
+        const nextLevel =
+          targetLevel > levelRef.current
+            ? targetLevel
+            : levelRef.current * 0.88 + targetLevel * 0.12
+
+        levelRef.current = nextLevel < 0.01 ? 0 : nextLevel
+        setLevel(levelRef.current)
       }
 
       frameId = window.requestAnimationFrame(tick)

@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import type { HotCue, LoopState } from '../../audio/deck'
 import { Overview } from '../Waveform/Overview'
 import { ZoomWave } from '../Waveform/ZoomWave'
@@ -89,6 +89,8 @@ export function DeckPanel({
   onSeek
 }: DeckPanelProps): JSX.Element {
   const remaining = Math.max(0, duration - position)
+  const hasTrack = duration > 0
+  const [syncFlashing, setSyncFlashing] = useState(false)
 
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -104,6 +106,12 @@ export function DeckPanel({
   const handlePlaybackClick = useCallback((): void => {
     void onTogglePlayback()
   }, [onTogglePlayback])
+
+  const handleSyncClick = useCallback((): void => {
+    onSync()
+    setSyncFlashing(true)
+    window.setTimeout(() => setSyncFlashing(false), 280)
+  }, [onSync])
 
   const handleDragOver = useCallback((event: React.DragEvent<HTMLElement>): void => {
     if (event.dataTransfer.types.includes('Files') || event.dataTransfer.types.includes('text/plain')) {
@@ -137,7 +145,7 @@ export function DeckPanel({
 
   return (
     <section
-      className="console-panel deck-panel min-w-0"
+      className={`console-panel deck-panel min-w-0 ${hasTrack ? '' : 'deck-panel-empty'}`}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
@@ -203,7 +211,7 @@ export function DeckPanel({
                 <button
                   aria-label={`Hot cue ${index + 1}`}
                   className={`hot-cue-button ${cue ? 'hot-cue-button-lit' : ''}`}
-                  disabled={duration <= 0}
+                  disabled={!hasTrack}
                   style={{ '--hot-cue-color': cue?.color ?? '#64748b' } as React.CSSProperties}
                   type="button"
                   onClick={(event) => {
@@ -249,8 +257,8 @@ export function DeckPanel({
 
       <div className="mt-6 grid grid-cols-2 gap-3">
         <button
-          className="transport-button transport-primary"
-          disabled={duration <= 0}
+          className={`transport-button transport-primary ${isPlaying ? 'transport-button-lit transport-button-pulse' : ''}`}
+          disabled={!hasTrack}
           style={{ '--transport-accent': accent } as React.CSSProperties}
           type="button"
           onClick={handlePlaybackClick}
@@ -259,7 +267,7 @@ export function DeckPanel({
         </button>
         <button
           className="transport-button"
-          disabled={duration <= 0}
+          disabled={!hasTrack}
           type="button"
           onClick={onCueToStart}
         >
@@ -269,16 +277,17 @@ export function DeckPanel({
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         <button
-          className="transport-button"
-          disabled={duration <= 0 || bpm <= 0}
+          className={`transport-button ${syncFlashing ? 'transport-button-sync-flash' : ''}`}
+          disabled={!hasTrack || bpm <= 0}
+          style={{ '--transport-accent': accent } as React.CSSProperties}
           type="button"
-          onClick={onSync}
+          onClick={handleSyncClick}
         >
           Sync
         </button>
         <button
-          className={`transport-button ${loop.start !== null ? 'transport-button-lit' : ''}`}
-          disabled={duration <= 0}
+          className={`transport-button ${loop.start !== null ? 'transport-button-lit' : ''} ${loop.active ? 'transport-button-pulse' : ''}`}
+          disabled={!hasTrack}
           style={{ '--transport-accent': accent } as React.CSSProperties}
           type="button"
           onClick={onLoopIn}
@@ -286,8 +295,8 @@ export function DeckPanel({
           Loop In
         </button>
         <button
-          className={`transport-button ${loop.end !== null ? 'transport-button-lit' : ''}`}
-          disabled={duration <= 0}
+          className={`transport-button ${loop.end !== null ? 'transport-button-lit' : ''} ${loop.active ? 'transport-button-pulse' : ''}`}
+          disabled={!hasTrack}
           style={{ '--transport-accent': accent } as React.CSSProperties}
           type="button"
           onClick={onLoopOut}
@@ -300,8 +309,8 @@ export function DeckPanel({
         {[1, 2, 4, 8].map((beats) => (
           <button
             key={beats}
-            className={`transport-button ${loop.active ? 'transport-button-lit' : ''}`}
-            disabled={duration <= 0 || bpm <= 0}
+            className={`transport-button ${loop.active ? 'transport-button-lit transport-button-pulse' : ''}`}
+            disabled={!hasTrack || bpm <= 0}
             style={{ '--transport-accent': accent } as React.CSSProperties}
             type="button"
             onClick={() => onAutoLoop(beats)}

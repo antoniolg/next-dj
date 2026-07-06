@@ -32,6 +32,13 @@ interface OutputState {
 
 const MASTER_OUTPUT_STORAGE_KEY = 'nextdj.masterOutputDeviceId'
 const CUE_OUTPUT_STORAGE_KEY = 'nextdj.cueOutputDeviceId'
+const CONTROLS_STORAGE_KEY = 'nextdj.controls.v1'
+
+interface PersistedControls {
+  channels: Record<DeckId, Pick<ChannelState, 'trim' | 'eq' | 'volume'>>
+  mixer: MixerState
+  deckPitch: Record<DeckId, number>
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
@@ -43,6 +50,105 @@ const createChannelState = (): ChannelState => ({
   volume: 1,
   cue: false
 })
+
+const createMixerState = (): MixerState => ({
+  crossfade: 0,
+  cueMix: 0,
+  masterVolume: 0.9
+})
+
+const DEFAULT_PITCH: Record<DeckId, number> = { A: 0, B: 0 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function numberFromRecord(
+  value: Record<string, unknown> | undefined,
+  key: string,
+  fallback: number,
+  min: number,
+  max: number
+): number {
+  const nextValue = value?.[key]
+  return typeof nextValue === 'number' && Number.isFinite(nextValue)
+    ? clamp(nextValue, min, max)
+    : fallback
+}
+
+function readPersistedControls(): PersistedControls {
+  const fallbackChannels: Record<DeckId, ChannelState> = {
+    A: createChannelState(),
+    B: createChannelState()
+  }
+  const fallbackMixer = createMixerState()
+
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CONTROLS_STORAGE_KEY) ?? '{}') as unknown
+    const root = isRecord(parsed) ? parsed : {}
+    const channelsRoot = isRecord(root.channels) ? root.channels : {}
+    const mixerRoot = isRecord(root.mixer) ? root.mixer : {}
+    const pitchRoot = isRecord(root.deckPitch) ? root.deckPitch : {}
+
+    const readChannel = (deckId: DeckId): Pick<ChannelState, 'trim' | 'eq' | 'volume'> => {
+      const channelRoot = isRecord(channelsRoot[deckId]) ? channelsRoot[deckId] : {}
+      const eqRoot = isRecord(channelRoot.eq) ? channelRoot.eq : {}
+      const fallback = fallbackChannels[deckId]
+
+      return {
+        trim: numberFromRecord(channelRoot, 'trim', fallback.trim, 0, 1.5),
+        volume: numberFromRecord(channelRoot, 'volume', fallback.volume, 0, 1),
+        eq: {
+          high: numberFromRecord(eqRoot, 'high', fallback.eq.high, -26, 6),
+          mid: numberFromRecord(eqRoot, 'mid', fallback.eq.mid, -26, 6),
+          low: numberFromRecord(eqRoot, 'low', fallback.eq.low, -26, 6)
+        }
+      }
+    }
+
+    return {
+      channels: {
+        A: readChannel('A'),
+        B: readChannel('B')
+      },
+      mixer: {
+        crossfade: numberFromRecord(mixerRoot, 'crossfade', fallbackMixer.crossfade, -1, 1),
+        cueMix: numberFromRecord(mixerRoot, 'cueMix', fallbackMixer.cueMix, 0, 1),
+        masterVolume: numberFromRecord(mixerRoot, 'masterVolume', fallbackMixer.masterVolume, 0, 1)
+      },
+      deckPitch: {
+        A: numberFromRecord(pitchRoot, 'A', DEFAULT_PITCH.A, MIN_PITCH_PERCENT, MAX_PITCH_PERCENT),
+        B: numberFromRecord(pitchRoot, 'B', DEFAULT_PITCH.B, MIN_PITCH_PERCENT, MAX_PITCH_PERCENT)
+      }
+    }
+  } catch {
+    return {
+      channels: fallbackChannels,
+      mixer: fallbackMixer,
+      deckPitch: DEFAULT_PITCH
+    }
+  }
+}
+
+function persistControls(
+  channels: Record<DeckId, ChannelState>,
+  mixer: MixerState,
+  decks: Record<DeckId, DeckState>
+): void {
+  const payload: PersistedControls = {
+    channels: {
+      A: { trim: channels.A.trim, eq: channels.A.eq, volume: channels.A.volume },
+      B: { trim: channels.B.trim, eq: channels.B.eq, volume: channels.B.volume }
+    },
+    mixer,
+    deckPitch: {
+      A: decks.A.pitch,
+      B: decks.B.pitch
+    }
+  }
+
+  localStorage.setItem(CONTROLS_STORAGE_KEY, JSON.stringify(payload))
+}
 
 export function useEngine(): {
   engine: DJEngine
@@ -74,18 +180,22 @@ export function useEngine(): {
   refreshOutputDevices: () => Promise<void>
 } {
   const engineRef = useRef<DJEngine | null>(null)
-  const [decks, setDecks] = useState<Record<DeckId, DeckState>>({
-    A: createDeckState(),
-    B: createDeckState()
-  })
-  const [channels, setChannels] = useState<Record<DeckId, ChannelState>>({
-    A: createChannelState(),
-    B: createChannelState()
-  })
-  const [mixer, setMixer] = useState<MixerState>({
-    crossfade: 0,
-    cueMix: 0,
-    masterVolume: 0.9
+  const persistedControlsRef = useRef<PersistedControls | null>(null)
+
+  if (!persistedControlsRef.current) {
+    persistedControlsRef.current = readPersistedControls()
+  }
+
+  const [decks, setDecks] = useState<Record<DeckId, DeckState>>(() => ({
+    A: { ...createDeckState(), pitch: persistedControlsRef.current?.deckPitch.A ?? 0 },
+    B: { ...createDeckState(), pitch: persistedControlsRef.current?.deckPitch.B ?? 0 }
+  }))
+  const [channels, setChannels] = useState<Record<DeckId, ChannelState>>(() => ({
+    A: { ...createChannelState(), ...persistedControlsRef.current?.channels.A },
+    B: { ...createChannelState(), ...persistedControlsRef.current?.channels.B }
+  }))
+  const [mixer, setMixer] = useState<MixerState>(() => {
+    return persistedControlsRef.current?.mixer ?? createMixerState()
   })
   const [output, setOutput] = useState<OutputState>({
     devices: [],
@@ -106,6 +216,25 @@ export function useEngine(): {
   )
 
   useEffect(() => {
+    const persistedControls = persistedControlsRef.current
+
+    if (persistedControls) {
+      ;(['A', 'B'] as const).forEach((deckId) => {
+        const deck = deckId === 'A' ? engine.deckA : engine.deckB
+        const channel = persistedControls.channels[deckId]
+
+        deck.setPitch(persistedControls.deckPitch[deckId])
+        deck.setTrim(channel.trim)
+        deck.setEq('high', channel.eq.high)
+        deck.setEq('mid', channel.eq.mid)
+        deck.setEq('low', channel.eq.low)
+        deck.setChannelFader(channel.volume)
+      })
+      engine.mixer.setCrossfade(persistedControls.mixer.crossfade)
+      engine.mixer.setCueMix(persistedControls.mixer.cueMix)
+      engine.mixer.setMasterGain(persistedControls.mixer.masterVolume)
+    }
+
     engine.deckA.onEnded = () => {
       setDecks((current) => ({ ...current, A: { ...current.A, isPlaying: false } }))
     }
@@ -118,6 +247,10 @@ export function useEngine(): {
       engine.deckB.onEnded = null
     }
   }, [engine])
+
+  useEffect(() => {
+    persistControls(channels, mixer, decks)
+  }, [channels, decks.A.pitch, decks.B.pitch, mixer])
 
   useEffect(() => {
     let frameId = 0
