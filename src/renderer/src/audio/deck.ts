@@ -15,6 +15,7 @@ function clamp(value: number, min: number, max: number): number {
 
 export class Deck {
   readonly output: GainNode
+  readonly cueOutput: GainNode
 
   onEnded: (() => void) | null = null
 
@@ -39,6 +40,7 @@ export class Deck {
   constructor(context: AudioContext) {
     this.context = context
     this.output = context.createGain()
+    this.cueOutput = context.createGain()
     this.trimGain = context.createGain()
     this.lowFilter = context.createBiquadFilter()
     this.midFilter = context.createBiquadFilter()
@@ -48,6 +50,7 @@ export class Deck {
     this.trimGain.gain.value = 1
     this.channelFader.gain.value = 1
     this.output.gain.value = 1
+    this.cueOutput.gain.value = 1
 
     this.lowFilter.type = 'lowshelf'
     this.lowFilter.frequency.value = 320
@@ -65,6 +68,8 @@ export class Deck {
       .connect(this.highFilter)
       .connect(this.channelFader)
       .connect(this.output)
+
+    this.highFilter.connect(this.cueOutput)
   }
 
   get isPlaying(): boolean {

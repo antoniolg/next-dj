@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Deck } from './audio/deck'
 import { getEngine, type DJEngine } from './audio/engine'
+import type { OutputDeviceInfo } from './audio/output'
 
 declare module 'react' {
   export function useCallback<T extends (...args: never[]) => unknown>(callback: T, deps: unknown[]): T
@@ -27,12 +28,17 @@ interface DeckPanelProps {
   onLoad: (file: File) => Promise<void>
   onTogglePlayback: () => Promise<void>
   onPitchChange: (percent: number) => void
+  onCueToggle: () => void
   isPlaying: boolean
+  cueEnabled: boolean
   trackName: string
   position: number
   duration: number
   pitch: number
 }
+
+const MASTER_OUTPUT_STORAGE_KEY = 'nextdj.masterOutputDeviceId'
+const CUE_OUTPUT_STORAGE_KEY = 'nextdj.cueOutputDeviceId'
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds)) {
@@ -51,7 +57,9 @@ function DeckPanel({
   onLoad,
   onTogglePlayback,
   onPitchChange,
+  onCueToggle,
   isPlaying,
+  cueEnabled,
   trackName,
   position,
   duration,
@@ -117,6 +125,20 @@ function DeckPanel({
           {isPlaying ? 'Pause' : 'Play'}
         </button>
 
+        <button
+          aria-pressed={cueEnabled}
+          className={`w-full rounded border px-4 py-3 text-base font-semibold transition disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500 ${
+            cueEnabled
+              ? 'border-amber-300 bg-amber-300 text-slate-950 hover:bg-amber-200'
+              : 'border-slate-600 bg-slate-950 text-slate-200 hover:border-amber-300 hover:text-amber-200'
+          }`}
+          disabled={!deck}
+          type="button"
+          onClick={onCueToggle}
+        >
+          CUE
+        </button>
+
         <label className="block text-sm font-medium text-slate-300">
           Pitch {pitch.toFixed(1)}%
           <input
@@ -146,6 +168,13 @@ export function App(): JSX.Element {
   const [deckAPitch, setDeckAPitch] = useState(0)
   const [deckBPitch, setDeckBPitch] = useState(0)
   const [crossfade, setCrossfade] = useState(0)
+  const [cueAEnabled, setCueAEnabled] = useState(false)
+  const [cueBEnabled, setCueBEnabled] = useState(false)
+  const [cueMix, setCueMix] = useState(0)
+  const [outputDevices, setOutputDevices] = useState<OutputDeviceInfo[]>([])
+  const [masterDeviceId, setMasterDeviceId] = useState('default')
+  const [cueDeviceId, setCueDeviceId] = useState('default')
+  const [outputError, setOutputError] = useState<string | null>(null)
 
   const ensureEngine = useCallback((): DJEngine => {
     if (!engineRef.current) {
@@ -165,6 +194,31 @@ export function App(): JSX.Element {
 
     return () => window.clearInterval(intervalId)
   }, [])
+
+  useEffect(() => {
+    const engine = ensureEngine()
+    const savedMasterDeviceId = localStorage.getItem(MASTER_OUTPUT_STORAGE_KEY) ?? 'default'
+    const savedCueDeviceId = localStorage.getItem(CUE_OUTPUT_STORAGE_KEY) ?? 'default'
+
+    setMasterDeviceId(savedMasterDeviceId)
+    setCueDeviceId(savedCueDeviceId)
+
+    void engine.outputRouter.setMasterDevice(savedMasterDeviceId).catch((error: unknown) => {
+      setOutputError(error instanceof Error ? error.message : 'Could not set master output.')
+    })
+    void engine.outputRouter.setCueDevice(savedCueDeviceId).catch((error: unknown) => {
+      setOutputError(error instanceof Error ? error.message : 'Could not set headphones output.')
+    })
+
+    void engine.outputRouter
+      .listOutputDevices()
+      .then((devices) => {
+        setOutputDevices(devices)
+      })
+      .catch((error: unknown) => {
+        setOutputError(error instanceof Error ? error.message : 'Could not list audio outputs.')
+      })
+  }, [ensureEngine])
 
   const loadDeckA = useCallback(
     async (file: File): Promise<void> => {
@@ -237,6 +291,61 @@ export function App(): JSX.Element {
     [ensureEngine]
   )
 
+  const toggleCueA = useCallback((): void => {
+    const nextCueEnabled = !cueAEnabled
+    ensureEngine().mixer.setCue('A', nextCueEnabled)
+    setCueAEnabled(nextCueEnabled)
+  }, [cueAEnabled, ensureEngine])
+
+  const toggleCueB = useCallback((): void => {
+    const nextCueEnabled = !cueBEnabled
+    ensureEngine().mixer.setCue('B', nextCueEnabled)
+    setCueBEnabled(nextCueEnabled)
+  }, [cueBEnabled, ensureEngine])
+
+  const handleCueMixChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>): void => {
+      const value = Number(event.currentTarget.value)
+      ensureEngine().mixer.setCueMix(value)
+      setCueMix(value)
+    },
+    [ensureEngine]
+  )
+
+  const handleMasterDeviceChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>): void => {
+      const deviceId = event.currentTarget.value
+      const engine = ensureEngine()
+
+      setMasterDeviceId(deviceId)
+      localStorage.setItem(MASTER_OUTPUT_STORAGE_KEY, deviceId)
+      void engine.outputRouter
+        .setMasterDevice(deviceId)
+        .then(() => setOutputError(null))
+        .catch((error: unknown) => {
+          setOutputError(error instanceof Error ? error.message : 'Could not set master output.')
+        })
+    },
+    [ensureEngine]
+  )
+
+  const handleCueDeviceChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>): void => {
+      const deviceId = event.currentTarget.value
+      const engine = ensureEngine()
+
+      setCueDeviceId(deviceId)
+      localStorage.setItem(CUE_OUTPUT_STORAGE_KEY, deviceId)
+      void engine.outputRouter
+        .setCueDevice(deviceId)
+        .then(() => setOutputError(null))
+        .catch((error: unknown) => {
+          setOutputError(error instanceof Error ? error.message : 'Could not set headphones output.')
+        })
+    },
+    [ensureEngine]
+  )
+
   const engine = engineRef.current
   const deckAPosition = engine?.deckA.getPosition() ?? 0
   const deckBPosition = engine?.deckB.getPosition() ?? 0
@@ -253,11 +362,13 @@ export function App(): JSX.Element {
           <DeckPanel
             deck={engine?.deckA ?? null}
             duration={deckADuration}
+            cueEnabled={cueAEnabled}
             isPlaying={deckAPlaying}
             label="A"
             pitch={deckAPitch}
             position={deckAPosition}
             trackName={deckATrackName}
+            onCueToggle={toggleCueA}
             onLoad={loadDeckA}
             onPitchChange={setPitchA}
             onTogglePlayback={toggleDeckA}
@@ -280,21 +391,76 @@ export function App(): JSX.Element {
               <span>{crossfade.toFixed(2)}</span>
               <span>B</span>
             </div>
+
+            <label className="mt-8 block w-full text-sm font-medium text-slate-300">
+              CUE MIX {cueMix.toFixed(2)}
+              <input
+                aria-label="Cue mix"
+                className="mt-3 w-full accent-amber-300"
+                max="1"
+                min="0"
+                step="0.01"
+                type="range"
+                value={cueMix}
+                onChange={handleCueMixChange}
+              />
+            </label>
           </section>
 
           <DeckPanel
             deck={engine?.deckB ?? null}
             duration={deckBDuration}
+            cueEnabled={cueBEnabled}
             isPlaying={deckBPlaying}
             label="B"
             pitch={deckBPitch}
             position={deckBPosition}
             trackName={deckBTrackName}
+            onCueToggle={toggleCueB}
             onLoad={loadDeckB}
             onPitchChange={setPitchB}
             onTogglePlayback={toggleDeckB}
           />
         </div>
+
+        <details className="rounded border border-slate-700 bg-slate-900/70 p-5">
+          <summary className="cursor-pointer text-lg font-semibold tracking-normal">Settings</summary>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <label className="block text-sm font-medium text-slate-300">
+              Master output
+              <select
+                className="mt-2 w-full rounded border border-slate-700 bg-slate-950 p-2 text-sm text-slate-200"
+                value={masterDeviceId}
+                onChange={handleMasterDeviceChange}
+              >
+                {outputDevices.length === 0 ? <option value="default">System default</option> : null}
+                {outputDevices.map((device) => (
+                  <option key={device.deviceId} value={device.deviceId}>
+                    {device.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block text-sm font-medium text-slate-300">
+              Headphones output
+              <select
+                className="mt-2 w-full rounded border border-slate-700 bg-slate-950 p-2 text-sm text-slate-200"
+                value={cueDeviceId}
+                onChange={handleCueDeviceChange}
+              >
+                {outputDevices.length === 0 ? <option value="default">System default</option> : null}
+                {outputDevices.map((device) => (
+                  <option key={device.deviceId} value={device.deviceId}>
+                    {device.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {outputError ? <p className="mt-4 text-sm text-amber-200">{outputError}</p> : null}
+        </details>
       </div>
     </main>
   )
