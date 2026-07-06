@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import type { HotCue, LoopState } from '../../audio/deck'
 import { Overview } from '../Waveform/Overview'
 import { ZoomWave } from '../Waveform/ZoomWave'
 import type { WaveformData } from '../Waveform/waveformData'
@@ -13,13 +14,25 @@ interface DeckPanelProps {
   duration: number
   isPlaying: boolean
   pitch: number
+  bpm: number
+  firstBeatOffset: number
+  effectiveBpm: number
   waveform: WaveformData | null
+  hotCues: Array<HotCue | null>
+  loop: LoopState
   getPosition: () => number
   onLoad: (file: File) => Promise<void>
   onTrackDrop: (trackId: string) => Promise<void>
   onTogglePlayback: () => Promise<void>
   onCueToStart: () => void
   onPitchChange: (percent: number) => void
+  onSync: () => void
+  onHotCue: (index: number) => void
+  onClearHotCue: (index: number) => void
+  onLoopIn: () => void
+  onLoopOut: () => void
+  onLoopExit: () => void
+  onAutoLoop: (beats: number) => void
   onSeek: (seconds: number) => void
 }
 
@@ -34,6 +47,18 @@ function formatTime(seconds: number): string {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
+function formatBpm(bpm: number): string {
+  return bpm > 0 ? bpm.toFixed(1) : '--.-'
+}
+
+function formatLoop(loop: LoopState): string {
+  if (loop.start === null || loop.end === null || loop.end <= loop.start) {
+    return 'Loop idle'
+  }
+
+  return `${loop.active ? 'Loop' : 'Saved'} ${formatTime(loop.start)}-${formatTime(loop.end)}`
+}
+
 export function DeckPanel({
   deckId,
   accent,
@@ -42,13 +67,25 @@ export function DeckPanel({
   duration,
   isPlaying,
   pitch,
+  bpm,
+  firstBeatOffset,
+  effectiveBpm,
   waveform,
+  hotCues,
+  loop,
   getPosition,
   onLoad,
   onTrackDrop,
   onTogglePlayback,
   onCueToStart,
   onPitchChange,
+  onSync,
+  onHotCue,
+  onClearHotCue,
+  onLoopIn,
+  onLoopOut,
+  onLoopExit,
+  onAutoLoop,
   onSeek
 }: DeckPanelProps): JSX.Element {
   const remaining = Math.max(0, duration - position)
@@ -121,7 +158,9 @@ export function DeckPanel({
       <div className="mt-5">
         <ZoomWave
           accent={accent}
+          bpm={bpm}
           duration={duration}
+          firstBeatOffset={firstBeatOffset}
           getPosition={getPosition}
           waveform={waveform}
         />
@@ -133,6 +172,7 @@ export function DeckPanel({
         </p>
         <div className="mt-2 flex justify-between font-mono text-xs text-cyan-200/70">
           <span>{formatTime(position)}</span>
+          <span>{formatBpm(effectiveBpm)} BPM</span>
           <span>-{formatTime(remaining)}</span>
         </div>
       </div>
@@ -148,14 +188,52 @@ export function DeckPanel({
       </div>
 
       <div className="mt-5 grid grid-cols-[1fr_72px] items-center gap-6">
-        <JogWheel
-          accent={accent}
-          duration={duration}
-          isPlaying={isPlaying}
-          label={`Deck ${deckId} jog wheel`}
-          position={position}
-          onSeek={onSeek}
-        />
+        <div>
+          <JogWheel
+            accent={accent}
+            duration={duration}
+            isPlaying={isPlaying}
+            label={`Deck ${deckId} jog wheel`}
+            position={position}
+            onSeek={onSeek}
+          />
+          <div className="mt-4 grid grid-cols-4 gap-2">
+            {hotCues.map((cue, index) => (
+              <div key={index} className="hot-cue-slot">
+                <button
+                  aria-label={`Hot cue ${index + 1}`}
+                  className={`hot-cue-button ${cue ? 'hot-cue-button-lit' : ''}`}
+                  disabled={duration <= 0}
+                  style={{ '--hot-cue-color': cue?.color ?? '#64748b' } as React.CSSProperties}
+                  type="button"
+                  onClick={(event) => {
+                    if (event.shiftKey) {
+                      onClearHotCue(index)
+                    } else {
+                      onHotCue(index)
+                    }
+                  }}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    onClearHotCue(index)
+                  }}
+                >
+                  {index + 1}
+                </button>
+                {cue ? (
+                  <button
+                    aria-label={`Clear hot cue ${index + 1}`}
+                    className="hot-cue-clear"
+                    type="button"
+                    onClick={() => onClearHotCue(index)}
+                  >
+                    x
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
         <Fader
           centerDetent
           accent={accent}
@@ -188,6 +266,63 @@ export function DeckPanel({
           Cue Start
         </button>
       </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <button
+          className="transport-button"
+          disabled={duration <= 0 || bpm <= 0}
+          type="button"
+          onClick={onSync}
+        >
+          Sync
+        </button>
+        <button
+          className={`transport-button ${loop.start !== null ? 'transport-button-lit' : ''}`}
+          disabled={duration <= 0}
+          style={{ '--transport-accent': accent } as React.CSSProperties}
+          type="button"
+          onClick={onLoopIn}
+        >
+          Loop In
+        </button>
+        <button
+          className={`transport-button ${loop.end !== null ? 'transport-button-lit' : ''}`}
+          disabled={duration <= 0}
+          style={{ '--transport-accent': accent } as React.CSSProperties}
+          type="button"
+          onClick={onLoopOut}
+        >
+          Loop Out
+        </button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-5 gap-2">
+        {[1, 2, 4, 8].map((beats) => (
+          <button
+            key={beats}
+            className={`transport-button ${loop.active ? 'transport-button-lit' : ''}`}
+            disabled={duration <= 0 || bpm <= 0}
+            style={{ '--transport-accent': accent } as React.CSSProperties}
+            type="button"
+            onClick={() => onAutoLoop(beats)}
+          >
+            {beats}
+          </button>
+        ))}
+        <button
+          className={`transport-button ${loop.active ? 'transport-button-lit' : ''}`}
+          disabled={!loop.active}
+          style={{ '--transport-accent': accent } as React.CSSProperties}
+          type="button"
+          onClick={onLoopExit}
+        >
+          Exit
+        </button>
+      </div>
+
+      <p className="mt-3 truncate font-mono text-[0.68rem] uppercase text-slate-500">
+        Base {formatBpm(bpm)} BPM - {formatLoop(loop)}
+      </p>
     </section>
   )
 }

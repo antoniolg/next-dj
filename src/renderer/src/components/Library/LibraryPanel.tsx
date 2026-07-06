@@ -20,6 +20,10 @@ function formatTime(seconds: number): string {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
+function formatBpm(bpm: number): string {
+  return bpm > 0 ? bpm.toFixed(1) : '--'
+}
+
 export function LibraryPanel({
   tracks,
   onAddFiles,
@@ -123,7 +127,7 @@ export function LibraryPanel({
                     </span>
                   </td>
                   <td>{formatTime(track.duration)}</td>
-                  <td>—</td>
+                  <td>{formatBpm(track.bpm)}</td>
                   <td>
                     <div className="flex justify-end gap-2">
                       <button

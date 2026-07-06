@@ -1,15 +1,32 @@
 import { computeWaveformData, type WaveformData } from '../components/Waveform/waveformData'
+import { detectBpm } from './bpm'
 
 export type EqBand = 'low' | 'mid' | 'high'
 
 export interface TrackMetadata {
   name: string
+  bpm: number
+  firstBeatOffset: number
 }
+
+export interface HotCue {
+  position: number
+  color: string
+}
+
+export interface LoopState {
+  start: number | null
+  end: number | null
+  active: boolean
+}
+
+export const HOT_CUE_COLORS = ['#22d3ee', '#f97316', '#a78bfa', '#22c55e'] as const
+export const MIN_PITCH_PERCENT = -8
+export const MAX_PITCH_PERCENT = 8
 
 const MIN_EQ_DB = -26
 const MAX_EQ_DB = 6
-const MIN_PITCH_PERCENT = -8
-const MAX_PITCH_PERCENT = 8
+const HOT_CUE_STORAGE_KEY = 'nextdj.hotCues'
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
@@ -37,8 +54,10 @@ export class Deck {
   private playbackRate = 1
 
   duration = 0
-  metadata: TrackMetadata = { name: 'No track loaded' }
+  metadata: TrackMetadata = { name: 'No track loaded', bpm: 0, firstBeatOffset: 0 }
   waveform: WaveformData | null = null
+  hotCues: Array<HotCue | null> = [null, null, null, null]
+  loop: LoopState = { start: null, end: null, active: false }
 
   constructor(context: AudioContext) {
     this.context = context
@@ -87,9 +106,14 @@ export class Deck {
     this.buffer = decoded
     this.duration = decoded.duration
     this.waveform = computeWaveformData(decoded)
+    const { bpm, firstBeatOffset } = await detectBpm(decoded)
     this.metadata = {
-      name: file instanceof File ? file.name : 'Loaded audio'
+      name: file instanceof File ? file.name : 'Loaded audio',
+      bpm,
+      firstBeatOffset
     }
+    this.hotCues = this.loadHotCues(this.metadata.name)
+    this.loop = { start: null, end: null, active: false }
   }
 
   async play(): Promise<void> {
@@ -131,7 +155,7 @@ export class Deck {
     }
   }
 
-  setPitch(percent: number): void {
+  setPitch(percent: number): number {
     const clamped = clamp(percent, MIN_PITCH_PERCENT, MAX_PITCH_PERCENT)
 
     if (this.started) {
@@ -143,6 +167,91 @@ export class Deck {
 
     if (this.source) {
       this.source.playbackRate.setValueAtTime(this.playbackRate, this.context.currentTime)
+    }
+
+    return clamped
+  }
+
+  getEffectiveBpm(): number {
+    return this.metadata.bpm > 0 ? this.metadata.bpm * this.playbackRate : 0
+  }
+
+  triggerHotCue(index: number): void {
+    if (!this.isValidHotCueIndex(index) || this.duration <= 0) {
+      return
+    }
+
+    const existing = this.hotCues[index]
+
+    if (existing) {
+      this.seek(existing.position)
+      return
+    }
+
+    this.hotCues = this.hotCues.map((cue, cueIndex) =>
+      cueIndex === index ? { position: this.getPosition(), color: HOT_CUE_COLORS[index] } : cue
+    )
+    this.saveHotCues()
+  }
+
+  clearHotCue(index: number): void {
+    if (!this.isValidHotCueIndex(index)) {
+      return
+    }
+
+    this.hotCues = this.hotCues.map((cue, cueIndex) => (cueIndex === index ? null : cue))
+    this.saveHotCues()
+  }
+
+  setLoopIn(): void {
+    const position = this.getPosition()
+    const end = this.loop.end !== null && this.loop.end > position ? this.loop.end : null
+
+    this.loop = {
+      start: position,
+      end,
+      active: end !== null
+    }
+  }
+
+  setLoopOut(): void {
+    const position = this.getPosition()
+    const start = this.loop.start !== null && this.loop.start < position ? this.loop.start : null
+
+    this.loop = {
+      start: start ?? this.loop.start,
+      end: position,
+      active: start !== null
+    }
+  }
+
+  setAutoLoop(beats: number): void {
+    if (this.metadata.bpm <= 0 || beats <= 0 || this.duration <= 0) {
+      return
+    }
+
+    const start = this.getPosition()
+    const seconds = (60 / this.metadata.bpm) * beats
+    const end = this.clampPosition(start + seconds)
+
+    if (end > start) {
+      this.loop = { start, end, active: true }
+    }
+  }
+
+  exitLoop(): void {
+    this.loop = { ...this.loop, active: false }
+  }
+
+  tickLoop(): void {
+    if (!this.loop.active || this.loop.start === null || this.loop.end === null || this.loop.end <= this.loop.start) {
+      return
+    }
+
+    const position = this.getPosition()
+
+    if (position >= this.loop.end) {
+      this.seek(this.loop.start)
     }
   }
 
@@ -217,6 +326,53 @@ export class Deck {
 
   private clampPosition(seconds: number): number {
     return clamp(seconds, 0, this.duration)
+  }
+
+  private isValidHotCueIndex(index: number): boolean {
+    return Number.isInteger(index) && index >= 0 && index < this.hotCues.length
+  }
+
+  private loadHotCues(trackName: string): Array<HotCue | null> {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(HOT_CUE_STORAGE_KEY) ?? '{}') as Record<
+        string,
+        Array<HotCue | null>
+      >
+      const stored = parsed[trackName]
+
+      if (!Array.isArray(stored)) {
+        return [null, null, null, null]
+      }
+
+      return HOT_CUE_COLORS.map((color, index) => {
+        const cue = stored[index]
+
+        if (!cue || typeof cue.position !== 'number') {
+          return null
+        }
+
+        return {
+          position: this.clampPosition(cue.position),
+          color: typeof cue.color === 'string' ? cue.color : color
+        }
+      })
+    } catch {
+      return [null, null, null, null]
+    }
+  }
+
+  private saveHotCues(): void {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(HOT_CUE_STORAGE_KEY) ?? '{}') as Record<
+        string,
+        Array<HotCue | null>
+      >
+
+      parsed[this.metadata.name] = this.hotCues
+      localStorage.setItem(HOT_CUE_STORAGE_KEY, JSON.stringify(parsed))
+    } catch {
+      localStorage.setItem(HOT_CUE_STORAGE_KEY, JSON.stringify({ [this.metadata.name]: this.hotCues }))
+    }
   }
 
   private getEqFilter(band: EqBand): BiquadFilterNode {

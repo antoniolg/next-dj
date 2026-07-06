@@ -4,16 +4,56 @@ import { getPeakAt } from './waveformData'
 
 interface ZoomWaveProps {
   accent: string
+  bpm: number
   duration: number
+  firstBeatOffset: number
   getPosition: () => number
   waveform: WaveformData | null
   windowSeconds?: number
+}
+
+function drawBeatGrid(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  dpr: number,
+  bpm: number,
+  firstBeatOffset: number,
+  startSeconds: number,
+  windowSeconds: number
+): void {
+  if (bpm <= 0) {
+    return
+  }
+
+  const beatPeriod = 60 / bpm
+  const firstBeat = firstBeatOffset + Math.floor((startSeconds - firstBeatOffset) / beatPeriod) * beatPeriod
+  const pixelsPerSecond = width / windowSeconds
+
+  for (let beatTime = firstBeat; beatTime <= startSeconds + windowSeconds; beatTime += beatPeriod) {
+    if (beatTime < 0) {
+      continue
+    }
+
+    const beatIndex = Math.round((beatTime - firstBeatOffset) / beatPeriod)
+    const x = (beatTime - startSeconds) * pixelsPerSecond
+    const strong = beatIndex % 4 === 0
+
+    context.strokeStyle = strong ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.16)'
+    context.lineWidth = (strong ? 2 : 1) * dpr
+    context.beginPath()
+    context.moveTo(x, strong ? 0 : height * 0.16)
+    context.lineTo(x, strong ? height : height * 0.84)
+    context.stroke()
+  }
 }
 
 function drawZoom(
   canvas: HTMLCanvasElement,
   waveform: WaveformData | null,
   accent: string,
+  bpm: number,
+  firstBeatOffset: number,
   duration: number,
   position: number,
   windowSeconds: number
@@ -39,6 +79,8 @@ function drawZoom(
   context.fillRect(0, 0, width, height)
 
   const centerY = height / 2
+  const startSeconds = position - windowSeconds / 2
+
   context.strokeStyle = 'rgba(255,255,255,0.08)'
   context.lineWidth = 1 * dpr
   context.beginPath()
@@ -52,7 +94,6 @@ function drawZoom(
     context.fillText('Zoom waveform', 12 * dpr, centerY + 4 * dpr)
   } else {
     const secondsPerPixel = windowSeconds / width
-    const startSeconds = position - windowSeconds / 2
 
     for (let x = 0; x < width; x += dpr) {
       const seconds = startSeconds + x * secondsPerPixel
@@ -77,6 +118,8 @@ function drawZoom(
     }
   }
 
+  drawBeatGrid(context, width, height, dpr, bpm, firstBeatOffset, startSeconds, windowSeconds)
+
   const needleX = width / 2
   context.fillStyle = 'rgba(255,255,255,0.98)'
   context.fillRect(needleX - dpr, 0, dpr * 2, height)
@@ -86,7 +129,9 @@ function drawZoom(
 
 export function ZoomWave({
   accent,
+  bpm,
   duration,
+  firstBeatOffset,
   getPosition,
   waveform,
   windowSeconds = 8
@@ -100,7 +145,7 @@ export function ZoomWave({
       const canvas = canvasRef.current
 
       if (canvas) {
-        drawZoom(canvas, waveform, accent, duration, getPosition(), windowSeconds)
+        drawZoom(canvas, waveform, accent, bpm, firstBeatOffset, duration, getPosition(), windowSeconds)
       }
 
       frameId = window.requestAnimationFrame(tick)
@@ -108,7 +153,7 @@ export function ZoomWave({
 
     frameId = window.requestAnimationFrame(tick)
     return () => window.cancelAnimationFrame(frameId)
-  }, [accent, duration, getPosition, waveform, windowSeconds])
+  }, [accent, bpm, duration, firstBeatOffset, getPosition, waveform, windowSeconds])
 
   return (
     <canvas

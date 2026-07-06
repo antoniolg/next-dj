@@ -1,19 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { EqBand } from '../audio/deck'
+import {
+  MAX_PITCH_PERCENT,
+  MIN_PITCH_PERCENT,
+  type EqBand,
+} from '../audio/deck'
 import { getEngine, type DJEngine } from '../audio/engine'
-import type { WaveformData } from '../components/Waveform/waveformData'
 import type { OutputDeviceInfo } from '../audio/output'
+import { createDeckState, getDeckSnapshot, type DeckState } from './deckState'
 
 export type DeckId = 'A' | 'B'
-
-interface DeckState {
-  trackName: string
-  duration: number
-  position: number
-  isPlaying: boolean
-  pitch: number
-  waveform: WaveformData | null
-}
 
 interface ChannelState {
   trim: number
@@ -38,14 +33,9 @@ interface OutputState {
 const MASTER_OUTPUT_STORAGE_KEY = 'nextdj.masterOutputDeviceId'
 const CUE_OUTPUT_STORAGE_KEY = 'nextdj.cueOutputDeviceId'
 
-const createDeckState = (): DeckState => ({
-  trackName: 'No track loaded',
-  duration: 0,
-  position: 0,
-  isPlaying: false,
-  pitch: 0,
-  waveform: null
-})
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
 
 const createChannelState = (): ChannelState => ({
   trim: 1,
@@ -65,6 +55,13 @@ export function useEngine(): {
   seek: (deckId: DeckId, seconds: number) => void
   cueToStart: (deckId: DeckId) => void
   setPitch: (deckId: DeckId, percent: number) => void
+  syncDeck: (deckId: DeckId) => void
+  triggerHotCue: (deckId: DeckId, index: number) => void
+  clearHotCue: (deckId: DeckId, index: number) => void
+  setLoopIn: (deckId: DeckId) => void
+  setLoopOut: (deckId: DeckId) => void
+  exitLoop: (deckId: DeckId) => void
+  setAutoLoop: (deckId: DeckId, beats: number) => void
   setTrim: (deckId: DeckId, value: number) => void
   setEq: (deckId: DeckId, band: EqBand, value: number) => void
   setChannelVolume: (deckId: DeckId, value: number) => void
@@ -126,16 +123,24 @@ export function useEngine(): {
     let frameId = 0
 
     const tick = (): void => {
+      engine.deckA.tickLoop()
+      engine.deckB.tickLoop()
       setDecks((current) => ({
         A: {
           ...current.A,
           position: engine.deckA.getPosition(),
-          isPlaying: engine.deckA.isPlaying
+          isPlaying: engine.deckA.isPlaying,
+          effectiveBpm: engine.deckA.getEffectiveBpm(),
+          hotCues: engine.deckA.hotCues,
+          loop: engine.deckA.loop
         },
         B: {
           ...current.B,
           position: engine.deckB.getPosition(),
-          isPlaying: engine.deckB.isPlaying
+          isPlaying: engine.deckB.isPlaying,
+          effectiveBpm: engine.deckB.getEffectiveBpm(),
+          hotCues: engine.deckB.hotCues,
+          loop: engine.deckB.loop
         }
       }))
       frameId = window.requestAnimationFrame(tick)
@@ -190,6 +195,11 @@ export function useEngine(): {
           duration: deck.duration,
           position: 0,
           isPlaying: false,
+          bpm: deck.metadata.bpm,
+          firstBeatOffset: deck.metadata.firstBeatOffset,
+          effectiveBpm: deck.getEffectiveBpm(),
+          hotCues: deck.hotCues,
+          loop: deck.loop,
           waveform: deck.waveform
         }
       }))
@@ -236,8 +246,104 @@ export function useEngine(): {
 
   const setPitch = useCallback(
     (deckId: DeckId, percent: number): void => {
-      getDeck(deckId).setPitch(percent)
-      setDecks((current) => ({ ...current, [deckId]: { ...current[deckId], pitch: percent } }))
+      const deck = getDeck(deckId)
+      const pitch = deck.setPitch(percent)
+      setDecks((current) => ({
+        ...current,
+        [deckId]: { ...current[deckId], pitch, effectiveBpm: deck.getEffectiveBpm() }
+      }))
+    },
+    [getDeck]
+  )
+
+  const syncDeck = useCallback(
+    (deckId: DeckId): void => {
+      const deck = getDeck(deckId)
+      const otherDeck = getDeck(deckId === 'A' ? 'B' : 'A')
+      const targetBpm = otherDeck.getEffectiveBpm()
+
+      if (deck.metadata.bpm <= 0 || targetBpm <= 0) {
+        return
+      }
+
+      const pitch = clamp((targetBpm / deck.metadata.bpm - 1) * 100, MIN_PITCH_PERCENT, MAX_PITCH_PERCENT)
+      deck.setPitch(pitch)
+      setDecks((current) => ({
+        ...current,
+        [deckId]: { ...current[deckId], pitch, effectiveBpm: deck.getEffectiveBpm() }
+      }))
+    },
+    [getDeck]
+  )
+
+  const triggerHotCue = useCallback(
+    (deckId: DeckId, index: number): void => {
+      const deck = getDeck(deckId)
+      deck.triggerHotCue(index)
+      setDecks((current) => ({
+        ...current,
+        [deckId]: getDeckSnapshot(deck, current[deckId].pitch)
+      }))
+    },
+    [getDeck]
+  )
+
+  const clearHotCue = useCallback(
+    (deckId: DeckId, index: number): void => {
+      const deck = getDeck(deckId)
+      deck.clearHotCue(index)
+      setDecks((current) => ({
+        ...current,
+        [deckId]: getDeckSnapshot(deck, current[deckId].pitch)
+      }))
+    },
+    [getDeck]
+  )
+
+  const setLoopIn = useCallback(
+    (deckId: DeckId): void => {
+      const deck = getDeck(deckId)
+      deck.setLoopIn()
+      setDecks((current) => ({
+        ...current,
+        [deckId]: getDeckSnapshot(deck, current[deckId].pitch)
+      }))
+    },
+    [getDeck]
+  )
+
+  const setLoopOut = useCallback(
+    (deckId: DeckId): void => {
+      const deck = getDeck(deckId)
+      deck.setLoopOut()
+      setDecks((current) => ({
+        ...current,
+        [deckId]: getDeckSnapshot(deck, current[deckId].pitch)
+      }))
+    },
+    [getDeck]
+  )
+
+  const exitLoop = useCallback(
+    (deckId: DeckId): void => {
+      const deck = getDeck(deckId)
+      deck.exitLoop()
+      setDecks((current) => ({
+        ...current,
+        [deckId]: getDeckSnapshot(deck, current[deckId].pitch)
+      }))
+    },
+    [getDeck]
+  )
+
+  const setAutoLoop = useCallback(
+    (deckId: DeckId, beats: number): void => {
+      const deck = getDeck(deckId)
+      deck.setAutoLoop(beats)
+      setDecks((current) => ({
+        ...current,
+        [deckId]: getDeckSnapshot(deck, current[deckId].pitch)
+      }))
     },
     [getDeck]
   )
@@ -352,6 +458,13 @@ export function useEngine(): {
     seek,
     cueToStart,
     setPitch,
+    syncDeck,
+    triggerHotCue,
+    clearHotCue,
+    setLoopIn,
+    setLoopOut,
+    exitLoop,
+    setAutoLoop,
     setTrim,
     setEq,
     setChannelVolume,

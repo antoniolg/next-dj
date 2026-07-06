@@ -1,9 +1,12 @@
 import { useCallback, useState } from 'react'
+import { detectBpm } from '../audio/bpm'
 
 export interface LibraryTrack {
   id: string
   title: string
   duration: number
+  bpm: number
+  firstBeatOffset: number
   file: File
 }
 
@@ -40,6 +43,21 @@ function readDuration(file: File): Promise<number> {
   })
 }
 
+async function readBpm(file: File): Promise<{ bpm: number; firstBeatOffset: number }> {
+  const context = new AudioContext()
+
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = await context.decodeAudioData(arrayBuffer.slice(0))
+
+    return detectBpm(buffer)
+  } catch {
+    return { bpm: 0, firstBeatOffset: 0 }
+  } finally {
+    void context.close()
+  }
+}
+
 export function useLibrary(): {
   tracks: LibraryTrack[]
   addFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
@@ -54,6 +72,7 @@ export function useLibrary(): {
         id: createTrackId(file),
         title: file.name.replace(/\.[^.]+$/, ''),
         duration: await readDuration(file),
+        ...(await readBpm(file)),
         file
       }))
     )

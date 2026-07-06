@@ -19,6 +19,13 @@ export function App(): JSX.Element {
     seek,
     cueToStart,
     setPitch,
+    syncDeck,
+    triggerHotCue,
+    clearHotCue,
+    setLoopIn,
+    setLoopOut,
+    exitLoop,
+    setAutoLoop,
     setTrim,
     setEq,
     setChannelVolume,
@@ -84,16 +91,28 @@ export function App(): JSX.Element {
             accent="#22d3ee"
             deckId="A"
             duration={decks.A.duration}
+            bpm={decks.A.bpm}
+            effectiveBpm={decks.A.effectiveBpm}
+            firstBeatOffset={decks.A.firstBeatOffset}
             getPosition={getDeckAPosition}
+            hotCues={decks.A.hotCues}
             isPlaying={decks.A.isPlaying}
+            loop={decks.A.loop}
             pitch={decks.A.pitch}
             position={decks.A.position}
             trackName={decks.A.trackName}
             waveform={decks.A.waveform}
+            onAutoLoop={(beats) => setAutoLoop('A', beats)}
+            onClearHotCue={(index) => clearHotCue('A', index)}
             onCueToStart={() => cueToStart('A')}
+            onHotCue={(index) => triggerHotCue('A', index)}
             onLoad={(file) => loadFileToDeck('A', file)}
+            onLoopExit={() => exitLoop('A')}
+            onLoopIn={() => setLoopIn('A')}
+            onLoopOut={() => setLoopOut('A')}
             onPitchChange={(value) => setPitch('A', value)}
             onSeek={(seconds) => seek('A', seconds)}
+            onSync={() => syncDeck('A')}
             onTogglePlayback={() => togglePlayback('A')}
             onTrackDrop={(trackId) => loadLibraryTrackById('A', trackId)}
           />
@@ -120,16 +139,28 @@ export function App(): JSX.Element {
             accent="#f59e0b"
             deckId="B"
             duration={decks.B.duration}
+            bpm={decks.B.bpm}
+            effectiveBpm={decks.B.effectiveBpm}
+            firstBeatOffset={decks.B.firstBeatOffset}
             getPosition={getDeckBPosition}
+            hotCues={decks.B.hotCues}
             isPlaying={decks.B.isPlaying}
+            loop={decks.B.loop}
             pitch={decks.B.pitch}
             position={decks.B.position}
             trackName={decks.B.trackName}
             waveform={decks.B.waveform}
+            onAutoLoop={(beats) => setAutoLoop('B', beats)}
+            onClearHotCue={(index) => clearHotCue('B', index)}
             onCueToStart={() => cueToStart('B')}
+            onHotCue={(index) => triggerHotCue('B', index)}
             onLoad={(file) => loadFileToDeck('B', file)}
+            onLoopExit={() => exitLoop('B')}
+            onLoopIn={() => setLoopIn('B')}
+            onLoopOut={() => setLoopOut('B')}
             onPitchChange={(value) => setPitch('B', value)}
             onSeek={(seconds) => seek('B', seconds)}
+            onSync={() => syncDeck('B')}
             onTogglePlayback={() => togglePlayback('B')}
             onTrackDrop={(trackId) => loadLibraryTrackById('B', trackId)}
           />
