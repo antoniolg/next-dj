@@ -1,0 +1,13 @@
+appId: com.antoniolg.nextdj
+productName: NextDJ
+directories:
+  output: release
+files:
+  - out/**
+  - package.json
+mac:
+  target:
+    - dmg
+  category: public.app-category.music
+  identity: null
+npmRebuild: false

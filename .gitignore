@@ -6,3 +6,4 @@ out
 .npm-cache
 vendor
 *.tsbuildinfo
+release/
