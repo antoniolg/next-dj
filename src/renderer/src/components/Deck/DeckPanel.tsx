@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { FolderOpen, MoreHorizontal, Pause, Play, SkipBack } from 'lucide-react'
 import type { HotCue, LoopState } from '../../audio/deck'
 import { Overview } from '../Waveform/Overview'
+import { ZoomWaveform } from '../Waveform/ZoomWaveform'
 import type { WaveformData } from '../Waveform/waveformData'
 import { Fader } from '../controls/Fader'
 import { JogWheel } from '../controls/JogWheel'
@@ -151,13 +152,24 @@ export function DeckPanel({
         </label>
       </div>
 
-      <Overview
-        accent={accent}
-        duration={duration}
-        getPosition={getPosition}
-        waveform={waveform}
-        onSeek={onSeek}
-      />
+      <div className="deck-waveforms">
+        <ZoomWaveform
+          accent={accent}
+          bpm={bpm}
+          duration={duration}
+          firstBeatOffset={firstBeatOffset}
+          getPosition={getPosition}
+          waveform={waveform}
+          onSeek={onSeek}
+        />
+        <Overview
+          accent={accent}
+          duration={duration}
+          getPosition={getPosition}
+          waveform={waveform}
+          onSeek={onSeek}
+        />
+      </div>
 
       <div className="led-display">
         {hasTrack ? <span className="deck-artwork" aria-hidden="true" /> : null}
@@ -228,31 +240,39 @@ export function DeckPanel({
         </div>
       </div>
 
-      <div className="hot-cue-row">
-        {hotCues.map((cue, index) => (
-          <button
-            key={index}
-            aria-label={`Hot cue ${index + 1}`}
-            className={`hot-cue-button ${cue ? 'hot-cue-button-lit' : ''}`}
-            disabled={!hasTrack}
-            style={{ '--hot-cue-color': cue?.color ?? '#475569' } as React.CSSProperties}
-            title={cue ? `Jump to ${formatTime(cue.position)} (right click: clear)` : 'Set hot cue'}
-            type="button"
-            onClick={(event) => {
-              if (event.shiftKey) {
-                onClearHotCue(index)
-              } else {
-                onHotCue(index)
+      <div className="deck-button-group">
+        <span className="deck-control-label">Hot cues</span>
+        <div className="hot-cue-row">
+          {hotCues.map((cue, index) => (
+            <button
+              key={index}
+              aria-label={cue ? `Jump to hot cue ${index + 1}` : `Set hot cue ${index + 1}`}
+              className={`hot-cue-button ${cue ? 'hot-cue-button-lit' : ''}`}
+              disabled={!hasTrack}
+              style={{ '--hot-cue-color': cue?.color ?? '#475569' } as React.CSSProperties}
+              title={
+                cue
+                  ? `Hot cue ${index + 1}: jump to ${formatTime(cue.position)}. Right click or Shift-click to clear.`
+                  : `Hot cue ${index + 1}: save this position.`
               }
-            }}
-            onContextMenu={(event) => {
-              event.preventDefault()
-              onClearHotCue(index)
-            }}
-          >
-            {index + 1}
-          </button>
-        ))}
+              type="button"
+              onClick={(event) => {
+                if (event.shiftKey) {
+                  onClearHotCue(index)
+                } else {
+                  onHotCue(index)
+                }
+              }}
+              onContextMenu={(event) => {
+                event.preventDefault()
+                onClearHotCue(index)
+              }}
+            >
+              <span className="control-button-label">Cue</span>
+              <span>{index + 1}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="deck-control-row">
@@ -267,40 +287,46 @@ export function DeckPanel({
           {isPlaying ? <Pause size={18} strokeWidth={2.4} /> : <Play size={18} strokeWidth={2.4} />}
         </button>
         <button
+          aria-label="Set loop start point"
           className={`loop-button ${loop.start !== null ? 'loop-button-lit' : ''}`}
           disabled={!hasTrack}
-          title="Loop in"
+          title="Loop IN: set the loop start point"
           type="button"
           onClick={onLoopIn}
         >
-          IN
+          <span className="control-button-label">Loop</span>
+          <span>IN</span>
         </button>
         <button
+          aria-label="Set loop end point"
           className={`loop-button ${loop.end !== null ? 'loop-button-lit' : ''}`}
           disabled={!hasTrack}
-          title="Loop out"
+          title="Loop OUT: set the loop end point"
           type="button"
           onClick={onLoopOut}
         >
-          OUT
+          <span className="control-button-label">Loop</span>
+          <span>OUT</span>
         </button>
         {[1, 2, 4, 8].map((beats) => (
           <button
             key={beats}
+            aria-label={loop.active ? 'Exit active loop' : `Start ${beats}-beat auto loop`}
             className={`loop-button ${loop.active ? 'loop-button-lit' : ''}`}
             disabled={!hasTrack || bpm <= 0}
-            title={loop.active ? 'Exit loop' : `${beats}-beat loop`}
+            title={loop.active ? 'Exit active loop' : `Auto loop: repeat ${beats} beat${beats === 1 ? '' : 's'}`}
             type="button"
             onClick={() => (loop.active ? onLoopExit() : onAutoLoop(beats))}
           >
-            {beats}
+            <span className="control-button-label">Auto</span>
+            <span>{beats}B</span>
           </button>
         ))}
         <button
-          aria-label="Cue to start"
+          aria-label="Return to track start"
           className="transport-button"
           disabled={!hasTrack}
-          title="Back to start"
+          title="Return to track start"
           type="button"
           onClick={onCueToStart}
         >
