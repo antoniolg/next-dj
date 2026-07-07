@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
-import { FolderOpen, MoreHorizontal, Pause, Play } from 'lucide-react'
-import { MAX_PITCH_PERCENT, type HotCue, type LoopState } from '../../audio/deck'
+import { FolderOpen, Pause, Play } from 'lucide-react'
+import { MAX_PITCH_PERCENT, type LoopState } from '../../audio/deck'
 import { Overview } from '../Waveform/Overview'
 import { ZoomWaveform } from '../Waveform/ZoomWaveform'
 import type { WaveformData } from '../Waveform/waveformData'
@@ -21,7 +21,6 @@ interface DeckPanelProps {
   firstBeatOffset: number
   effectiveBpm: number
   waveform: WaveformData | null
-  hotCues: Array<HotCue | null>
   loop: LoopState
   masterDeckId: 'A' | 'B' | null
   masterEffectiveBpm: number
@@ -36,10 +35,6 @@ interface DeckPanelProps {
   onSync: () => void
   onNudge: (direction: -1 | 1) => void
   onJogBend: (degrees: number) => void
-  onHotCue: (index: number) => void
-  onClearHotCue: (index: number) => void
-  onLoopIn: () => void
-  onLoopOut: () => void
   onLoopExit: () => void
   onAutoLoop: (beats: number) => void
   onSeek: (seconds: number) => void
@@ -82,7 +77,6 @@ export function DeckPanel({
   firstBeatOffset,
   effectiveBpm,
   waveform,
-  hotCues,
   loop,
   masterDeckId,
   masterEffectiveBpm,
@@ -97,10 +91,6 @@ export function DeckPanel({
   onSync,
   onNudge,
   onJogBend,
-  onHotCue,
-  onClearHotCue,
-  onLoopIn,
-  onLoopOut,
   onLoopExit,
   onAutoLoop,
   onSeek
@@ -108,7 +98,6 @@ export function DeckPanel({
   const remaining = Math.max(0, duration - position)
   const hasTrack = duration > 0
   const [syncFlashing, setSyncFlashing] = useState(false)
-  const [padsOpen, setPadsOpen] = useState(false)
   const [loopBeats, setLoopBeats] = useState<4 | 8>(8)
   const isMaster = masterDeckId === deckId
   const hasMaster = masterDeckId !== null
@@ -207,20 +196,6 @@ export function DeckPanel({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div className="deck-header">
-        <span className="deck-badge">DECK {deckId}</span>
-        <label className="icon-button" title={isLoading ? 'Deck is loading' : 'Load track'}>
-          <FolderOpen size={15} strokeWidth={2.2} />
-          <input
-            accept="audio/*"
-            className="sr-only"
-            disabled={isLoading}
-            type="file"
-            onChange={handleFileChange}
-          />
-        </label>
-      </div>
-
       {isLoading ? (
         <div className="deck-loading-overlay" role="status" aria-live="polite">
           <span className="deck-loading-spinner" aria-hidden="true" />
@@ -259,11 +234,19 @@ export function DeckPanel({
             <span className="led-remaining">-{formatTime(remaining)}</span>
           </div>
         </div>
-        {hasTrack ? (
-          <span aria-hidden="true" className="led-menu">
-            <MoreHorizontal size={15} strokeWidth={2.2} />
-          </span>
-        ) : null}
+        <label
+          className="icon-button led-load"
+          title={isLoading ? 'Deck is loading' : 'Load track'}
+        >
+          <FolderOpen size={15} strokeWidth={2.2} />
+          <input
+            accept="audio/*"
+            className="sr-only"
+            disabled={isLoading}
+            type="file"
+            onChange={handleFileChange}
+          />
+        </label>
       </div>
 
       <div className="deck-center">
@@ -399,94 +382,7 @@ export function DeckPanel({
         >
           4/8
         </button>
-        <button
-          aria-label="Toggle performance pads"
-          className={`transport-button ${padsOpen ? 'transport-button-lit' : ''}`}
-          disabled={isLoading || !hasTrack}
-          title="Show hot cues and advanced loops"
-          type="button"
-          onClick={() => setPadsOpen((current) => !current)}
-        >
-          Pads
-        </button>
       </div>
-
-      {padsOpen ? (
-        <div className="deck-pads-panel">
-          <div className="deck-button-group">
-            <span className="deck-control-label">Hot cues</span>
-            <div className="hot-cue-row">
-              {hotCues.map((cue, index) => (
-                <button
-                  key={index}
-                  aria-label={cue ? `Jump to hot cue ${index + 1}` : `Set hot cue ${index + 1}`}
-                  className={`hot-cue-button ${cue ? 'hot-cue-button-lit' : ''}`}
-                  disabled={isLoading || !hasTrack}
-                  style={{ '--hot-cue-color': cue?.color ?? '#475569' } as React.CSSProperties}
-                  title={
-                    cue
-                      ? `Hot cue ${index + 1}: jump to ${formatTime(cue.position)}. Right click or Shift-click to clear.`
-                      : `Hot cue ${index + 1}: save this position.`
-                  }
-                  type="button"
-                  onClick={(event) => {
-                    if (event.shiftKey) {
-                      onClearHotCue(index)
-                    } else {
-                      onHotCue(index)
-                    }
-                  }}
-                  onContextMenu={(event) => {
-                    event.preventDefault()
-                    onClearHotCue(index)
-                  }}
-                >
-                  <span className="control-button-label">Cue</span>
-                  <span>{index + 1}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="pads-loop-row">
-            <button
-              aria-label="Set loop start point"
-              className={`loop-button ${loop.start !== null ? 'loop-button-lit' : ''}`}
-              disabled={isLoading || !hasTrack}
-              title="Loop IN: set the loop start point"
-              type="button"
-              onClick={onLoopIn}
-            >
-              <span className="control-button-label">Loop</span>
-              <span>IN</span>
-            </button>
-            <button
-              aria-label="Set loop end point"
-              className={`loop-button ${loop.end !== null ? 'loop-button-lit' : ''}`}
-              disabled={isLoading || !hasTrack}
-              title="Loop OUT: set the loop end point"
-              type="button"
-              onClick={onLoopOut}
-            >
-              <span className="control-button-label">Loop</span>
-              <span>OUT</span>
-            </button>
-            {[1, 2, 4, 8].map((beats) => (
-              <button
-                key={beats}
-                aria-label={loop.active ? 'Exit active loop' : `Start ${beats}-beat auto loop`}
-                className={`loop-button ${loop.active ? 'loop-button-lit' : ''}`}
-                disabled={isLoading || !hasTrack || bpm <= 0}
-                title={loop.active ? 'Exit active loop' : `Auto loop: repeat ${beats} beat${beats === 1 ? '' : 's'}`}
-                type="button"
-                onClick={() => (loop.active ? onLoopExit() : onAutoLoop(beats))}
-              >
-                <span className="control-button-label">Auto</span>
-                <span>{beats}B</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </section>
   )
 }

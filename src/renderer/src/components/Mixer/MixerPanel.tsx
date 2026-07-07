@@ -1,3 +1,4 @@
+import { Activity, Settings } from 'lucide-react'
 import type { EqBand } from '../../audio/deck'
 import type { DeckId } from '../../hooks/useEngine'
 import { Fader } from '../controls/Fader'
@@ -16,6 +17,9 @@ interface MixerPanelProps {
   channelB: ChannelValues
   crossfade: number
   cueMix: number
+  masterAccent: string
+  masterBeatIndex: number
+  masterBpm: number
   masterVolume: number
   analyserA: AnalyserNode | null
   analyserB: AnalyserNode | null
@@ -26,6 +30,8 @@ interface MixerPanelProps {
   onCrossfadeChange: (value: number) => void
   onCueMixChange: (value: number) => void
   onMasterVolumeChange: (value: number) => void
+  onOpenSettings: () => void
+  onOpenShortcuts: () => void
 }
 
 const EQ_BANDS: Array<{ band: EqBand; label: string }> = [
@@ -114,6 +120,9 @@ export function MixerPanel({
   channelB,
   crossfade,
   cueMix,
+  masterAccent,
+  masterBeatIndex,
+  masterBpm,
   masterVolume,
   analyserA,
   analyserB,
@@ -123,12 +132,14 @@ export function MixerPanel({
   onCueToggle,
   onCrossfadeChange,
   onCueMixChange,
-  onMasterVolumeChange
+  onMasterVolumeChange,
+  onOpenSettings,
+  onOpenShortcuts
 }: MixerPanelProps): JSX.Element {
   return (
     <section className="console-panel mixer-panel">
       <div className="mixer-header">
-        <h2 className="mixer-title">Mixer</h2>
+        <h1 className="mixer-brand">NEXTDJ</h1>
       </div>
 
       <div className="mixer-body">
@@ -157,6 +168,40 @@ export function MixerPanel({
               <span>-30</span>
             </div>
             <VUMeter analyser={analyserB} segments={32} />
+          </div>
+          <div className="mixer-session">
+            <span className={`mixer-session-bpm ${masterBpm > 0 ? '' : 'mixer-session-bpm-idle'}`}>
+              {masterBpm > 0 ? `${masterBpm.toFixed(1)} BPM` : '--.- BPM'}
+            </span>
+            <span aria-hidden="true" className="mixer-session-dots">
+              {[0, 1, 2, 3].map((beat) => (
+                <span
+                  key={beat}
+                  className={`status-dot ${beat === masterBeatIndex ? 'status-dot-lit' : ''}`}
+                  style={{ '--status-accent': masterAccent } as React.CSSProperties}
+                />
+              ))}
+            </span>
+            <div className="mixer-session-actions">
+              <button
+                aria-label="Show keyboard shortcuts"
+                className="icon-button"
+                title="Keyboard shortcuts (?)"
+                type="button"
+                onClick={onOpenShortcuts}
+              >
+                <Activity size={15} strokeWidth={2.2} />
+              </button>
+              <button
+                aria-label="Open output settings"
+                className="icon-button"
+                title="Output devices"
+                type="button"
+                onClick={onOpenSettings}
+              >
+                <Settings size={15} strokeWidth={2.2} />
+              </button>
+            </div>
           </div>
           <div className="master-knob">
             <span className="vu-label">Master</span>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Activity, Settings, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { DeckPanel } from './components/Deck/DeckPanel'
 import { LibraryPanel } from './components/Library/LibraryPanel'
 import { MixerPanel } from './components/Mixer/MixerPanel'
@@ -7,7 +7,6 @@ import { SettingsPanel } from './components/Settings/SettingsPanel'
 import { useEngine } from './hooks/useEngine'
 import { useLibrary, type LibraryTrack } from './hooks/useLibrary'
 
-const APP_VERSION = '1.2.0'
 const CROSSFADER_NUDGE = 0.08
 const PITCH_NUDGE = 0.1
 const DECK_TRACK_STORAGE_KEY = 'nextdj.deckTracks.v1'
@@ -53,8 +52,6 @@ export function App(): JSX.Element {
     jogBend,
     triggerHotCue,
     clearHotCue,
-    setLoopIn,
-    setLoopOut,
     exitLoop,
     setAutoLoop,
     setTrim,
@@ -281,7 +278,13 @@ export function App(): JSX.Element {
 
       if (deckAHotCue >= 0 && !deckALoading) {
         event.preventDefault()
-        triggerHotCue('A', deckAHotCue)
+
+        if (event.shiftKey) {
+          clearHotCue('A', deckAHotCue)
+        } else {
+          triggerHotCue('A', deckAHotCue)
+        }
+
         return
       }
 
@@ -289,7 +292,12 @@ export function App(): JSX.Element {
 
       if (deckBHotCue >= 0 && !deckBLoading) {
         event.preventDefault()
-        triggerHotCue('B', deckBHotCue)
+
+        if (event.shiftKey) {
+          clearHotCue('B', deckBHotCue)
+        } else {
+          triggerHotCue('B', deckBHotCue)
+        }
       }
     }
 
@@ -327,7 +335,8 @@ export function App(): JSX.Element {
     setCrossfade,
     setPitch,
     togglePlayback,
-    triggerHotCue
+    triggerHotCue,
+    clearHotCue
   ])
 
   const masterDeck = masterDeckId ? decks[masterDeckId] : null
@@ -347,47 +356,6 @@ export function App(): JSX.Element {
   return (
     <main className="flex h-screen flex-col overflow-hidden text-slate-100">
       <div className="console-shell flex min-h-0 flex-1 flex-col">
-        <header className="app-header">
-          <div className="app-brand">
-            <span className="app-logo">NEXTDJ</span>
-            <span className="app-version">v{APP_VERSION}</span>
-          </div>
-          <div className="app-status">
-            <button
-              aria-label="Show keyboard shortcuts"
-              className="icon-button app-status-button"
-              title="Keyboard shortcuts (?)"
-              type="button"
-              onClick={() => setShortcutsOpen(true)}
-            >
-              <Activity size={15} strokeWidth={2.2} />
-            </button>
-            <div className="app-status-group">
-              <span className={`app-status-item ${masterDeck ? '' : 'app-status-item-muted'}`}>
-                {masterDeck ? `${masterDeck.effectiveBpm.toFixed(1)} BPM` : '--.- BPM'}
-              </span>
-              <span aria-hidden="true" className="app-status-item app-status-item-dots">
-                {[0, 1, 2, 3].map((beat) => (
-                  <span
-                    key={beat}
-                    className={`app-status-dot ${beat === masterBeatIndex ? 'app-status-dot-lit' : ''}`}
-                    style={{ '--status-accent': masterAccent } as React.CSSProperties}
-                  />
-                ))}
-              </span>
-            </div>
-            <button
-              aria-label="Open output settings"
-              className="icon-button app-status-button"
-              title="Output devices"
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <Settings size={15} strokeWidth={2.2} />
-            </button>
-          </div>
-        </header>
-
         <div className="console-grid">
           <DeckPanel
             accent="#22d3ee"
@@ -397,7 +365,6 @@ export function App(): JSX.Element {
             effectiveBpm={decks.A.effectiveBpm}
             firstBeatOffset={decks.A.firstBeatOffset}
             getPosition={getDeckAPosition}
-            hotCues={decks.A.hotCues}
             isPlaying={decks.A.isPlaying}
             isLoading={Boolean(loadingDecks.A)}
             loadingMessage={loadingDecks.A}
@@ -410,15 +377,11 @@ export function App(): JSX.Element {
             trackName={decks.A.trackName}
             waveform={decks.A.waveform}
             onAutoLoop={(beats) => setAutoLoop('A', beats)}
-            onClearHotCue={(index) => clearHotCue('A', index)}
             onCueDown={() => cuePress('A')}
             onCueUp={() => cueRelease('A')}
-            onHotCue={(index) => triggerHotCue('A', index)}
             onJogBend={(degrees) => jogBend('A', degrees)}
             onLoad={(file) => loadFileToDeck('A', file)}
             onLoopExit={() => exitLoop('A')}
-            onLoopIn={() => setLoopIn('A')}
-            onLoopOut={() => setLoopOut('A')}
             onNudge={(direction) => nudgeDeck('A', direction)}
             onPitchChange={(value) => setPitch('A', value)}
             onSeek={(seconds) => seek('A', seconds)}
@@ -434,6 +397,9 @@ export function App(): JSX.Element {
             channelB={channels.B}
             crossfade={mixer.crossfade}
             cueMix={mixer.cueMix}
+            masterAccent={masterAccent}
+            masterBeatIndex={masterBeatIndex}
+            masterBpm={masterDeck?.effectiveBpm ?? 0}
             masterVolume={mixer.masterVolume}
             onChannelVolumeChange={setChannelVolume}
             onCrossfadeChange={setCrossfade}
@@ -441,6 +407,8 @@ export function App(): JSX.Element {
             onCueToggle={toggleCue}
             onEqChange={setEq}
             onMasterVolumeChange={setMasterVolume}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onOpenShortcuts={() => setShortcutsOpen(true)}
             onTrimChange={setTrim}
           />
 
@@ -452,7 +420,6 @@ export function App(): JSX.Element {
             effectiveBpm={decks.B.effectiveBpm}
             firstBeatOffset={decks.B.firstBeatOffset}
             getPosition={getDeckBPosition}
-            hotCues={decks.B.hotCues}
             isPlaying={decks.B.isPlaying}
             isLoading={Boolean(loadingDecks.B)}
             loadingMessage={loadingDecks.B}
@@ -465,15 +432,11 @@ export function App(): JSX.Element {
             trackName={decks.B.trackName}
             waveform={decks.B.waveform}
             onAutoLoop={(beats) => setAutoLoop('B', beats)}
-            onClearHotCue={(index) => clearHotCue('B', index)}
             onCueDown={() => cuePress('B')}
             onCueUp={() => cueRelease('B')}
-            onHotCue={(index) => triggerHotCue('B', index)}
             onJogBend={(degrees) => jogBend('B', degrees)}
             onLoad={(file) => loadFileToDeck('B', file)}
             onLoopExit={() => exitLoop('B')}
-            onLoopIn={() => setLoopIn('B')}
-            onLoopOut={() => setLoopOut('B')}
             onNudge={(direction) => nudgeDeck('B', direction)}
             onPitchChange={(value) => setPitch('B', value)}
             onSeek={(seconds) => seek('B', seconds)}
