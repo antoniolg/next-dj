@@ -6,6 +6,7 @@ interface JogWheelProps {
   isPlaying: boolean
   accent: string
   label: string
+  onBend: (degrees: number) => void
   onSeek: (seconds: number) => void
 }
 
@@ -34,6 +35,7 @@ export function JogWheel({
   isPlaying,
   accent,
   label,
+  onBend,
   onSeek
 }: JogWheelProps): JSX.Element {
   const dragRef = useRef<{ angle: number; position: number } | null>(null)
@@ -58,13 +60,21 @@ export function JogWheel({
 
       const nextAngle = pointerAngle(event)
       const delta = angleDelta(dragRef.current.angle, nextAngle)
+
+      if (isPlaying) {
+        dragRef.current = { angle: nextAngle, position: dragRef.current.position }
+        setDragRotation((current: number) => current + delta)
+        onBend(delta)
+        return
+      }
+
       const nextPosition = Math.min(duration, Math.max(0, dragRef.current.position + (delta / 360) * 4))
 
       dragRef.current = { angle: nextAngle, position: nextPosition }
       setDragRotation((current: number) => current + delta)
       onSeek(nextPosition)
     },
-    [duration, onSeek]
+    [duration, isPlaying, onBend, onSeek]
   )
 
   const clearDrag = useCallback((): void => {

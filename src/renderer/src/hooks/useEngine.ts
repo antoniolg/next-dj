@@ -33,6 +33,10 @@ interface OutputState {
 const MASTER_OUTPUT_STORAGE_KEY = 'nextdj.masterOutputDeviceId'
 const CUE_OUTPUT_STORAGE_KEY = 'nextdj.cueOutputDeviceId'
 const CONTROLS_STORAGE_KEY = 'nextdj.controls.v1'
+const NUDGE_SECONDS = 0.035
+const JOG_NUDGE_SECONDS_PER_DEGREE = 0.001
+const PITCH_BEND_PERCENT = 3.5
+const PITCH_BEND_MS = 140
 
 interface PersistedControls {
   channels: Record<DeckId, Pick<ChannelState, 'trim' | 'eq' | 'volume'>>
@@ -42,6 +46,31 @@ interface PersistedControls {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
+}
+
+function positiveModulo(value: number, modulus: number): number {
+  return ((value % modulus) + modulus) % modulus
+}
+
+function normalizePhaseOffset(seconds: number, beatSeconds: number): number {
+  const phase = positiveModulo(seconds, beatSeconds)
+  return phase > beatSeconds / 2 ? phase - beatSeconds : phase
+}
+
+function getBeatPhase(position: number, firstBeatOffset: number, beatSeconds: number): number {
+  return positiveModulo(position - firstBeatOffset, beatSeconds)
+}
+
+function getPhaseOffsetSeconds(deck: DeckState, masterDeck: DeckState): number {
+  if (deck.effectiveBpm <= 0 || masterDeck.effectiveBpm <= 0) {
+    return 0
+  }
+
+  const beatSeconds = 60 / masterDeck.effectiveBpm
+  const deckPhase = getBeatPhase(deck.position, deck.firstBeatOffset, beatSeconds)
+  const masterPhase = getBeatPhase(masterDeck.position, masterDeck.firstBeatOffset, beatSeconds)
+
+  return normalizePhaseOffset(deckPhase - masterPhase, beatSeconds)
 }
 
 const createChannelState = (): ChannelState => ({
@@ -153,6 +182,8 @@ function persistControls(
 export function useEngine(): {
   engine: DJEngine
   decks: Record<DeckId, DeckState>
+  masterDeckId: DeckId | null
+  phaseOffsets: Record<DeckId, number>
   channels: Record<DeckId, ChannelState>
   mixer: MixerState
   output: OutputState
@@ -160,8 +191,12 @@ export function useEngine(): {
   togglePlayback: (deckId: DeckId) => Promise<void>
   seek: (deckId: DeckId, seconds: number) => void
   cueToStart: (deckId: DeckId) => void
+  cuePress: (deckId: DeckId) => Promise<void>
+  cueRelease: (deckId: DeckId) => void
   setPitch: (deckId: DeckId, percent: number) => void
   syncDeck: (deckId: DeckId) => void
+  nudgeDeck: (deckId: DeckId, direction: -1 | 1) => void
+  jogBend: (deckId: DeckId, degrees: number) => void
   triggerHotCue: (deckId: DeckId, index: number) => void
   clearHotCue: (deckId: DeckId, index: number) => void
   setLoopIn: (deckId: DeckId) => void
@@ -181,6 +216,7 @@ export function useEngine(): {
 } {
   const engineRef = useRef<DJEngine | null>(null)
   const persistedControlsRef = useRef<PersistedControls | null>(null)
+  const masterDeckIdRef = useRef<DeckId | null>(null)
 
   if (!persistedControlsRef.current) {
     persistedControlsRef.current = readPersistedControls()
@@ -203,6 +239,16 @@ export function useEngine(): {
     cueDeviceId: 'default',
     error: null
   })
+  const [masterDeckId, setMasterDeckId] = useState<DeckId | null>(null)
+
+  const updateMasterDeck = useCallback((nextMasterDeckId: DeckId | null): void => {
+    if (masterDeckIdRef.current === nextMasterDeckId) {
+      return
+    }
+
+    masterDeckIdRef.current = nextMasterDeckId
+    setMasterDeckId(nextMasterDeckId)
+  }, [])
 
   if (!engineRef.current) {
     engineRef.current = getEngine()
@@ -258,6 +304,22 @@ export function useEngine(): {
     const tick = (): void => {
       engine.deckA.tickLoop()
       engine.deckB.tickLoop()
+      const deckAPlaying = engine.deckA.isPlaying
+      const deckBPlaying = engine.deckB.isPlaying
+      const currentMaster = masterDeckIdRef.current
+
+      if (currentMaster === 'A' && deckAPlaying) {
+        updateMasterDeck('A')
+      } else if (currentMaster === 'B' && deckBPlaying) {
+        updateMasterDeck('B')
+      } else if (deckAPlaying) {
+        updateMasterDeck('A')
+      } else if (deckBPlaying) {
+        updateMasterDeck('B')
+      } else {
+        updateMasterDeck(null)
+      }
+
       setDecks((current) => ({
         A: {
           ...current.A,
@@ -281,7 +343,7 @@ export function useEngine(): {
 
     frameId = window.requestAnimationFrame(tick)
     return () => window.cancelAnimationFrame(frameId)
-  }, [engine])
+  }, [engine, updateMasterDeck])
 
   const refreshOutputDevices = useCallback(async (): Promise<void> => {
     try {
@@ -332,6 +394,7 @@ export function useEngine(): {
           firstBeatOffset: deck.metadata.firstBeatOffset,
           effectiveBpm: deck.getEffectiveBpm(),
           hotCues: deck.hotCues,
+          cuePoint: deck.cuePoint,
           loop: deck.loop,
           waveform: deck.waveform
         }
@@ -377,6 +440,30 @@ export function useEngine(): {
     [seek]
   )
 
+  const cuePress = useCallback(
+    async (deckId: DeckId): Promise<void> => {
+      const deck = getDeck(deckId)
+      await deck.cuePress()
+      setDecks((current) => ({
+        ...current,
+        [deckId]: getDeckSnapshot(deck, current[deckId].pitch)
+      }))
+    },
+    [getDeck]
+  )
+
+  const cueRelease = useCallback(
+    (deckId: DeckId): void => {
+      const deck = getDeck(deckId)
+      deck.cueRelease()
+      setDecks((current) => ({
+        ...current,
+        [deckId]: getDeckSnapshot(deck, current[deckId].pitch)
+      }))
+    },
+    [getDeck]
+  )
+
   const setPitch = useCallback(
     (deckId: DeckId, percent: number): void => {
       const deck = getDeck(deckId)
@@ -401,9 +488,49 @@ export function useEngine(): {
 
       const pitch = clamp((targetBpm / deck.metadata.bpm - 1) * 100, MIN_PITCH_PERCENT, MAX_PITCH_PERCENT)
       deck.setPitch(pitch)
+      const beatSeconds = 60 / targetBpm
+      const deckPhase = getBeatPhase(deck.getPosition(), deck.metadata.firstBeatOffset, beatSeconds)
+      const masterPhase = getBeatPhase(otherDeck.getPosition(), otherDeck.metadata.firstBeatOffset, beatSeconds)
+      const phaseOffset = normalizePhaseOffset(deckPhase - masterPhase, beatSeconds)
+
+      if (Number.isFinite(phaseOffset) && Math.abs(phaseOffset) > 0.005) {
+        deck.nudge(-phaseOffset)
+      }
+
       setDecks((current) => ({
         ...current,
-        [deckId]: { ...current[deckId], pitch, effectiveBpm: deck.getEffectiveBpm() }
+        [deckId]: { ...getDeckSnapshot(deck, pitch), pitch }
+      }))
+    },
+    [getDeck]
+  )
+
+  const nudgeDeck = useCallback(
+    (deckId: DeckId, direction: -1 | 1): void => {
+      const deck = getDeck(deckId)
+      deck.nudge(direction * NUDGE_SECONDS)
+      setDecks((current) => ({
+        ...current,
+        [deckId]: getDeckSnapshot(deck, current[deckId].pitch)
+      }))
+    },
+    [getDeck]
+  )
+
+  const jogBend = useCallback(
+    (deckId: DeckId, degrees: number): void => {
+      const deck = getDeck(deckId)
+
+      if (deck.isPlaying) {
+        const bend = clamp(degrees * 0.18, -PITCH_BEND_PERCENT, PITCH_BEND_PERCENT)
+        deck.pitchBend(bend, PITCH_BEND_MS)
+      } else {
+        deck.nudge(degrees * JOG_NUDGE_SECONDS_PER_DEGREE)
+      }
+
+      setDecks((current) => ({
+        ...current,
+        [deckId]: getDeckSnapshot(deck, current[deckId].pitch)
       }))
     },
     [getDeck]
@@ -580,9 +707,16 @@ export function useEngine(): {
     [engine]
   )
 
+  const phaseOffsets: Record<DeckId, number> = {
+    A: masterDeckId && masterDeckId !== 'A' ? getPhaseOffsetSeconds(decks.A, decks[masterDeckId]) : 0,
+    B: masterDeckId && masterDeckId !== 'B' ? getPhaseOffsetSeconds(decks.B, decks[masterDeckId]) : 0
+  }
+
   return {
     engine,
     decks,
+    masterDeckId,
+    phaseOffsets,
     channels,
     mixer,
     output,
@@ -590,8 +724,12 @@ export function useEngine(): {
     togglePlayback,
     seek,
     cueToStart,
+    cuePress,
+    cueRelease,
     setPitch,
     syncDeck,
+    nudgeDeck,
+    jogBend,
     triggerHotCue,
     clearHotCue,
     setLoopIn,

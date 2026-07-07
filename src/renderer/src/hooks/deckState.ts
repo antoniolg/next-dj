@@ -12,6 +12,7 @@ export interface DeckState {
   effectiveBpm: number
   waveform: WaveformData | null
   hotCues: Array<HotCue | null>
+  cuePoint: number
   loop: LoopState
 }
 
@@ -26,6 +27,7 @@ export const createDeckState = (): DeckState => ({
   effectiveBpm: 0,
   waveform: null,
   hotCues: [null, null, null, null],
+  cuePoint: 0,
   loop: { start: null, end: null, active: false }
 })
 
@@ -41,6 +43,7 @@ export function getDeckSnapshot(deck: Deck, pitch: number): DeckState {
     effectiveBpm: deck.getEffectiveBpm(),
     waveform: deck.waveform,
     hotCues: deck.hotCues,
+    cuePoint: deck.cuePoint,
     loop: deck.loop
   }
 }

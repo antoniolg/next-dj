@@ -12,7 +12,8 @@ interface ZoomWaveformProps {
   onSeek: (seconds: number) => void
 }
 
-const WINDOW_SECONDS = 24
+const DEFAULT_WINDOW_SECONDS = 8
+const MAX_VISIBLE_BEATS = 16
 const PLAYHEAD_RATIO = 0.38
 
 function clamp(value: number, min: number, max: number): number {
@@ -25,6 +26,22 @@ function getWindowStart(position: number, duration: number, windowSeconds: numbe
   }
 
   return clamp(position - windowSeconds * PLAYHEAD_RATIO, 0, duration - windowSeconds)
+}
+
+function getZoomWindowSeconds(duration: number, bpm: number): number {
+  if (duration <= 0) {
+    return DEFAULT_WINDOW_SECONDS
+  }
+
+  if (bpm > 0) {
+    const beatWindow = (60 / bpm) * MAX_VISIBLE_BEATS
+
+    if (Number.isFinite(beatWindow) && beatWindow > 0) {
+      return Math.min(duration, beatWindow)
+    }
+  }
+
+  return Math.min(duration, DEFAULT_WINDOW_SECONDS)
 }
 
 function drawBeatGrid(
@@ -93,7 +110,7 @@ function drawCanvas(
   context.fillStyle = '#05080b'
   context.fillRect(0, 0, width, height)
 
-  const windowSeconds = Math.min(WINDOW_SECONDS, Math.max(duration, WINDOW_SECONDS))
+  const windowSeconds = getZoomWindowSeconds(duration, bpm)
   const windowStart = getWindowStart(position, duration, windowSeconds)
   const playheadX = clamp(((position - windowStart) / windowSeconds) * width, 0, width)
   const centerY = height / 2
@@ -104,8 +121,6 @@ function drawCanvas(
   context.moveTo(0, centerY)
   context.lineTo(width, centerY)
   context.stroke()
-
-  drawBeatGrid(context, width, height, dpr, bpm, firstBeatOffset, windowStart, windowSeconds)
 
   if (waveform && duration > 0) {
     for (let x = 0; x < width; x += dpr) {
@@ -130,6 +145,8 @@ function drawCanvas(
     }
   }
 
+  drawBeatGrid(context, width, height, dpr, bpm, firstBeatOffset, windowStart, windowSeconds)
+
   context.globalAlpha = 1
   context.fillStyle = accent
   context.fillRect(playheadX - dpr, 0, dpr * 2, height)
@@ -153,7 +170,7 @@ export function ZoomWaveform({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const draggingRef = useRef(false)
   const dragWindowStartRef = useRef(0)
-  const windowSeconds = useMemo(() => Math.min(WINDOW_SECONDS, Math.max(duration, WINDOW_SECONDS)), [duration])
+  const windowSeconds = useMemo(() => getZoomWindowSeconds(duration, bpm), [bpm, duration])
 
   useEffect(() => {
     let frameId = 0

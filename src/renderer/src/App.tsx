@@ -13,6 +13,8 @@ const PITCH_NUDGE = 0.1
 const DECK_TRACK_STORAGE_KEY = 'nextdj.deckTracks.v1'
 
 type DeckTrackSelection = Partial<Record<'A' | 'B', string>>
+type DeckId = 'A' | 'B'
+type DeckLoadingState = Partial<Record<DeckId, string>>
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -30,19 +32,25 @@ function isEditableTarget(target: EventTarget | null): boolean {
 export function App(): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [loadingDecks, setLoadingDecks] = useState<DeckLoadingState>({})
   const restoredDecksRef = useRef(false)
   const {
     engine,
     decks,
+    masterDeckId,
+    phaseOffsets,
     channels,
     mixer,
     output,
     loadTrack,
     togglePlayback,
     seek,
-    cueToStart,
+    cuePress,
+    cueRelease,
     setPitch,
     syncDeck,
+    nudgeDeck,
+    jogBend,
     triggerHotCue,
     clearHotCue,
     setLoopIn,
@@ -62,7 +70,21 @@ export function App(): JSX.Element {
   } = useEngine()
   const { tracks, isReady: libraryReady, addFiles, addYouTubeTracks, resolveTrackFile, getTrack } = useLibrary()
 
-  const persistDeckTrack = useCallback((deckId: 'A' | 'B', trackId: string): void => {
+  const setDeckLoading = useCallback((deckId: DeckId, message: string | null): void => {
+    setLoadingDecks((current) => {
+      const next = { ...current }
+
+      if (message) {
+        next[deckId] = message
+      } else {
+        delete next[deckId]
+      }
+
+      return next
+    })
+  }, [])
+
+  const persistDeckTrack = useCallback((deckId: DeckId, trackId: string): void => {
     try {
       const parsed = JSON.parse(localStorage.getItem(DECK_TRACK_STORAGE_KEY) ?? '{}') as DeckTrackSelection
       localStorage.setItem(DECK_TRACK_STORAGE_KEY, JSON.stringify({ ...parsed, [deckId]: trackId }))
@@ -72,31 +94,47 @@ export function App(): JSX.Element {
   }, [])
 
   const loadFileToDeck = useCallback(
-    async (deckId: 'A' | 'B', file: File): Promise<void> => {
-      const [track] = await addFiles([file])
-      await loadTrack(deckId, file)
+    async (deckId: DeckId, file: File): Promise<void> => {
+      setDeckLoading(deckId, 'Analyzing audio...')
 
-      if (track) {
-        persistDeckTrack(deckId, track.id)
+      try {
+        const [track] = await addFiles([file])
+        setDeckLoading(deckId, 'Loading deck...')
+        await loadTrack(deckId, file)
+
+        if (track) {
+          persistDeckTrack(deckId, track.id)
+        }
+      } finally {
+        setDeckLoading(deckId, null)
       }
     },
-    [addFiles, loadTrack, persistDeckTrack]
+    [addFiles, loadTrack, persistDeckTrack, setDeckLoading]
   )
 
   const loadLibraryTrack = useCallback(
-    async (deckId: 'A' | 'B', track: LibraryTrack): Promise<void> => {
-      const file = await resolveTrackFile(track)
+    async (deckId: DeckId, track: LibraryTrack): Promise<void> => {
+      setDeckLoading(deckId, track.file ? 'Loading deck...' : 'Downloading audio...')
 
-      if (file) {
+      try {
+        const file = await resolveTrackFile(track)
+
+        if (!file) {
+          return
+        }
+
+        setDeckLoading(deckId, 'Decoding waveform...')
         await loadTrack(deckId, file)
         persistDeckTrack(deckId, track.id)
+      } finally {
+        setDeckLoading(deckId, null)
       }
     },
-    [loadTrack, persistDeckTrack, resolveTrackFile]
+    [loadTrack, persistDeckTrack, resolveTrackFile, setDeckLoading]
   )
 
   const loadLibraryTrackById = useCallback(
-    async (deckId: 'A' | 'B', trackId: string): Promise<void> => {
+    async (deckId: DeckId, trackId: string): Promise<void> => {
       const track = getTrack(trackId)
 
       if (track) {
@@ -142,6 +180,9 @@ export function App(): JSX.Element {
         return
       }
 
+      const deckALoading = Boolean(loadingDecks.A)
+      const deckBLoading = Boolean(loadingDecks.B)
+
       const isRepeatSensitive =
         event.code === 'KeyQ' ||
         event.code === 'KeyW' ||
@@ -166,27 +207,27 @@ export function App(): JSX.Element {
         return
       }
 
-      if (event.code === 'KeyQ') {
+      if (event.code === 'KeyQ' && !deckALoading) {
         event.preventDefault()
         void togglePlayback('A')
         return
       }
 
-      if (event.code === 'KeyW') {
+      if (event.code === 'KeyW' && !deckBLoading) {
         event.preventDefault()
         void togglePlayback('B')
         return
       }
 
-      if (event.code === 'KeyA') {
+      if (event.code === 'KeyA' && !deckALoading) {
         event.preventDefault()
-        toggleCue('A')
+        void cuePress('A')
         return
       }
 
-      if (event.code === 'KeyS') {
+      if (event.code === 'KeyS' && !deckBLoading) {
         event.preventDefault()
-        toggleCue('B')
+        void cuePress('B')
         return
       }
 
@@ -224,9 +265,21 @@ export function App(): JSX.Element {
         }
       }
 
+      if (event.code === 'BracketLeft') {
+        event.preventDefault()
+        nudgeDeck(event.shiftKey ? 'B' : 'A', -1)
+        return
+      }
+
+      if (event.code === 'BracketRight') {
+        event.preventDefault()
+        nudgeDeck(event.shiftKey ? 'B' : 'A', 1)
+        return
+      }
+
       const deckAHotCue = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(event.code)
 
-      if (deckAHotCue >= 0) {
+      if (deckAHotCue >= 0 && !deckALoading) {
         event.preventDefault()
         triggerHotCue('A', deckAHotCue)
         return
@@ -234,22 +287,45 @@ export function App(): JSX.Element {
 
       const deckBHotCue = ['Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(event.code)
 
-      if (deckBHotCue >= 0) {
+      if (deckBHotCue >= 0 && !deckBLoading) {
         event.preventDefault()
         triggerHotCue('B', deckBHotCue)
       }
     }
 
+    const handleKeyUp = (event: KeyboardEvent): void => {
+      if (isEditableTarget(event.target)) {
+        return
+      }
+
+      if (event.code === 'KeyA') {
+        cueRelease('A')
+        return
+      }
+
+      if (event.code === 'KeyS') {
+        cueRelease('B')
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
   }, [
     decks.A.pitch,
     decks.B.pitch,
+    loadingDecks.A,
+    loadingDecks.B,
     mixer.crossfade,
+    nudgeDeck,
+    cuePress,
+    cueRelease,
     shortcutsOpen,
     setCrossfade,
     setPitch,
-    toggleCue,
     togglePlayback,
     triggerHotCue
   ])
@@ -300,19 +376,27 @@ export function App(): JSX.Element {
             getPosition={getDeckAPosition}
             hotCues={decks.A.hotCues}
             isPlaying={decks.A.isPlaying}
+            isLoading={Boolean(loadingDecks.A)}
+            loadingMessage={loadingDecks.A}
             loop={decks.A.loop}
+            masterDeckId={masterDeckId}
+            masterEffectiveBpm={masterDeckId ? decks[masterDeckId].effectiveBpm : 0}
+            phaseOffset={phaseOffsets.A}
             pitch={decks.A.pitch}
             position={decks.A.position}
             trackName={decks.A.trackName}
             waveform={decks.A.waveform}
             onAutoLoop={(beats) => setAutoLoop('A', beats)}
             onClearHotCue={(index) => clearHotCue('A', index)}
-            onCueToStart={() => cueToStart('A')}
+            onCueDown={() => cuePress('A')}
+            onCueUp={() => cueRelease('A')}
             onHotCue={(index) => triggerHotCue('A', index)}
+            onJogBend={(degrees) => jogBend('A', degrees)}
             onLoad={(file) => loadFileToDeck('A', file)}
             onLoopExit={() => exitLoop('A')}
             onLoopIn={() => setLoopIn('A')}
             onLoopOut={() => setLoopOut('A')}
+            onNudge={(direction) => nudgeDeck('A', direction)}
             onPitchChange={(value) => setPitch('A', value)}
             onSeek={(seconds) => seek('A', seconds)}
             onSync={() => syncDeck('A')}
@@ -347,19 +431,27 @@ export function App(): JSX.Element {
             getPosition={getDeckBPosition}
             hotCues={decks.B.hotCues}
             isPlaying={decks.B.isPlaying}
+            isLoading={Boolean(loadingDecks.B)}
+            loadingMessage={loadingDecks.B}
             loop={decks.B.loop}
+            masterDeckId={masterDeckId}
+            masterEffectiveBpm={masterDeckId ? decks[masterDeckId].effectiveBpm : 0}
+            phaseOffset={phaseOffsets.B}
             pitch={decks.B.pitch}
             position={decks.B.position}
             trackName={decks.B.trackName}
             waveform={decks.B.waveform}
             onAutoLoop={(beats) => setAutoLoop('B', beats)}
             onClearHotCue={(index) => clearHotCue('B', index)}
-            onCueToStart={() => cueToStart('B')}
+            onCueDown={() => cuePress('B')}
+            onCueUp={() => cueRelease('B')}
             onHotCue={(index) => triggerHotCue('B', index)}
+            onJogBend={(degrees) => jogBend('B', degrees)}
             onLoad={(file) => loadFileToDeck('B', file)}
             onLoopExit={() => exitLoop('B')}
             onLoopIn={() => setLoopIn('B')}
             onLoopOut={() => setLoopOut('B')}
+            onNudge={(direction) => nudgeDeck('B', direction)}
             onPitchChange={(value) => setPitch('B', value)}
             onSeek={(seconds) => seek('B', seconds)}
             onSync={() => syncDeck('B')}

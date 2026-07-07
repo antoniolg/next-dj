@@ -27,6 +27,7 @@ export const MAX_PITCH_PERCENT = 8
 const MIN_EQ_DB = -26
 const MAX_EQ_DB = 6
 const HOT_CUE_STORAGE_KEY = 'nextdj.hotCues'
+const CUE_POINT_STORAGE_KEY = 'nextdj.cuePoints'
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
@@ -52,12 +53,16 @@ export class Deck {
   private startContextTime = 0
   private offsetSeconds = 0
   private playbackRate = 1
+  private basePlaybackRate = 1
+  private cuePreviewing = false
+  private pitchBendTimeout: number | null = null
 
   duration = 0
   metadata: TrackMetadata = { name: 'No track loaded', bpm: 0, firstBeatOffset: 0 }
   waveform: WaveformData | null = null
   hotCues: Array<HotCue | null> = [null, null, null, null]
   loop: LoopState = { start: null, end: null, active: false }
+  cuePoint = 0
 
   constructor(context: AudioContext) {
     this.context = context
@@ -113,6 +118,7 @@ export class Deck {
       firstBeatOffset
     }
     this.hotCues = this.loadHotCues(this.metadata.name)
+    this.cuePoint = this.loadCuePoint(this.metadata.name)
     this.loop = { start: null, end: null, active: false }
   }
 
@@ -164,12 +170,78 @@ export class Deck {
     }
 
     this.playbackRate = 1 + clamped / 100
+    this.basePlaybackRate = this.playbackRate
 
     if (this.source) {
       this.source.playbackRate.setValueAtTime(this.playbackRate, this.context.currentTime)
     }
 
     return clamped
+  }
+
+  nudge(seconds: number): void {
+    this.seek(this.getPosition() + seconds)
+  }
+
+  pitchBend(percent: number, durationMs: number): void {
+    if (!this.source || durationMs <= 0) {
+      return
+    }
+
+    if (this.pitchBendTimeout !== null) {
+      window.clearTimeout(this.pitchBendTimeout)
+      this.pitchBendTimeout = null
+    }
+
+    const bentRate = this.basePlaybackRate * (1 + percent / 100)
+    this.playbackRate = bentRate
+    this.source.playbackRate.setValueAtTime(bentRate, this.context.currentTime)
+
+    this.pitchBendTimeout = window.setTimeout(() => {
+      this.offsetSeconds = this.getPosition()
+      this.startContextTime = this.context.currentTime
+      this.playbackRate = this.basePlaybackRate
+      this.source?.playbackRate.setValueAtTime(this.basePlaybackRate, this.context.currentTime)
+      this.pitchBendTimeout = null
+    }, durationMs)
+  }
+
+  setCuePoint(seconds: number = this.getPosition()): void {
+    this.cuePoint = this.clampPosition(seconds)
+    this.saveCuePoint()
+  }
+
+  async cuePress(): Promise<void> {
+    if (this.duration <= 0) {
+      return
+    }
+
+    if (this.started) {
+      this.pause()
+      this.seek(this.cuePoint)
+      return
+    }
+
+    const position = this.getPosition()
+
+    if (Math.abs(position - this.cuePoint) > 0.08) {
+      this.setCuePoint(position)
+      this.seek(this.cuePoint)
+      return
+    }
+
+    this.cuePreviewing = true
+    await this.play()
+  }
+
+  cueRelease(): void {
+    if (!this.cuePreviewing) {
+      return
+    }
+
+    this.cuePreviewing = false
+    this.pause()
+    this.seek(this.cuePoint)
   }
 
   getEffectiveBpm(): number {
@@ -372,6 +444,27 @@ export class Deck {
       localStorage.setItem(HOT_CUE_STORAGE_KEY, JSON.stringify(parsed))
     } catch {
       localStorage.setItem(HOT_CUE_STORAGE_KEY, JSON.stringify({ [this.metadata.name]: this.hotCues }))
+    }
+  }
+
+  private loadCuePoint(trackName: string): number {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(CUE_POINT_STORAGE_KEY) ?? '{}') as Record<string, number>
+      const cuePoint = parsed[trackName]
+
+      return typeof cuePoint === 'number' ? this.clampPosition(cuePoint) : 0
+    } catch {
+      return 0
+    }
+  }
+
+  private saveCuePoint(): void {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(CUE_POINT_STORAGE_KEY) ?? '{}') as Record<string, number>
+      parsed[this.metadata.name] = this.cuePoint
+      localStorage.setItem(CUE_POINT_STORAGE_KEY, JSON.stringify(parsed))
+    } catch {
+      localStorage.setItem(CUE_POINT_STORAGE_KEY, JSON.stringify({ [this.metadata.name]: this.cuePoint }))
     }
   }
 
