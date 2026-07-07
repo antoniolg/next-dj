@@ -111,8 +111,11 @@ export function DeckPanel({
   const [padsOpen, setPadsOpen] = useState(false)
   const [loopBeats, setLoopBeats] = useState<4 | 8>(8)
   const isMaster = masterDeckId === deckId
+  const hasMaster = masterDeckId !== null
+  const deckRole = !hasTrack ? 'EMPTY' : isMaster ? 'MASTER' : hasMaster ? 'FOLLOW' : 'READY'
   const canSync = hasTrack && bpm > 0 && masterEffectiveBpm > 0 && masterDeckId !== null && !isMaster
   const phaseMeterOffset = Math.max(-1, Math.min(1, phaseOffset / 0.18))
+  const showPhase = hasTrack && hasMaster && !isMaster
 
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -313,15 +316,15 @@ export function DeckPanel({
       </div>
 
       <div className="phase-strip">
-        <span className={`master-pill ${isMaster ? 'master-pill-lit' : ''}`}>{isMaster ? 'MASTER' : 'FOLLOW'}</span>
-        <div className="phase-meter" aria-label={`Beat phase ${formatPhaseOffset(phaseOffset)}`}>
+        <span className={`master-pill ${isMaster ? 'master-pill-lit' : ''}`}>{deckRole}</span>
+        <div className="phase-meter" aria-label={showPhase ? `Beat phase ${formatPhaseOffset(phaseOffset)}` : 'No active master deck'}>
           <span className="phase-meter-center" />
           <span
             className="phase-meter-dot"
-            style={{ left: `${50 + phaseMeterOffset * 45}%` }}
+            style={{ left: showPhase ? `${50 + phaseMeterOffset * 45}%` : '50%' }}
           />
         </div>
-        <span className="phase-label">{isMaster || !hasTrack ? '--' : formatPhaseOffset(phaseOffset)}</span>
+        <span className="phase-label">{showPhase ? formatPhaseOffset(phaseOffset) : '--'}</span>
       </div>
 
       <div className="deck-control-row">

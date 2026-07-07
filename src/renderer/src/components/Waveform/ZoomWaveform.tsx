@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { WaveformData } from './waveformData'
-import { getPeakAt } from './waveformData'
+import { getLowPeakAt, getPeakAt } from './waveformData'
 
 interface ZoomWaveformProps {
   accent: string
@@ -15,6 +15,7 @@ interface ZoomWaveformProps {
 const DEFAULT_WINDOW_SECONDS = 8
 const MAX_VISIBLE_BEATS = 16
 const PLAYHEAD_RATIO = 0.38
+const LOW_BAND_GAIN = 1.5
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
@@ -123,6 +124,8 @@ function drawCanvas(
   context.stroke()
 
   if (waveform && duration > 0) {
+    context.lineWidth = Math.max(1, dpr)
+
     for (let x = 0; x < width; x += dpr) {
       const time = windowStart + (x / width) * windowSeconds
 
@@ -131,16 +134,23 @@ function drawCanvas(
       }
 
       const bucketIndex = (time / duration) * waveform.zoom.bucketCount
-      const { min, max } = getPeakAt(waveform.zoom, bucketIndex)
-      const minY = centerY + min * centerY * 0.9
-      const maxY = centerY + max * centerY * 0.9
+      const played = x <= playheadX
 
-      context.globalAlpha = x <= playheadX ? 0.48 : 0.95
+      const { min, max } = getPeakAt(waveform.zoom, bucketIndex)
+      context.globalAlpha = played ? 0.16 : 0.32
       context.strokeStyle = accent
-      context.lineWidth = Math.max(1, dpr)
       context.beginPath()
-      context.moveTo(x, minY)
-      context.lineTo(x, maxY)
+      context.moveTo(x, centerY + min * centerY * 0.9)
+      context.lineTo(x, centerY + max * centerY * 0.9)
+      context.stroke()
+
+      const low = getLowPeakAt(waveform.zoom, bucketIndex)
+      const lowMin = clamp(low.min * LOW_BAND_GAIN, -1, 1)
+      const lowMax = clamp(low.max * LOW_BAND_GAIN, -1, 1)
+      context.globalAlpha = played ? 0.5 : 0.95
+      context.beginPath()
+      context.moveTo(x, centerY + lowMin * centerY * 0.9)
+      context.lineTo(x, centerY + lowMax * centerY * 0.9)
       context.stroke()
     }
   }

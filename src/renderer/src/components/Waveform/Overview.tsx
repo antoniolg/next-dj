@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { WaveformData } from './waveformData'
-import { getPeakAt } from './waveformData'
+import { getLowPeakAt, getPeakAt } from './waveformData'
+
+const LOW_BAND_GAIN = 1.5
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
 
 interface OverviewProps {
   accent: string
@@ -60,18 +66,27 @@ function drawCanvas(
   const playedX = playedRatio * width
   const centerY = height / 2
 
+  context.lineWidth = Math.max(1, dpr)
+
   for (let x = 0; x < width; x += dpr) {
     const bucketIndex = (x / width) * waveform.overview.bucketCount
-    const { min, max } = getPeakAt(waveform.overview, bucketIndex)
-    const minY = centerY + min * centerY * 0.84
-    const maxY = centerY + max * centerY * 0.84
+    const played = x <= playedX
 
-    context.globalAlpha = x <= playedX ? 0.55 : 1
+    const { min, max } = getPeakAt(waveform.overview, bucketIndex)
+    context.globalAlpha = played ? 0.24 : 0.42
     context.strokeStyle = accent
-    context.lineWidth = Math.max(1, dpr)
     context.beginPath()
-    context.moveTo(x, minY)
-    context.lineTo(x, maxY)
+    context.moveTo(x, centerY + min * centerY * 0.84)
+    context.lineTo(x, centerY + max * centerY * 0.84)
+    context.stroke()
+
+    const low = getLowPeakAt(waveform.overview, bucketIndex)
+    const lowMin = clamp(low.min * LOW_BAND_GAIN, -1, 1)
+    const lowMax = clamp(low.max * LOW_BAND_GAIN, -1, 1)
+    context.globalAlpha = played ? 0.55 : 1
+    context.beginPath()
+    context.moveTo(x, centerY + lowMin * centerY * 0.84)
+    context.lineTo(x, centerY + lowMax * centerY * 0.84)
     context.stroke()
   }
 
