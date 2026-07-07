@@ -56,7 +56,7 @@ export function App(): JSX.Element {
     setCueDevice,
     refreshOutputDevices
   } = useEngine()
-  const { tracks, addFiles, getTrack } = useLibrary()
+  const { tracks, addFiles, addYouTubeTracks, resolveTrackFile, getTrack } = useLibrary()
 
   const loadFileToDeck = useCallback(
     async (deckId: 'A' | 'B', file: File): Promise<void> => {
@@ -68,9 +68,13 @@ export function App(): JSX.Element {
 
   const loadLibraryTrack = useCallback(
     async (deckId: 'A' | 'B', track: LibraryTrack): Promise<void> => {
-      await loadTrack(deckId, track.file)
+      const file = await resolveTrackFile(track)
+
+      if (file) {
+        await loadTrack(deckId, file)
+      }
     },
-    [loadTrack]
+    [loadTrack, resolveTrackFile]
   )
 
   const loadLibraryTrackById = useCallback(
@@ -324,7 +328,12 @@ export function App(): JSX.Element {
         </div>
 
         <div className="px-3 pb-3">
-          <LibraryPanel tracks={tracks} onAddFiles={addFiles} onLoadTrack={loadLibraryTrack} />
+          <LibraryPanel
+            tracks={tracks}
+            onAddFiles={addFiles}
+            onAddYouTubeTracks={addYouTubeTracks}
+            onLoadTrack={loadLibraryTrack}
+          />
         </div>
       </div>
 

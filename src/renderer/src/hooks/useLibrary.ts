@@ -7,7 +7,9 @@ export interface LibraryTrack {
   duration: number
   bpm: number
   firstBeatOffset: number
-  file: File
+  file?: File
+  source: 'local' | 'youtube'
+  youtubeUrl?: string
 }
 
 function isAudioFile(file: File): boolean {
@@ -61,6 +63,8 @@ async function readBpm(file: File): Promise<{ bpm: number; firstBeatOffset: numb
 export function useLibrary(): {
   tracks: LibraryTrack[]
   addFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
+  addYouTubeTracks: (youtubeTracks: YouTubeTrackSummary[]) => LibraryTrack[]
+  resolveTrackFile: (track: LibraryTrack) => Promise<File | null>
   getTrack: (trackId: string) => LibraryTrack | undefined
 } {
   const [tracks, setTracks] = useState<LibraryTrack[]>([])
@@ -73,7 +77,8 @@ export function useLibrary(): {
         title: file.name,
         duration: await readDuration(file),
         ...(await readBpm(file)),
-        file
+        file,
+        source: 'local' as const
       }))
     )
 
@@ -87,10 +92,75 @@ export function useLibrary(): {
     return nextTracks
   }, [])
 
+  const addYouTubeTracks = useCallback((youtubeTracks: YouTubeTrackSummary[]): LibraryTrack[] => {
+    const nextTracks = youtubeTracks.map((track) => ({
+      id: `youtube-${track.id}`,
+      title: track.title,
+      duration: track.duration,
+      bpm: 0,
+      firstBeatOffset: 0,
+      source: 'youtube' as const,
+      youtubeUrl: track.url
+    }))
+
+    setTracks((current) => {
+      const existingIds = new Set(current.map((track) => track.id))
+      const uniqueNextTracks = nextTracks.filter((track) => !existingIds.has(track.id))
+
+      return [...current, ...uniqueNextTracks]
+    })
+
+    return nextTracks
+  }, [])
+
+  const resolveTrackFile = useCallback(async (track: LibraryTrack): Promise<File | null> => {
+    if (track.file) {
+      return track.file
+    }
+
+    if (track.source !== 'youtube' || !track.youtubeUrl) {
+      return null
+    }
+
+    const downloader = window.nextdj?.downloadYouTubeAudio
+
+    if (!downloader) {
+      return null
+    }
+
+    const result = await downloader(track.youtubeUrl)
+
+    if (!result.file) {
+      return null
+    }
+
+    const file = new File([result.file.data], result.file.name, {
+      lastModified: result.file.lastModified,
+      type: 'audio/mpeg'
+    })
+    const duration = await readDuration(file)
+    const bpm = await readBpm(file)
+
+    setTracks((current) =>
+      current.map((currentTrack) =>
+        currentTrack.id === track.id
+          ? {
+              ...currentTrack,
+              duration,
+              ...bpm,
+              file
+            }
+          : currentTrack
+      )
+    )
+
+    return file
+  }, [])
+
   const getTrack = useCallback(
     (trackId: string): LibraryTrack | undefined => tracks.find((track) => track.id === trackId),
     [tracks]
   )
 
-  return { tracks, addFiles, getTrack }
+  return { tracks, addFiles, addYouTubeTracks, resolveTrackFile, getTrack }
 }

@@ -474,6 +474,11 @@ select {
   color: #fff;
 }
 
+.icon-button-active {
+  border-color: rgba(34, 211, 238, 0.42);
+  color: #67e8f9;
+}
+
 .transport-row {
   display: grid;
   flex: none;
@@ -1429,6 +1434,58 @@ select {
     0 3px 8px rgba(0, 0, 0, 0.3);
 }
 
+.youtube-import {
+  display: grid;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr) auto minmax(180px, 0.55fr);
+  gap: 0.45rem;
+  align-items: center;
+  margin-top: 0.45rem;
+}
+
+.youtube-import input {
+  min-width: 0;
+  height: 30px;
+  border: 1px solid rgba(212, 220, 232, 0.11);
+  border-radius: 7px;
+  background: #05080b;
+  color: #e2e8f0;
+  outline: none;
+  padding: 0 0.65rem;
+}
+
+.youtube-import input:focus {
+  border-color: rgba(34, 211, 238, 0.45);
+}
+
+.youtube-import button {
+  height: 30px;
+  border: 1px solid rgba(34, 211, 238, 0.32);
+  border-radius: 7px;
+  background: linear-gradient(180deg, #113342, #0a1720);
+  color: #dffbff;
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 0 0.8rem;
+}
+
+.youtube-import button:disabled {
+  border-color: rgba(148, 163, 184, 0.12);
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.youtube-import-status {
+  min-width: 0;
+  overflow: hidden;
+  color: #8b9aae;
+  font-size: 0.72rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .library-table-wrap {
   flex: 1;
   min-height: 0;
@@ -1468,6 +1525,16 @@ select {
   color: #e2e8f0;
   font-size: 0.86rem;
   font-weight: 600;
+}
+
+.library-track-source {
+  display: inline-flex;
+  margin-top: 0.12rem;
+  color: #67e8f9;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .library-col-time {

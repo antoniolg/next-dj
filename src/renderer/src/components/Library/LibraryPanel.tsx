@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, Info, Music, Plus } from 'lucide-react'
+import { ChevronDown, ChevronUp, Info, Link, Music, Plus } from 'lucide-react'
 import type { DeckId } from '../../hooks/useEngine'
 import type { LibraryTrack } from '../../hooks/useLibrary'
 
 interface LibraryPanelProps {
   tracks: LibraryTrack[]
   onAddFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
+  onAddYouTubeTracks: (youtubeTracks: YouTubeTrackSummary[]) => LibraryTrack[]
   onLoadTrack: (deckId: DeckId, track: LibraryTrack) => Promise<void>
 }
 
@@ -44,6 +45,7 @@ function formatBpm(bpm: number): string {
 export function LibraryPanel({
   tracks,
   onAddFiles,
+  onAddYouTubeTracks,
   onLoadTrack
 }: LibraryPanelProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -51,6 +53,10 @@ export function LibraryPanel({
   const [isDropTarget, setIsDropTarget] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1')
   const [height, setHeight] = useState(readInitialHeight)
+  const [youtubeOpen, setYoutubeOpen] = useState(false)
+  const [youtubeUrl, setYoutubeUrl] = useState('')
+  const [youtubeStatus, setYoutubeStatus] = useState<string | null>(null)
+  const [isImportingYoutube, setIsImportingYoutube] = useState(false)
 
   useEffect(() => {
     localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0')
@@ -156,6 +162,35 @@ export function LibraryPanel({
     }
   }, [])
 
+  const handleYoutubeImport = useCallback(async (): Promise<void> => {
+    const listYouTubeTracks = window.nextdj?.listYouTubeTracks
+
+    if (!listYouTubeTracks) {
+      setYoutubeStatus('YouTube import is not available in this build.')
+      return
+    }
+
+    setIsImportingYoutube(true)
+    setYoutubeStatus('Reading playlist...')
+
+    try {
+      const youtubeTracks = await listYouTubeTracks(youtubeUrl)
+
+      if (youtubeTracks.length === 0) {
+        setYoutubeStatus('No tracks were found in this playlist.')
+        return
+      }
+
+      onAddYouTubeTracks(youtubeTracks)
+      setYoutubeStatus(`Listed ${youtubeTracks.length} track${youtubeTracks.length === 1 ? '' : 's'}. Downloads happen on load.`)
+      setYoutubeUrl('')
+    } catch (error) {
+      setYoutubeStatus(error instanceof Error ? error.message : 'Could not read this playlist.')
+    } finally {
+      setIsImportingYoutube(false)
+    }
+  }, [onAddYouTubeTracks, youtubeUrl])
+
   return (
     <section
       className={`console-panel library-panel ${collapsed ? 'library-collapsed' : ''} ${isDropTarget ? 'library-panel-drop-target' : ''}`}
@@ -192,6 +227,15 @@ export function LibraryPanel({
         </div>
         <div className="library-actions">
           <button
+            aria-label="Import YouTube Music"
+            className={`icon-button ${youtubeOpen ? 'icon-button-active' : ''}`}
+            title="Import YouTube Music"
+            type="button"
+            onClick={() => setYoutubeOpen((current) => !current)}
+          >
+            <Link size={15} strokeWidth={2.4} />
+          </button>
+          <button
             aria-label="Add tracks"
             className="icon-button"
             title="Add tracks"
@@ -221,14 +265,38 @@ export function LibraryPanel({
       </div>
 
       {collapsed ? null : (
-        <div className="library-table-wrap">
-          {tracks.length === 0 ? (
-            <div className="library-empty">
-              <Music size={22} strokeWidth={1.6} />
-              <p>Drop audio here or add tracks to build your crate.</p>
-            </div>
-          ) : (
-            <table className="library-table">
+        <>
+          {youtubeOpen ? (
+            <form
+              className="youtube-import"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void handleYoutubeImport()
+              }}
+            >
+              <input
+                aria-label="YouTube Music playlist URL"
+                disabled={isImportingYoutube}
+                placeholder="Paste YouTube Music playlist URL"
+                type="url"
+                value={youtubeUrl}
+                onChange={(event) => setYoutubeUrl(event.currentTarget.value)}
+              />
+              <button disabled={isImportingYoutube || youtubeUrl.trim().length === 0} type="submit">
+                {isImportingYoutube ? 'Reading' : 'Import'}
+              </button>
+              {youtubeStatus ? <span className="youtube-import-status">{youtubeStatus}</span> : null}
+            </form>
+          ) : null}
+
+          <div className="library-table-wrap">
+            {tracks.length === 0 ? (
+              <div className="library-empty">
+                <Music size={22} strokeWidth={1.6} />
+                <p>Drop audio here or add tracks to build your crate.</p>
+              </div>
+            ) : (
+              <table className="library-table">
               <thead>
                 <tr>
                   <th>Title</th>
@@ -248,6 +316,7 @@ export function LibraryPanel({
                       <span className="block truncate" title={track.title}>
                         {track.title}
                       </span>
+                      {track.source === 'youtube' && !track.file ? <span className="library-track-source">YouTube</span> : null}
                     </td>
                     <td className="library-col-time">{formatTime(track.duration)}</td>
                     <td className="library-col-bpm">{formatBpm(track.bpm)}</td>
@@ -274,9 +343,10 @@ export function LibraryPanel({
                   </tr>
                 ))}
               </tbody>
-            </table>
-          )}
-        </div>
+              </table>
+            )}
+          </div>
+        </>
       )}
     </section>
   )
