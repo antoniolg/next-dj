@@ -31,6 +31,12 @@ const MAX_EQ_DB = 6
 // picks it up"; the buffer offset is advanced to match, keeping restarts
 // (seek, nudge, loop) gap-free relative to the other deck.
 const START_SCHEDULE_DELAY = 0.01
+// Jog turns while playing accumulate a pending position shift that a rate
+// bend chases smoothly (no source restarts, so no clicks).
+const JOG_CHASE_SECONDS = 0.15
+const JOG_MAX_RATE_BEND = 0.35
+const JOG_TICK_MS = 40
+const MIN_JOG_RATE = 0.05
 const HOT_CUE_STORAGE_KEY = 'nextdj.hotCues'
 const CUE_POINT_STORAGE_KEY = 'nextdj.cuePoints'
 
@@ -60,7 +66,9 @@ export class Deck {
   private playbackRate = 1
   private basePlaybackRate = 1
   private cuePreviewing = false
-  private pitchBendTimeout: number | null = null
+  private jogPendingSeconds = 0
+  private jogIntervalId: number | null = null
+  private jogLastFoldTime = 0
 
   duration = 0
   metadata: TrackMetadata = { name: 'No track loaded', bpm: 0, firstBeatOffset: 0 }
@@ -188,32 +196,18 @@ export class Deck {
     this.seek(this.getPosition() + seconds)
   }
 
-  pitchBend(percent: number, durationMs: number): void {
-    if (!this.source || durationMs <= 0) {
+  jogShift(seconds: number): void {
+    if (!this.started) {
+      this.nudge(seconds)
       return
     }
 
-    if (this.pitchBendTimeout !== null) {
-      window.clearTimeout(this.pitchBendTimeout)
-      this.pitchBendTimeout = null
+    this.jogPendingSeconds += seconds
+    this.applyJogRate()
+
+    if (this.jogIntervalId === null) {
+      this.jogIntervalId = window.setInterval(() => this.jogTick(), JOG_TICK_MS)
     }
-
-    // Fold elapsed time at the old rate into the offset before changing the
-    // rate; otherwise getPosition() applies the new rate retroactively.
-    this.offsetSeconds = this.getPosition()
-    this.startContextTime = this.context.currentTime
-
-    const bentRate = this.basePlaybackRate * (1 + percent / 100)
-    this.playbackRate = bentRate
-    this.source.playbackRate.setValueAtTime(bentRate, this.context.currentTime)
-
-    this.pitchBendTimeout = window.setTimeout(() => {
-      this.offsetSeconds = this.getPosition()
-      this.startContextTime = this.context.currentTime
-      this.playbackRate = this.basePlaybackRate
-      this.source?.playbackRate.setValueAtTime(this.basePlaybackRate, this.context.currentTime)
-      this.pitchBendTimeout = null
-    }, durationMs)
   }
 
   setCuePoint(seconds: number = this.getPosition()): void {
@@ -396,7 +390,61 @@ export class Deck {
     source.start(when, offset)
   }
 
+  // Fold elapsed time at the current rate into the offset, then bend the
+  // rate so the pending jog shift is consumed within JOG_CHASE_SECONDS.
+  private applyJogRate(): void {
+    this.offsetSeconds = this.getPosition()
+    this.startContextTime = this.context.currentTime
+    this.jogLastFoldTime = this.context.currentTime
+
+    const bend = clamp(
+      this.jogPendingSeconds / JOG_CHASE_SECONDS,
+      -JOG_MAX_RATE_BEND,
+      JOG_MAX_RATE_BEND
+    )
+    this.playbackRate = Math.max(MIN_JOG_RATE, this.basePlaybackRate + bend)
+    this.source?.playbackRate.setValueAtTime(this.playbackRate, this.context.currentTime)
+  }
+
+  private jogTick(): void {
+    const consumed =
+      (this.playbackRate - this.basePlaybackRate) *
+      (this.context.currentTime - this.jogLastFoldTime)
+    this.jogPendingSeconds -= consumed
+
+    if (!this.started || Math.abs(this.jogPendingSeconds) < 0.0005) {
+      this.endJog()
+      return
+    }
+
+    this.applyJogRate()
+  }
+
+  private endJog(): void {
+    if (this.jogIntervalId !== null) {
+      window.clearInterval(this.jogIntervalId)
+      this.jogIntervalId = null
+    }
+
+    this.jogPendingSeconds = 0
+
+    if (this.started) {
+      this.offsetSeconds = this.getPosition()
+      this.startContextTime = this.context.currentTime
+    }
+
+    this.playbackRate = this.basePlaybackRate
+    this.source?.playbackRate.setValueAtTime(this.basePlaybackRate, this.context.currentTime)
+  }
+
   private stopSource(suppressEnded: boolean): void {
+    if (this.jogIntervalId !== null) {
+      window.clearInterval(this.jogIntervalId)
+      this.jogIntervalId = null
+      this.jogPendingSeconds = 0
+      this.playbackRate = this.basePlaybackRate
+    }
+
     if (!this.source) {
       this.started = false
       return

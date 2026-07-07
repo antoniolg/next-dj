@@ -34,9 +34,7 @@ const MASTER_OUTPUT_STORAGE_KEY = 'nextdj.masterOutputDeviceId'
 const CUE_OUTPUT_STORAGE_KEY = 'nextdj.cueOutputDeviceId'
 const CONTROLS_STORAGE_KEY = 'nextdj.controls.v1'
 const NUDGE_SECONDS = 0.035
-const JOG_NUDGE_SECONDS_PER_DEGREE = 0.001
-const PITCH_BEND_PERCENT = 3.5
-const PITCH_BEND_MS = 140
+const JOG_SECONDS_PER_DEGREE = 0.001
 
 interface PersistedControls {
   channels: Record<DeckId, Pick<ChannelState, 'trim' | 'eq' | 'volume'>>
@@ -540,14 +538,7 @@ export function useEngine(): {
   const jogBend = useCallback(
     (deckId: DeckId, degrees: number): void => {
       const deck = getDeck(deckId)
-
-      if (deck.isPlaying) {
-        const bend = clamp(degrees * 0.18, -PITCH_BEND_PERCENT, PITCH_BEND_PERCENT)
-        deck.pitchBend(bend, PITCH_BEND_MS)
-      } else {
-        deck.nudge(degrees * JOG_NUDGE_SECONDS_PER_DEGREE)
-      }
-
+      deck.jogShift(degrees * JOG_SECONDS_PER_DEGREE)
       setDecks((current) => ({
         ...current,
         [deckId]: getDeckSnapshot(deck, current[deckId].pitch)
