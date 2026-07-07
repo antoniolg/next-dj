@@ -118,9 +118,21 @@ select {
 }
 
 .app-status-item-dots {
-  color: #475569;
-  letter-spacing: 0.18em;
-  padding: 0 0.35rem;
+  gap: 0.3rem;
+  padding: 0 0.85rem 0 0.35rem;
+}
+
+.app-status-dot {
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  background: #2c3543;
+  transition: background 60ms linear, box-shadow 60ms linear;
+}
+
+.app-status-dot-lit {
+  background: var(--status-accent, #22d3ee);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--status-accent, #22d3ee), transparent 40%);
 }
 
 .console-grid {

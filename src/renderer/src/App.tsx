@@ -330,6 +330,20 @@ export function App(): JSX.Element {
     triggerHotCue
   ])
 
+  const masterDeck = masterDeckId ? decks[masterDeckId] : null
+  const masterAccent = masterDeckId === 'B' ? '#f59e0b' : '#22d3ee'
+  let masterBeatIndex = -1
+
+  if (masterDeck && masterDeck.bpm > 0 && masterDeck.isPlaying) {
+    const beatSeconds = 60 / masterDeck.bpm
+    masterBeatIndex =
+      Math.floor((masterDeck.position - masterDeck.firstBeatOffset) / beatSeconds) % 4
+
+    if (masterBeatIndex < 0) {
+      masterBeatIndex += 4
+    }
+  }
+
   return (
     <main className="flex h-screen flex-col overflow-hidden text-slate-100">
       <div className="console-shell flex min-h-0 flex-1 flex-col">
@@ -349,9 +363,18 @@ export function App(): JSX.Element {
               <Activity size={15} strokeWidth={2.2} />
             </button>
             <div className="app-status-group">
-              <span className="app-status-item">120.0 BPM</span>
-              <span className="app-status-item app-status-item-dots">•••</span>
-              <span className="app-status-item app-status-item-muted">MIDI</span>
+              <span className={`app-status-item ${masterDeck ? '' : 'app-status-item-muted'}`}>
+                {masterDeck ? `${masterDeck.effectiveBpm.toFixed(1)} BPM` : '--.- BPM'}
+              </span>
+              <span aria-hidden="true" className="app-status-item app-status-item-dots">
+                {[0, 1, 2, 3].map((beat) => (
+                  <span
+                    key={beat}
+                    className={`app-status-dot ${beat === masterBeatIndex ? 'app-status-dot-lit' : ''}`}
+                    style={{ '--status-accent': masterAccent } as React.CSSProperties}
+                  />
+                ))}
+              </span>
             </div>
             <button
               aria-label="Open output settings"
