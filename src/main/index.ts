@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, session } from 'electron'
 import { execFile } from 'node:child_process'
 import { mkdir, readFile, readdir, stat } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -7,6 +7,7 @@ import { promisify } from 'node:util'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const execFileAsync = promisify(execFile)
+const isDev = Boolean(process.env.ELECTRON_RENDERER_URL)
 
 interface YouTubeAudioFile {
   data: ArrayBuffer
@@ -238,6 +239,16 @@ function createWindow(): void {
     }
   })
 
+  if (!isDev) {
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      const isReloadKey = input.key.toLowerCase() === 'r' && (input.meta || input.control)
+
+      if (isReloadKey) {
+        event.preventDefault()
+      }
+    })
+  }
+
   if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
@@ -246,6 +257,10 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  if (!isDev) {
+    Menu.setApplicationMenu(null)
+  }
+
   session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
     callback(permission === 'media')
   })

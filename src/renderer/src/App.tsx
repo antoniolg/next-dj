@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Activity, Settings, X } from 'lucide-react'
 import { DeckPanel } from './components/Deck/DeckPanel'
 import { LibraryPanel } from './components/Library/LibraryPanel'
@@ -10,6 +10,9 @@ import { useLibrary, type LibraryTrack } from './hooks/useLibrary'
 const APP_VERSION = '1.2.0'
 const CROSSFADER_NUDGE = 0.08
 const PITCH_NUDGE = 0.1
+const DECK_TRACK_STORAGE_KEY = 'nextdj.deckTracks.v1'
+
+type DeckTrackSelection = Partial<Record<'A' | 'B', string>>
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -27,6 +30,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 export function App(): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const restoredDecksRef = useRef(false)
   const {
     engine,
     decks,
@@ -56,14 +60,27 @@ export function App(): JSX.Element {
     setCueDevice,
     refreshOutputDevices
   } = useEngine()
-  const { tracks, addFiles, addYouTubeTracks, resolveTrackFile, getTrack } = useLibrary()
+  const { tracks, isReady: libraryReady, addFiles, addYouTubeTracks, resolveTrackFile, getTrack } = useLibrary()
+
+  const persistDeckTrack = useCallback((deckId: 'A' | 'B', trackId: string): void => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(DECK_TRACK_STORAGE_KEY) ?? '{}') as DeckTrackSelection
+      localStorage.setItem(DECK_TRACK_STORAGE_KEY, JSON.stringify({ ...parsed, [deckId]: trackId }))
+    } catch {
+      localStorage.setItem(DECK_TRACK_STORAGE_KEY, JSON.stringify({ [deckId]: trackId }))
+    }
+  }, [])
 
   const loadFileToDeck = useCallback(
     async (deckId: 'A' | 'B', file: File): Promise<void> => {
-      await addFiles([file])
+      const [track] = await addFiles([file])
       await loadTrack(deckId, file)
+
+      if (track) {
+        persistDeckTrack(deckId, track.id)
+      }
     },
-    [addFiles, loadTrack]
+    [addFiles, loadTrack, persistDeckTrack]
   )
 
   const loadLibraryTrack = useCallback(
@@ -72,9 +89,10 @@ export function App(): JSX.Element {
 
       if (file) {
         await loadTrack(deckId, file)
+        persistDeckTrack(deckId, track.id)
       }
     },
-    [loadTrack, resolveTrackFile]
+    [loadTrack, persistDeckTrack, resolveTrackFile]
   )
 
   const loadLibraryTrackById = useCallback(
@@ -94,6 +112,29 @@ export function App(): JSX.Element {
   useEffect(() => {
     document.title = 'NextDJ'
   }, [])
+
+  useEffect(() => {
+    if (!libraryReady || restoredDecksRef.current) {
+      return
+    }
+
+    restoredDecksRef.current = true
+
+    try {
+      const parsed = JSON.parse(localStorage.getItem(DECK_TRACK_STORAGE_KEY) ?? '{}') as DeckTrackSelection
+
+      ;(['A', 'B'] as const).forEach((deckId) => {
+        const trackId = parsed[deckId]
+        const track = trackId ? getTrack(trackId) : undefined
+
+        if (track) {
+          void loadLibraryTrack(deckId, track)
+        }
+      })
+    } catch {
+      localStorage.removeItem(DECK_TRACK_STORAGE_KEY)
+    }
+  }, [getTrack, libraryReady, loadLibraryTrack])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
