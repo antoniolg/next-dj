@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { FolderOpen, MoreHorizontal, Pause, Play } from 'lucide-react'
-import type { HotCue, LoopState } from '../../audio/deck'
+import { MAX_PITCH_PERCENT, type HotCue, type LoopState } from '../../audio/deck'
 import { Overview } from '../Waveform/Overview'
 import { ZoomWaveform } from '../Waveform/ZoomWaveform'
 import type { WaveformData } from '../Waveform/waveformData'
@@ -114,8 +114,10 @@ export function DeckPanel({
   const hasMaster = masterDeckId !== null
   const deckRole = !hasTrack ? 'EMPTY' : isMaster ? 'MASTER' : hasMaster ? 'FOLLOW' : 'READY'
   const canSync = hasTrack && bpm > 0 && masterEffectiveBpm > 0 && masterDeckId !== null && !isMaster
+  const requiredSyncPitch = bpm > 0 && masterEffectiveBpm > 0 ? (masterEffectiveBpm / bpm - 1) * 100 : 0
+  const syncOutOfRange = canSync && Math.abs(requiredSyncPitch) > MAX_PITCH_PERCENT
   const phaseMeterOffset = Math.max(-1, Math.min(1, phaseOffset / 0.18))
-  const showPhase = hasTrack && hasMaster && !isMaster
+  const showPhase = hasTrack && hasMaster && !isMaster && isPlaying
 
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
@@ -300,9 +302,15 @@ export function DeckPanel({
             onChange={onPitchChange}
           />
           <button
-            className={`led-button ${syncFlashing ? 'led-button-flash' : ''} `}
+            className={`led-button ${syncFlashing ? 'led-button-flash' : ''} ${syncOutOfRange ? 'led-button-warn' : ''}`}
             disabled={isLoading || !canSync}
-            title={canSync ? 'Match BPM and beat with the master deck' : 'Load two analyzed tracks to sync'}
+            title={
+              !canSync
+                ? 'Load two analyzed tracks to sync'
+                : syncOutOfRange
+                  ? `Master tempo needs ${requiredSyncPitch.toFixed(1)}% pitch (range is ±${MAX_PITCH_PERCENT}%) — sync will only get close`
+                  : 'Match BPM and beat with the master deck (starts playback if stopped)'
+            }
             type="button"
             onClick={handleSyncClick}
           >

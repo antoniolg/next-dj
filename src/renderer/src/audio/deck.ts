@@ -26,6 +26,11 @@ export const MAX_PITCH_PERCENT = 8
 
 const MIN_EQ_DB = -26
 const MAX_EQ_DB = 6
+// Sources are scheduled this far ahead so playback starts exactly when the
+// position accounting says it does, instead of "whenever the render thread
+// picks it up"; the buffer offset is advanced to match, keeping restarts
+// (seek, nudge, loop) gap-free relative to the other deck.
+const START_SCHEDULE_DELAY = 0.01
 const HOT_CUE_STORAGE_KEY = 'nextdj.hotCues'
 const CUE_POINT_STORAGE_KEY = 'nextdj.cuePoints'
 
@@ -193,6 +198,11 @@ export class Deck {
       this.pitchBendTimeout = null
     }
 
+    // Fold elapsed time at the old rate into the offset before changing the
+    // rate; otherwise getPosition() applies the new rate retroactively.
+    this.offsetSeconds = this.getPosition()
+    this.startContextTime = this.context.currentTime
+
     const bentRate = this.basePlaybackRate * (1 + percent / 100)
     this.playbackRate = bentRate
     this.source.playbackRate.setValueAtTime(bentRate, this.context.currentTime)
@@ -323,7 +333,10 @@ export class Deck {
     const position = this.getPosition()
 
     if (position >= this.loop.end) {
-      this.seek(this.loop.start)
+      // Carry the overshoot past the loop end into the restart so the loop
+      // stays in phase despite the coarse tick granularity.
+      const loopLength = this.loop.end - this.loop.start
+      this.seek(this.loop.start + ((position - this.loop.end) % loopLength))
     }
   }
 
@@ -346,7 +359,7 @@ export class Deck {
       return this.clampPosition(this.offsetSeconds)
     }
 
-    const elapsed = (this.context.currentTime - this.startContextTime) * this.playbackRate
+    const elapsed = Math.max(0, this.context.currentTime - this.startContextTime) * this.playbackRate
     return this.clampPosition(this.offsetSeconds + elapsed)
   }
 
@@ -356,7 +369,8 @@ export class Deck {
     }
 
     const source = this.context.createBufferSource()
-    const offset = this.clampPosition(offsetSeconds)
+    const when = this.context.currentTime + START_SCHEDULE_DELAY
+    const offset = this.clampPosition(offsetSeconds + START_SCHEDULE_DELAY * this.playbackRate)
 
     source.buffer = this.buffer
     source.playbackRate.value = this.playbackRate
@@ -377,9 +391,9 @@ export class Deck {
     this.source = source
     this.started = true
     this.offsetSeconds = offset
-    this.startContextTime = this.context.currentTime
+    this.startContextTime = when
     this.suppressEnded = false
-    source.start(0, offset)
+    source.start(when, offset)
   }
 
   private stopSource(suppressEnded: boolean): void {

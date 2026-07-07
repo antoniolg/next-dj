@@ -52,25 +52,27 @@ function positiveModulo(value: number, modulus: number): number {
   return ((value % modulus) + modulus) % modulus
 }
 
-function normalizePhaseOffset(seconds: number, beatSeconds: number): number {
-  const phase = positiveModulo(seconds, beatSeconds)
-  return phase > beatSeconds / 2 ? phase - beatSeconds : phase
+// Positions are in track time, where beats are spaced by the native BPM
+// regardless of playback rate — so each deck's phase must be measured as a
+// fraction of its own beat grid before the two are compared.
+function getBeatFraction(position: number, firstBeatOffset: number, nativeBpm: number): number {
+  return positiveModulo(((position - firstBeatOffset) * nativeBpm) / 60, 1)
 }
 
-function getBeatPhase(position: number, firstBeatOffset: number, beatSeconds: number): number {
-  return positiveModulo(position - firstBeatOffset, beatSeconds)
+function normalizeFractionOffset(fraction: number): number {
+  const wrapped = positiveModulo(fraction, 1)
+  return wrapped > 0.5 ? wrapped - 1 : wrapped
 }
 
 function getPhaseOffsetSeconds(deck: DeckState, masterDeck: DeckState): number {
-  if (deck.effectiveBpm <= 0 || masterDeck.effectiveBpm <= 0) {
+  if (deck.bpm <= 0 || masterDeck.bpm <= 0 || masterDeck.effectiveBpm <= 0) {
     return 0
   }
 
-  const beatSeconds = 60 / masterDeck.effectiveBpm
-  const deckPhase = getBeatPhase(deck.position, deck.firstBeatOffset, beatSeconds)
-  const masterPhase = getBeatPhase(masterDeck.position, masterDeck.firstBeatOffset, beatSeconds)
+  const deckFraction = getBeatFraction(deck.position, deck.firstBeatOffset, deck.bpm)
+  const masterFraction = getBeatFraction(masterDeck.position, masterDeck.firstBeatOffset, masterDeck.bpm)
 
-  return normalizePhaseOffset(deckPhase - masterPhase, beatSeconds)
+  return normalizeFractionOffset(deckFraction - masterFraction) * (60 / masterDeck.effectiveBpm)
 }
 
 const createChannelState = (): ChannelState => ({
@@ -488,13 +490,31 @@ export function useEngine(): {
 
       const pitch = clamp((targetBpm / deck.metadata.bpm - 1) * 100, MIN_PITCH_PERCENT, MAX_PITCH_PERCENT)
       deck.setPitch(pitch)
-      const beatSeconds = 60 / targetBpm
-      const deckPhase = getBeatPhase(deck.getPosition(), deck.metadata.firstBeatOffset, beatSeconds)
-      const masterPhase = getBeatPhase(otherDeck.getPosition(), otherDeck.metadata.firstBeatOffset, beatSeconds)
-      const phaseOffset = normalizePhaseOffset(deckPhase - masterPhase, beatSeconds)
 
-      if (Number.isFinite(phaseOffset) && Math.abs(phaseOffset) > 0.005) {
-        deck.nudge(-phaseOffset)
+      const deckFraction = getBeatFraction(
+        deck.getPosition(),
+        deck.metadata.firstBeatOffset,
+        deck.metadata.bpm
+      )
+      const masterFraction = getBeatFraction(
+        otherDeck.getPosition(),
+        otherDeck.metadata.firstBeatOffset,
+        otherDeck.metadata.bpm
+      )
+      // The correction is applied in this deck's track time, so it converts
+      // through this deck's native beat length, not the master's.
+      const nudgeSeconds =
+        normalizeFractionOffset(deckFraction - masterFraction) * (60 / deck.metadata.bpm)
+
+      if (Number.isFinite(nudgeSeconds) && Math.abs(nudgeSeconds) > 0.003) {
+        deck.nudge(-nudgeSeconds)
+      }
+
+      // Starting after the phase alignment keeps the first audible sample on
+      // beat: the seek was instant on a stopped deck and the scheduled start
+      // is accounted as "now".
+      if (!deck.isPlaying && otherDeck.isPlaying) {
+        void deck.play()
       }
 
       setDecks((current) => ({
