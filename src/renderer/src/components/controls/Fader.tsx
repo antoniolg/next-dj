@@ -11,6 +11,8 @@ interface FaderProps {
   step?: number
   centerDetent?: boolean
   disabled?: boolean
+  hideLabel?: boolean
+  showFill?: boolean
   valueFormatter?: (value: number) => string
 }
 
@@ -29,6 +31,8 @@ export function Fader({
   step = 0.01,
   centerDetent = false,
   disabled = false,
+  hideLabel = false,
+  showFill = false,
   valueFormatter = (nextValue) => nextValue.toFixed(2)
 }: FaderProps): JSX.Element {
   const trackRef = useRef<HTMLDivElement | null>(null)
@@ -110,8 +114,8 @@ export function Fader({
   const trackStyle = { '--fader-accent': accent }
 
   const thumbStyle = isVertical
-    ? { bottom: `calc(${percentage * 100}% - 14px)` }
-    : { left: `calc(${percentage * 100}% - 14px)` }
+    ? { bottom: `${percentage * 100}%` }
+    : { left: `${percentage * 100}%` }
 
   return (
     <div className={`fader ${isVertical ? 'fader-vertical' : 'fader-horizontal'} ${disabled ? 'fader-disabled' : ''}`}>
@@ -135,9 +139,15 @@ export function Fader({
         onPointerUp={clearDrag}
       >
         {centerDetent ? <span className="fader-detent" /> : null}
+        {showFill ? (
+          <span
+            className="fader-fill"
+            style={isVertical ? { height: `${percentage * 100}%` } : { width: `${percentage * 100}%` }}
+          />
+        ) : null}
         <span className="fader-thumb" style={thumbStyle} />
       </div>
-      {label ? <span className="fader-label">{label}</span> : null}
+      {label && !hideLabel ? <span className="fader-label">{label}</span> : null}
     </div>
   )
 }

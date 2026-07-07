@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, Music, Plus } from 'lucide-react'
+import { ChevronDown, ChevronUp, Info, Music, Plus } from 'lucide-react'
 import type { DeckId } from '../../hooks/useEngine'
 import type { LibraryTrack } from '../../hooks/useLibrary'
 
@@ -91,7 +91,9 @@ export function LibraryPanel({
         <div className="library-title">
           <Music size={13} strokeWidth={2.4} />
           <span>Crate</span>
-          <span className="library-count">{tracks.length}</span>
+          <span className="library-info" title={`${tracks.length} tracks`}>
+            <Info size={13} strokeWidth={2.2} />
+          </span>
         </div>
         <div className="library-actions">
           <button

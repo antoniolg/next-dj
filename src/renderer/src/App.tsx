@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Keyboard, Settings, X } from 'lucide-react'
+import { Activity, Settings, X } from 'lucide-react'
 import { DeckPanel } from './components/Deck/DeckPanel'
 import { LibraryPanel } from './components/Library/LibraryPanel'
 import { MixerPanel } from './components/Mixer/MixerPanel'
@@ -7,7 +7,7 @@ import { SettingsPanel } from './components/Settings/SettingsPanel'
 import { useEngine } from './hooks/useEngine'
 import { useLibrary, type LibraryTrack } from './hooks/useLibrary'
 
-const APP_VERSION = '0.1.0'
+const APP_VERSION = '1.2.0'
 const CROSSFADER_NUDGE = 0.08
 const PITCH_NUDGE = 0.1
 
@@ -217,19 +217,24 @@ export function App(): JSX.Element {
             <span className="app-logo">NEXTDJ</span>
             <span className="app-version">v{APP_VERSION}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="app-status">
             <button
               aria-label="Show keyboard shortcuts"
-              className="icon-button"
+              className="icon-button app-status-button"
               title="Keyboard shortcuts (?)"
               type="button"
               onClick={() => setShortcutsOpen(true)}
             >
-              <Keyboard size={15} strokeWidth={2.2} />
+              <Activity size={15} strokeWidth={2.2} />
             </button>
+            <div className="app-status-group">
+              <span className="app-status-item">120.0 BPM</span>
+              <span className="app-status-item app-status-item-dots">•••</span>
+              <span className="app-status-item app-status-item-muted">MIDI</span>
+            </div>
             <button
               aria-label="Open output settings"
-              className="icon-button"
+              className="icon-button app-status-button"
               title="Output devices"
               type="button"
               onClick={() => setSettingsOpen(true)}
@@ -277,7 +282,6 @@ export function App(): JSX.Element {
             channelB={channels.B}
             crossfade={mixer.crossfade}
             cueMix={mixer.cueMix}
-            masterAnalyser={engine.mixer.masterAnalyser}
             masterVolume={mixer.masterVolume}
             onChannelVolumeChange={setChannelVolume}
             onCrossfadeChange={setCrossfade}

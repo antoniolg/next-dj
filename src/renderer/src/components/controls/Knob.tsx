@@ -9,6 +9,7 @@ interface KnobProps {
   accent: string
   onChange: (value: number) => void
   step?: number
+  hideLabel?: boolean
   valueFormatter?: (value: number) => string
 }
 
@@ -29,6 +30,7 @@ export function Knob({
   accent,
   onChange,
   step = 0.01,
+  hideLabel = false,
   valueFormatter = (nextValue) => nextValue.toFixed(1)
 }: KnobProps): JSX.Element {
   const dragRef = useRef<{ y: number; value: number } | null>(null)
@@ -111,7 +113,7 @@ export function Knob({
           </span>
         </button>
       </div>
-      <span className="knob-label">{label}</span>
+      {hideLabel ? null : <span className="knob-label">{label}</span>}
     </div>
   )
 }

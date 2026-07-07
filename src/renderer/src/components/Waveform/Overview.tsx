@@ -5,7 +5,7 @@ import { getPeakAt } from './waveformData'
 interface OverviewProps {
   accent: string
   duration: number
-  position: number
+  getPosition: () => number
   waveform: WaveformData | null
   onSeek: (seconds: number) => void
 }
@@ -45,9 +45,14 @@ function drawCanvas(
   context.stroke()
 
   if (!waveform || duration <= 0) {
-    context.fillStyle = 'rgba(148,163,184,0.28)'
-    context.font = `${11 * dpr}px ui-monospace, SFMono-Regular, Menlo, monospace`
-    context.fillText('Drop or load audio', 12 * dpr, height / 2 + 4 * dpr)
+    context.fillStyle = accent
+    context.fillRect(width / 2 - dpr, 0, dpr * 2, height)
+    context.beginPath()
+    context.moveTo(width / 2 - 5 * dpr, 0)
+    context.lineTo(width / 2 + 5 * dpr, 0)
+    context.lineTo(width / 2, 6 * dpr)
+    context.closePath()
+    context.fill()
     return
   }
 
@@ -61,7 +66,8 @@ function drawCanvas(
     const minY = centerY + min * centerY * 0.84
     const maxY = centerY + max * centerY * 0.84
 
-    context.strokeStyle = x <= playedX ? accent : 'rgba(148,163,184,0.34)'
+    context.globalAlpha = x <= playedX ? 0.55 : 1
+    context.strokeStyle = accent
     context.lineWidth = Math.max(1, dpr)
     context.beginPath()
     context.moveTo(x, minY)
@@ -69,20 +75,21 @@ function drawCanvas(
     context.stroke()
   }
 
-  context.save()
-  context.globalAlpha = 0.1
+  context.globalAlpha = 1
   context.fillStyle = accent
-  context.fillRect(0, 0, playedX, height)
-  context.restore()
-
-  context.fillStyle = 'rgba(255,255,255,0.94)'
-  context.fillRect(playedX - dpr / 2, 0, dpr, height)
+  context.fillRect(playedX - dpr, 0, dpr * 2, height)
+  context.beginPath()
+  context.moveTo(playedX - 5 * dpr, 0)
+  context.lineTo(playedX + 5 * dpr, 0)
+  context.lineTo(playedX, 6 * dpr)
+  context.closePath()
+  context.fill()
 }
 
 export function Overview({
   accent,
   duration,
-  position,
+  getPosition,
   waveform,
   onSeek
 }: OverviewProps): JSX.Element {
@@ -90,14 +97,21 @@ export function Overview({
   const draggingRef = useRef(false)
 
   useEffect(() => {
-    const canvas = canvasRef.current
+    let frameId = 0
 
-    if (!canvas) {
-      return
+    const tick = (): void => {
+      const canvas = canvasRef.current
+
+      if (canvas) {
+        drawCanvas(canvas, waveform, accent, duration, getPosition())
+      }
+
+      frameId = window.requestAnimationFrame(tick)
     }
 
-    drawCanvas(canvas, waveform, accent, duration, position)
-  }, [accent, duration, position, waveform])
+    frameId = window.requestAnimationFrame(tick)
+    return () => window.cancelAnimationFrame(frameId)
+  }, [accent, duration, getPosition, waveform])
 
   const seekFromPointer = useCallback(
     (clientX: number): void => {

@@ -70,7 +70,7 @@ export function useLibrary(): {
     const nextTracks = await Promise.all(
       audioFiles.map(async (file) => ({
         id: createTrackId(file),
-        title: file.name.replace(/\.[^.]+$/, ''),
+        title: file.name,
         duration: await readDuration(file),
         ...(await readBpm(file)),
         file

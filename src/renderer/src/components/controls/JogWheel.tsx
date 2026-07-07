@@ -39,6 +39,7 @@ export function JogWheel({
   const dragRef = useRef<{ angle: number; position: number } | null>(null)
   const [dragRotation, setDragRotation] = useState(0)
   const rotation = dragRef.current ? dragRotation : position * 150
+  const progress = duration > 0 ? Math.min(1, Math.max(0, position / duration)) : 0
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>): void => {
@@ -74,16 +75,21 @@ export function JogWheel({
     <button
       aria-label={label}
       className={`jog-wheel ${isPlaying && !dragRef.current ? 'jog-wheel-playing' : ''}`}
-      style={{ '--jog-accent': accent } as React.CSSProperties}
+      style={
+        {
+          '--jog-accent': accent,
+          '--jog-progress': `${progress * 360}deg`
+        } as React.CSSProperties
+      }
       type="button"
       onPointerCancel={clearDrag}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={clearDrag}
     >
-      <span className="jog-platter" style={{ transform: `rotate(${rotation}deg)` }}>
-        <span className="jog-marker" />
-      </span>
+      <span aria-hidden="true" className="jog-arc" />
+      <span aria-hidden="true" className="jog-ticks" />
+      <span className="jog-platter" style={{ transform: `rotate(${rotation}deg)` }} />
       <span className="jog-cap">
         <span className="jog-label">NEXTDJ</span>
       </span>

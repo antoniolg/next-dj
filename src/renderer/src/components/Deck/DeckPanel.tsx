@@ -1,8 +1,7 @@
 import { useCallback, useState } from 'react'
-import { FolderOpen, Pause, Play, SkipBack, X, Zap } from 'lucide-react'
+import { FolderOpen, MoreHorizontal, Pause, Play, SkipBack } from 'lucide-react'
 import type { HotCue, LoopState } from '../../audio/deck'
 import { Overview } from '../Waveform/Overview'
-import { ZoomWave } from '../Waveform/ZoomWave'
 import type { WaveformData } from '../Waveform/waveformData'
 import { Fader } from '../controls/Fader'
 import { JogWheel } from '../controls/JogWheel'
@@ -152,33 +151,32 @@ export function DeckPanel({
         </label>
       </div>
 
-      <ZoomWave
-        accent={accent}
-        bpm={bpm}
-        duration={duration}
-        firstBeatOffset={firstBeatOffset}
-        getPosition={getPosition}
-        waveform={waveform}
-      />
-
-      <div className="led-display">
-        <p className="led-title" title={trackName}>
-          {hasTrack ? trackName : 'No track loaded'}
-        </p>
-        <div className="led-row">
-          <span>{formatTime(position)}</span>
-          <span className="led-bpm">{formatBpm(effectiveBpm)} BPM</span>
-          <span>-{formatTime(remaining)}</span>
-        </div>
-      </div>
-
       <Overview
         accent={accent}
         duration={duration}
-        position={position}
+        getPosition={getPosition}
         waveform={waveform}
         onSeek={onSeek}
       />
+
+      <div className="led-display">
+        {hasTrack ? <span className="deck-artwork" aria-hidden="true" /> : null}
+        <div className="led-content">
+          <p className="led-title" title={trackName}>
+            {hasTrack ? trackName : 'No track loaded'}
+          </p>
+          <div className={`led-row ${hasTrack ? '' : 'led-row-empty'}`}>
+            <span>{formatTime(position)}</span>
+            <span className="led-bpm">{formatBpm(effectiveBpm)} BPM</span>
+            <span className="led-remaining">-{formatTime(remaining)}</span>
+          </div>
+        </div>
+        {hasTrack ? (
+          <span aria-hidden="true" className="led-menu">
+            <MoreHorizontal size={15} strokeWidth={2.2} />
+          </span>
+        ) : null}
+      </div>
 
       <div className="deck-center">
         <div className="deck-jog-area">
@@ -199,10 +197,12 @@ export function DeckPanel({
           )}
         </div>
         <div className="deck-pitch">
+          <span className="fader-label">Pitch</span>
           <Fader
             centerDetent
             accent={accent}
             disabled={!hasTrack}
+            hideLabel
             label="Pitch"
             max={8}
             min={-8}
@@ -218,9 +218,12 @@ export function DeckPanel({
             type="button"
             onClick={handleSyncClick}
           >
-            <Zap size={12} strokeWidth={2.4} />
             SYNC
           </button>
+          <span aria-hidden="true" className="deck-pitch-dots">
+            <span className="deck-pitch-dot deck-pitch-dot-lit" />
+            <span className="deck-pitch-dot" />
+          </span>
         </div>
       </div>
 
@@ -246,13 +249,12 @@ export function DeckPanel({
               onClearHotCue(index)
             }}
           >
-            <span className="hot-cue-led" />
             {index + 1}
           </button>
         ))}
       </div>
 
-      <div className="transport-row">
+      <div className="deck-control-row">
         <button
           aria-label={isPlaying ? 'Pause' : 'Play'}
           className={`transport-button transport-primary ${isPlaying ? 'transport-button-lit transport-button-pulse' : ''}`}
@@ -263,19 +265,6 @@ export function DeckPanel({
         >
           {isPlaying ? <Pause size={18} strokeWidth={2.4} /> : <Play size={18} strokeWidth={2.4} />}
         </button>
-        <button
-          aria-label="Cue to start"
-          className="transport-button"
-          disabled={!hasTrack}
-          title="Back to start"
-          type="button"
-          onClick={onCueToStart}
-        >
-          <SkipBack size={18} strokeWidth={2.4} />
-        </button>
-      </div>
-
-      <div className="loop-row">
         <button
           className={`loop-button ${loop.start !== null ? 'loop-button-lit' : ''}`}
           disabled={!hasTrack}
@@ -299,22 +288,22 @@ export function DeckPanel({
             key={beats}
             className={`loop-button ${loop.active ? 'loop-button-lit' : ''}`}
             disabled={!hasTrack || bpm <= 0}
-            title={`${beats}-beat loop`}
+            title={loop.active ? 'Exit loop' : `${beats}-beat loop`}
             type="button"
-            onClick={() => onAutoLoop(beats)}
+            onClick={() => (loop.active ? onLoopExit() : onAutoLoop(beats))}
           >
             {beats}
           </button>
         ))}
         <button
-          aria-label="Exit loop"
-          className={`loop-button ${loop.active ? 'loop-button-exit-lit' : ''}`}
-          disabled={!loop.active}
-          title="Exit loop"
+          aria-label="Cue to start"
+          className="transport-button"
+          disabled={!hasTrack}
+          title="Back to start"
           type="button"
-          onClick={onLoopExit}
+          onClick={onCueToStart}
         >
-          <X size={13} strokeWidth={2.6} />
+          <SkipBack size={18} strokeWidth={2.4} />
         </button>
       </div>
     </section>
