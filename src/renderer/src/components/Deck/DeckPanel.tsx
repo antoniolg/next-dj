@@ -206,6 +206,7 @@ export function DeckPanel({
             label="Pitch"
             max={8}
             min={-8}
+            scale={{ count: 17, majorEvery: 2 }}
             step={0.1}
             value={pitch}
             valueFormatter={(value) => `${value > 0 ? '+' : ''}${value.toFixed(1)}%`}

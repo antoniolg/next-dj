@@ -1,5 +1,10 @@
 import { useCallback, useRef } from 'react'
 
+interface FaderScale {
+  count: number
+  majorEvery?: number
+}
+
 interface FaderProps {
   value: number
   min: number
@@ -13,6 +18,7 @@ interface FaderProps {
   disabled?: boolean
   hideLabel?: boolean
   showFill?: boolean
+  scale?: FaderScale
   valueFormatter?: (value: number) => string
 }
 
@@ -33,6 +39,7 @@ export function Fader({
   disabled = false,
   hideLabel = false,
   showFill = false,
+  scale,
   valueFormatter = (nextValue) => nextValue.toFixed(2)
 }: FaderProps): JSX.Element {
   const trackRef = useRef<HTMLDivElement | null>(null)
@@ -138,7 +145,24 @@ export function Fader({
         onPointerMove={handlePointerMove}
         onPointerUp={clearDrag}
       >
-        {centerDetent ? <span className="fader-detent" /> : null}
+        {scale ? (
+          <span aria-hidden="true" className="fader-scale">
+            {Array.from({ length: scale.count }, (_, index) => {
+              const ratio = index / (scale.count - 1)
+              const isMajor = scale.majorEvery ? index % scale.majorEvery === 0 : false
+              const isCenter = centerDetent && index * 2 === scale.count - 1
+
+              return (
+                <span
+                  key={index}
+                  className={`fader-tick ${isMajor ? 'fader-tick-major' : ''} ${isCenter ? 'fader-tick-center' : ''}`}
+                  style={isVertical ? { bottom: `${ratio * 100}%` } : { left: `${ratio * 100}%` }}
+                />
+              )
+            })}
+          </span>
+        ) : null}
+        {centerDetent && !scale ? <span className="fader-detent" /> : null}
         {showFill ? (
           <span
             className="fader-fill"

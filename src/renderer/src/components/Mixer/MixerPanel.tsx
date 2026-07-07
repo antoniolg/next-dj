@@ -99,6 +99,7 @@ function ChannelStrip({
           showFill
           max={1}
           min={0}
+          scale={{ count: 17, majorEvery: 2 }}
           value={values.volume}
           valueFormatter={(value) => `${Math.round(value * 100)}%`}
           onChange={(value) => onChannelVolumeChange(deckId, value)}
