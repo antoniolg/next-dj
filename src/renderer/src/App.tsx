@@ -210,7 +210,7 @@ export function App(): JSX.Element {
   ])
 
   return (
-    <main className="flex h-screen flex-col overflow-hidden bg-zinc-950 p-3 text-slate-100">
+    <main className="flex h-screen flex-col overflow-hidden text-slate-100">
       <div className="console-shell flex min-h-0 flex-1 flex-col">
         <header className="app-header">
           <div className="app-brand">

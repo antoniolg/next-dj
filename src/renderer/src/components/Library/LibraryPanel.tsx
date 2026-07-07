@@ -10,6 +10,20 @@ interface LibraryPanelProps {
 }
 
 const COLLAPSED_KEY = 'nextdj.library.collapsed'
+const HEIGHT_KEY = 'nextdj.library.height'
+const DEFAULT_HEIGHT = 176
+const MIN_HEIGHT = 150
+const MAX_HEIGHT = 420
+
+function clampHeight(height: number): number {
+  return Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, height))
+}
+
+function readInitialHeight(): number {
+  const storedHeight = Number(localStorage.getItem(HEIGHT_KEY))
+
+  return Number.isFinite(storedHeight) ? clampHeight(storedHeight) : DEFAULT_HEIGHT
+}
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds <= 0) {
@@ -33,12 +47,42 @@ export function LibraryPanel({
   onLoadTrack
 }: LibraryPanelProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const resizeRef = useRef<{ startHeight: number; startY: number } | null>(null)
   const [isDropTarget, setIsDropTarget] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1')
+  const [height, setHeight] = useState(readInitialHeight)
 
   useEffect(() => {
     localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0')
   }, [collapsed])
+
+  useEffect(() => {
+    localStorage.setItem(HEIGHT_KEY, String(height))
+  }, [height])
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent): void => {
+      if (!resizeRef.current) {
+        return
+      }
+
+      setHeight(clampHeight(resizeRef.current.startHeight + resizeRef.current.startY - event.clientY))
+    }
+
+    const handlePointerUp = (): void => {
+      resizeRef.current = null
+    }
+
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerUp)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerUp)
+    }
+  }, [])
 
   const handleFileChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -80,13 +124,64 @@ export function LibraryPanel({
     [onAddFiles]
   )
 
+  const handleResizeStart = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>): void => {
+      if (collapsed) {
+        return
+      }
+
+      event.preventDefault()
+      event.currentTarget.setPointerCapture(event.pointerId)
+      resizeRef.current = { startHeight: height, startY: event.clientY }
+    },
+    [collapsed, height]
+  )
+
+  const handleResizeMove = useCallback((event: React.PointerEvent<HTMLDivElement>): void => {
+    if (!resizeRef.current) {
+      return
+    }
+
+    setHeight(clampHeight(resizeRef.current.startHeight + resizeRef.current.startY - event.clientY))
+  }, [])
+
+  const handleResizeEnd = useCallback((): void => {
+    resizeRef.current = null
+  }, [])
+
+  const handleResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      event.preventDefault()
+      setHeight((current) => clampHeight(current + (event.key === 'ArrowUp' ? 24 : -24)))
+    }
+  }, [])
+
   return (
     <section
       className={`console-panel library-panel ${collapsed ? 'library-collapsed' : ''} ${isDropTarget ? 'library-panel-drop-target' : ''}`}
+      style={{ '--library-height': `${height}px` } as React.CSSProperties}
       onDragLeave={() => setIsDropTarget(false)}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
+      <div
+        aria-label="Resize crate"
+        aria-orientation="horizontal"
+        aria-valuemax={MAX_HEIGHT}
+        aria-valuemin={MIN_HEIGHT}
+        aria-valuenow={height}
+        className="library-resize-handle"
+        role="separator"
+        tabIndex={collapsed ? -1 : 0}
+        title="Drag to resize crate"
+        onDoubleClick={() => setHeight(DEFAULT_HEIGHT)}
+        onKeyDown={handleResizeKeyDown}
+        onPointerCancel={handleResizeEnd}
+        onPointerDown={handleResizeStart}
+        onPointerMove={handleResizeMove}
+        onPointerUp={handleResizeEnd}
+      />
+
       <div className="library-header">
         <div className="library-title">
           <Music size={13} strokeWidth={2.4} />
