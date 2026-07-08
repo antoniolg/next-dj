@@ -50,8 +50,6 @@ export function App(): JSX.Element {
     syncDeck,
     nudgeDeck,
     jogBend,
-    triggerHotCue,
-    clearHotCue,
     exitLoop,
     setAutoLoop,
     setTrim,
@@ -185,8 +183,11 @@ export function App(): JSX.Element {
         event.code === 'KeyW' ||
         event.code === 'KeyA' ||
         event.code === 'KeyS' ||
-        event.code === 'KeyC' ||
-        event.code.startsWith('Digit')
+        event.code === 'KeyD' ||
+        event.code === 'KeyF' ||
+        event.code === 'KeyT' ||
+        event.code === 'KeyY' ||
+        event.code === 'KeyC'
 
       if (event.repeat && isRepeatSensitive) {
         return
@@ -225,6 +226,30 @@ export function App(): JSX.Element {
       if (event.code === 'KeyS' && !deckBLoading) {
         event.preventDefault()
         void cuePress('B')
+        return
+      }
+
+      if (event.code === 'KeyD' && !deckALoading) {
+        event.preventDefault()
+        syncDeck('A')
+        return
+      }
+
+      if (event.code === 'KeyF' && !deckBLoading) {
+        event.preventDefault()
+        syncDeck('B')
+        return
+      }
+
+      if (event.code === 'KeyT') {
+        event.preventDefault()
+        toggleCue('A')
+        return
+      }
+
+      if (event.code === 'KeyY') {
+        event.preventDefault()
+        toggleCue('B')
         return
       }
 
@@ -274,31 +299,6 @@ export function App(): JSX.Element {
         return
       }
 
-      const deckAHotCue = ['Digit1', 'Digit2', 'Digit3', 'Digit4'].indexOf(event.code)
-
-      if (deckAHotCue >= 0 && !deckALoading) {
-        event.preventDefault()
-
-        if (event.shiftKey) {
-          clearHotCue('A', deckAHotCue)
-        } else {
-          triggerHotCue('A', deckAHotCue)
-        }
-
-        return
-      }
-
-      const deckBHotCue = ['Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(event.code)
-
-      if (deckBHotCue >= 0 && !deckBLoading) {
-        event.preventDefault()
-
-        if (event.shiftKey) {
-          clearHotCue('B', deckBHotCue)
-        } else {
-          triggerHotCue('B', deckBHotCue)
-        }
-      }
     }
 
     const handleKeyUp = (event: KeyboardEvent): void => {
@@ -335,8 +335,8 @@ export function App(): JSX.Element {
     setCrossfade,
     setPitch,
     togglePlayback,
-    triggerHotCue,
-    clearHotCue
+    syncDeck,
+    toggleCue
   ])
 
   const masterDeck = masterDeckId ? decks[masterDeckId] : null
@@ -485,21 +485,32 @@ export function App(): JSX.Element {
                 <X size={15} strokeWidth={2.4} />
               </button>
             </div>
-            <dl className="shortcut-grid mt-5">
+            <p className="micro-label shortcut-section">Decks</p>
+            <dl className="shortcut-grid">
               <dt>Q / W</dt>
               <dd>Play-pause deck A / B</dd>
               <dt>A / S</dt>
-              <dd>CUE toggle deck A / B</dd>
-              <dt>1-4</dt>
-              <dd>Hot cues deck A</dd>
-              <dt>7-0</dt>
-              <dd>Hot cues deck B</dd>
-              <dt>Z / X / C</dt>
-              <dd>Nudge crossfader left / right / center</dd>
+              <dd>Cue deck A / B (hold to preview)</dd>
+              <dt>D / F</dt>
+              <dd>Sync deck A / B with the master</dd>
+              <dt>[ / ]</dt>
+              <dd>Nudge deck A back / forward (Shift for deck B)</dd>
               <dt>Shift + Up/Down</dt>
               <dd>Pitch deck A up / down</dd>
               <dt>Alt + Up/Down</dt>
               <dd>Pitch deck B up / down</dd>
+            </dl>
+            <p className="micro-label shortcut-section">Mixer</p>
+            <dl className="shortcut-grid">
+              <dt>T / Y</dt>
+              <dd>Headphone cue channel A / B</dd>
+              <dt>Z / X / C</dt>
+              <dd>Nudge crossfader left / right / center</dd>
+            </dl>
+            <p className="micro-label shortcut-section">General</p>
+            <dl className="shortcut-grid">
+              <dt>?</dt>
+              <dd>Toggle this panel (Esc closes)</dd>
             </dl>
           </div>
         </div>

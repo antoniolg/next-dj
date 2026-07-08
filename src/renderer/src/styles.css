@@ -1698,6 +1698,11 @@ select {
   padding: 1.25rem;
 }
 
+.shortcut-section {
+  margin-top: 1.15rem;
+  margin-bottom: 0.5rem;
+}
+
 .shortcut-grid {
   display: grid;
   grid-template-columns: minmax(112px, auto) 1fr;
