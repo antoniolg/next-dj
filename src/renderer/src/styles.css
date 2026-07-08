@@ -11,6 +11,9 @@
   --knob-size: 48px;
   --fader-length: 150px;
   --vu-height: 130px;
+  --library-docked-height: 176px;
+  --library-collapsed-height: 48px;
+  --library-expanded-height: min(68vh, 680px, calc(100vh - 1.5rem));
 }
 
 html,
@@ -50,6 +53,14 @@ select {
   box-shadow: none;
 }
 
+.console-stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .status-dot {
   height: 6px;
   width: 6px;
@@ -67,9 +78,24 @@ select {
   display: grid;
   flex: 1;
   min-height: 0;
+  width: 100%;
   grid-template-columns: minmax(0, 1fr) 350px minmax(0, 1fr);
   gap: 0.65rem;
-  padding: 0.75rem 1rem 1rem;
+  padding: 0.75rem 1rem calc(var(--library-docked-height) + 1.4rem);
+  transition: padding-bottom 180ms ease;
+}
+
+.console-stage:has(.library-collapsed) .console-grid {
+  padding-bottom: calc(var(--library-collapsed-height) + 1.4rem);
+}
+
+.library-dock {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  z-index: 32;
+  pointer-events: none;
 }
 
 /* ---------- Panels ---------- */
@@ -1550,7 +1576,7 @@ select {
 .library-panel {
   position: relative;
   display: flex;
-  height: var(--library-height, 176px);
+  height: var(--library-docked-height);
   flex: none;
   flex-direction: column;
   overflow: hidden;
@@ -1559,44 +1585,27 @@ select {
     inset 0 1px 0 rgba(255, 255, 255, 0.035),
     0 10px 24px rgba(0, 0, 0, 0.3);
   padding: 0.5rem 0.75rem 0.65rem;
-  transition: height 180ms ease;
+  pointer-events: auto;
+  transition:
+    height 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
 }
 
 .library-collapsed {
-  height: 48px;
+  height: var(--library-collapsed-height);
 }
 
-.library-resize-handle {
-  position: absolute;
-  top: 0;
-  right: 0.75rem;
-  left: 0.75rem;
-  height: 8px;
-  cursor: ns-resize;
-  touch-action: none;
-}
-
-.library-resize-handle::before {
-  position: absolute;
-  top: 2px;
-  left: 50%;
-  width: 58px;
-  height: 2px;
-  border-radius: 999px;
-  background: rgba(202, 211, 223, 0.18);
-  opacity: 0;
-  transform: translateX(-50%);
-  transition: opacity 120ms ease;
-  content: '';
-}
-
-.library-resize-handle:hover::before,
-.library-resize-handle:focus-visible::before {
-  opacity: 1;
-}
-
-.library-collapsed .library-resize-handle {
-  display: none;
+.library-expanded {
+  height: var(--library-expanded-height);
+  border-color: rgba(202, 211, 223, 0.16);
+  background: rgba(7, 10, 14, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    inset 0 -16px 30px rgba(0, 0, 0, 0.42),
+    0 24px 70px rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(18px);
 }
 
 .library-header {
@@ -1767,6 +1776,16 @@ select {
 
 .library-table tbody tr:hover {
   background: rgba(255, 255, 255, 0.025);
+}
+
+.library-table tbody tr:focus-visible {
+  outline: none;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-a), transparent 72%), transparent 12rem),
+    rgba(255, 255, 255, 0.035);
+  box-shadow:
+    inset 3px 0 0 var(--accent-a),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent-a), transparent 70%);
 }
 
 .library-table tbody tr:active {
@@ -1965,6 +1984,8 @@ select {
 @media (max-height: 830px) {
   :root {
     --fader-length: 120px;
+    --library-docked-height: 128px;
+    --library-expanded-height: min(68vh, 560px, calc(100vh - 1.5rem));
   }
 
   .channel-strip {
@@ -1984,14 +2005,6 @@ select {
 
   .cue-button {
     padding: 0.28rem 0.6rem;
-  }
-
-  .library-panel {
-    height: 128px;
-  }
-
-  .library-collapsed {
-    height: 48px;
   }
 
   .waveform-zoom {

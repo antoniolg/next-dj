@@ -358,104 +358,107 @@ export function App(): JSX.Element {
   return (
     <main className="flex h-screen flex-col overflow-hidden text-slate-100">
       <div className="console-shell flex min-h-0 flex-1 flex-col">
-        <div className="console-grid">
-          <DeckPanel
-            accent="#22d3ee"
-            deckId="A"
-            duration={decks.A.duration}
-            bpm={decks.A.bpm}
-            effectiveBpm={decks.A.effectiveBpm}
-            firstBeatOffset={decks.A.firstBeatOffset}
-            getPosition={getDeckAPosition}
-            isPlaying={decks.A.isPlaying}
-            isLoading={Boolean(loadingDecks.A)}
-            loadingMessage={loadingDecks.A}
-            loop={decks.A.loop}
-            masterDeckId={masterDeckId}
-            masterEffectiveBpm={masterDeckId ? decks[masterDeckId].effectiveBpm : 0}
-            phaseOffset={phaseOffsets.A}
-            pitch={decks.A.pitch}
-            position={decks.A.position}
-            trackName={decks.A.trackName}
-            waveform={decks.A.waveform}
-            onAutoLoop={(beats) => setAutoLoop('A', beats)}
-            onCueDown={() => cuePress('A')}
-            onCueUp={() => cueRelease('A')}
-            onJogBend={(degrees) => jogBend('A', degrees)}
-            onLoad={(file) => loadFileToDeck('A', file)}
-            onLoopExit={() => exitLoop('A')}
-            onNudge={(direction) => nudgeDeck('A', direction)}
-            onPitchChange={(value) => setPitch('A', value)}
-            onSeek={(seconds) => seek('A', seconds)}
-            onSync={() => syncDeck('A')}
-            onTogglePlayback={() => togglePlayback('A')}
-            onTrackDrop={(trackId) => loadLibraryTrackById('A', trackId)}
-          />
+        <div className="console-stage">
+          <div className="console-grid">
+            <DeckPanel
+              accent="#22d3ee"
+              deckId="A"
+              duration={decks.A.duration}
+              bpm={decks.A.bpm}
+              effectiveBpm={decks.A.effectiveBpm}
+              firstBeatOffset={decks.A.firstBeatOffset}
+              getPosition={getDeckAPosition}
+              isPlaying={decks.A.isPlaying}
+              isLoading={Boolean(loadingDecks.A)}
+              loadingMessage={loadingDecks.A}
+              loop={decks.A.loop}
+              masterDeckId={masterDeckId}
+              masterEffectiveBpm={masterDeckId ? decks[masterDeckId].effectiveBpm : 0}
+              phaseOffset={phaseOffsets.A}
+              pitch={decks.A.pitch}
+              position={decks.A.position}
+              trackName={decks.A.trackName}
+              waveform={decks.A.waveform}
+              onAutoLoop={(beats) => setAutoLoop('A', beats)}
+              onCueDown={() => cuePress('A')}
+              onCueUp={() => cueRelease('A')}
+              onJogBend={(degrees) => jogBend('A', degrees)}
+              onLoad={(file) => loadFileToDeck('A', file)}
+              onLoopExit={() => exitLoop('A')}
+              onNudge={(direction) => nudgeDeck('A', direction)}
+              onPitchChange={(value) => setPitch('A', value)}
+              onSeek={(seconds) => seek('A', seconds)}
+              onSync={() => syncDeck('A')}
+              onTogglePlayback={() => togglePlayback('A')}
+              onTrackDrop={(trackId) => loadLibraryTrackById('A', trackId)}
+            />
 
-          <MixerPanel
-            analyserA={engine.mixer.channelAAnalyser}
-            analyserB={engine.mixer.channelBAnalyser}
-            channelA={channels.A}
-            channelB={channels.B}
-            crossfade={mixer.crossfade}
-            cueMix={mixer.cueMix}
-            masterAccent={masterAccent}
-            masterBeatIndex={masterBeatIndex}
-            masterBpm={masterDeck?.effectiveBpm ?? 0}
-            masterVolume={mixer.masterVolume}
-            recorder={recorder}
-            onChannelVolumeChange={setChannelVolume}
-            onCrossfadeChange={setCrossfade}
-            onCueMixChange={setCueMix}
-            onCueToggle={toggleCue}
-            onEqChange={setEq}
-            onMasterVolumeChange={setMasterVolume}
-            onOpenSettings={() => setSettingsOpen(true)}
-            onOpenShortcuts={() => setShortcutsOpen(true)}
-            onTrimChange={setTrim}
-          />
+            <MixerPanel
+              analyserA={engine.mixer.channelAAnalyser}
+              analyserB={engine.mixer.channelBAnalyser}
+              channelA={channels.A}
+              channelB={channels.B}
+              crossfade={mixer.crossfade}
+              cueMix={mixer.cueMix}
+              masterAccent={masterAccent}
+              masterBeatIndex={masterBeatIndex}
+              masterBpm={masterDeck?.effectiveBpm ?? 0}
+              masterVolume={mixer.masterVolume}
+              recorder={recorder}
+              onChannelVolumeChange={setChannelVolume}
+              onCrossfadeChange={setCrossfade}
+              onCueMixChange={setCueMix}
+              onCueToggle={toggleCue}
+              onEqChange={setEq}
+              onMasterVolumeChange={setMasterVolume}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onOpenShortcuts={() => setShortcutsOpen(true)}
+              onTrimChange={setTrim}
+            />
 
-          <DeckPanel
-            accent="#f59e0b"
-            deckId="B"
-            duration={decks.B.duration}
-            bpm={decks.B.bpm}
-            effectiveBpm={decks.B.effectiveBpm}
-            firstBeatOffset={decks.B.firstBeatOffset}
-            getPosition={getDeckBPosition}
-            isPlaying={decks.B.isPlaying}
-            isLoading={Boolean(loadingDecks.B)}
-            loadingMessage={loadingDecks.B}
-            loop={decks.B.loop}
-            masterDeckId={masterDeckId}
-            masterEffectiveBpm={masterDeckId ? decks[masterDeckId].effectiveBpm : 0}
-            phaseOffset={phaseOffsets.B}
-            pitch={decks.B.pitch}
-            position={decks.B.position}
-            trackName={decks.B.trackName}
-            waveform={decks.B.waveform}
-            onAutoLoop={(beats) => setAutoLoop('B', beats)}
-            onCueDown={() => cuePress('B')}
-            onCueUp={() => cueRelease('B')}
-            onJogBend={(degrees) => jogBend('B', degrees)}
-            onLoad={(file) => loadFileToDeck('B', file)}
-            onLoopExit={() => exitLoop('B')}
-            onNudge={(direction) => nudgeDeck('B', direction)}
-            onPitchChange={(value) => setPitch('B', value)}
-            onSeek={(seconds) => seek('B', seconds)}
-            onSync={() => syncDeck('B')}
-            onTogglePlayback={() => togglePlayback('B')}
-            onTrackDrop={(trackId) => loadLibraryTrackById('B', trackId)}
-          />
-        </div>
+            <DeckPanel
+              accent="#f59e0b"
+              deckId="B"
+              duration={decks.B.duration}
+              bpm={decks.B.bpm}
+              effectiveBpm={decks.B.effectiveBpm}
+              firstBeatOffset={decks.B.firstBeatOffset}
+              getPosition={getDeckBPosition}
+              isPlaying={decks.B.isPlaying}
+              isLoading={Boolean(loadingDecks.B)}
+              loadingMessage={loadingDecks.B}
+              loop={decks.B.loop}
+              masterDeckId={masterDeckId}
+              masterEffectiveBpm={masterDeckId ? decks[masterDeckId].effectiveBpm : 0}
+              phaseOffset={phaseOffsets.B}
+              pitch={decks.B.pitch}
+              position={decks.B.position}
+              trackName={decks.B.trackName}
+              waveform={decks.B.waveform}
+              onAutoLoop={(beats) => setAutoLoop('B', beats)}
+              onCueDown={() => cuePress('B')}
+              onCueUp={() => cueRelease('B')}
+              onJogBend={(degrees) => jogBend('B', degrees)}
+              onLoad={(file) => loadFileToDeck('B', file)}
+              onLoopExit={() => exitLoop('B')}
+              onNudge={(direction) => nudgeDeck('B', direction)}
+              onPitchChange={(value) => setPitch('B', value)}
+              onSeek={(seconds) => seek('B', seconds)}
+              onSync={() => syncDeck('B')}
+              onTogglePlayback={() => togglePlayback('B')}
+              onTrackDrop={(trackId) => loadLibraryTrackById('B', trackId)}
+            />
+          </div>
 
-        <div className="px-3 pb-3">
-          <LibraryPanel
-            tracks={tracks}
-            onAddFiles={addFiles}
-            onAddYouTubeTracks={addYouTubeTracks}
-            onLoadTrack={loadLibraryTrack}
-          />
+          <div className="library-dock">
+            <LibraryPanel
+              tracks={tracks}
+              keyboardLoadDeckId={masterDeckId === 'A' ? 'B' : 'A'}
+              onAddFiles={addFiles}
+              onAddYouTubeTracks={addYouTubeTracks}
+              onLoadTrack={loadLibraryTrack}
+            />
+          </div>
         </div>
       </div>
 
@@ -512,6 +515,10 @@ export function App(): JSX.Element {
             </dl>
             <p className="micro-label shortcut-section">General</p>
             <dl className="shortcut-grid">
+              <dt>K</dt>
+              <dd>Expand or shrink the crate</dd>
+              <dt>Enter</dt>
+              <dd>Load the focused crate track into the non-master deck</dd>
               <dt>?</dt>
               <dd>Toggle this panel (Esc closes)</dd>
             </dl>

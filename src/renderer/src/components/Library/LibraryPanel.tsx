@@ -1,29 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, Info, Link, Music, Plus } from 'lucide-react'
+import { ChevronDown, ChevronUp, Info, Link, Maximize2, Minimize2, Music, Plus } from 'lucide-react'
 import type { DeckId } from '../../hooks/useEngine'
 import type { LibraryTrack } from '../../hooks/useLibrary'
 
 interface LibraryPanelProps {
   tracks: LibraryTrack[]
+  keyboardLoadDeckId: DeckId
   onAddFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
   onAddYouTubeTracks: (youtubeTracks: YouTubeTrackSummary[]) => LibraryTrack[]
   onLoadTrack: (deckId: DeckId, track: LibraryTrack) => Promise<void>
 }
 
 const COLLAPSED_KEY = 'nextdj.library.collapsed'
-const HEIGHT_KEY = 'nextdj.library.height'
-const DEFAULT_HEIGHT = 176
-const MIN_HEIGHT = 150
-const MAX_HEIGHT = 420
 
-function clampHeight(height: number): number {
-  return Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, height))
-}
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
 
-function readInitialHeight(): number {
-  const storedHeight = Number(localStorage.getItem(HEIGHT_KEY))
-
-  return Number.isFinite(storedHeight) ? clampHeight(storedHeight) : DEFAULT_HEIGHT
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    target.isContentEditable
+  )
 }
 
 function formatTime(seconds: number): string {
@@ -44,15 +44,17 @@ function formatBpm(bpm: number): string {
 
 export function LibraryPanel({
   tracks,
+  keyboardLoadDeckId,
   onAddFiles,
   onAddYouTubeTracks,
   onLoadTrack
 }: LibraryPanelProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const resizeRef = useRef<{ startHeight: number; startY: number } | null>(null)
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({})
   const [isDropTarget, setIsDropTarget] = useState(false)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1')
-  const [height, setHeight] = useState(readInitialHeight)
+  const [expanded, setExpanded] = useState(false)
+  const [focusedTrackId, setFocusedTrackId] = useState<string | null>(null)
   const [youtubeOpen, setYoutubeOpen] = useState(false)
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [youtubeStatus, setYoutubeStatus] = useState<string | null>(null)
@@ -62,33 +64,71 @@ export function LibraryPanel({
     localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0')
   }, [collapsed])
 
-  useEffect(() => {
-    localStorage.setItem(HEIGHT_KEY, String(height))
-  }, [height])
+  const toggleExpanded = useCallback((): void => {
+    setExpanded((current) => {
+      const nextExpanded = !current
+
+      if (nextExpanded) {
+        setCollapsed(false)
+      }
+
+      return nextExpanded
+    })
+  }, [])
 
   useEffect(() => {
-    const handlePointerMove = (event: PointerEvent): void => {
-      if (!resizeRef.current) {
+    setFocusedTrackId((current) => {
+      if (tracks.length === 0) {
+        return null
+      }
+
+      return current && tracks.some((track) => track.id === current) ? current : tracks[0].id
+    })
+  }, [tracks])
+
+  useEffect(() => {
+    if (!expanded || tracks.length === 0) {
+      return
+    }
+
+    const nextFocusedTrackId =
+      focusedTrackId && tracks.some((track) => track.id === focusedTrackId)
+        ? focusedTrackId
+        : tracks[0].id
+
+    if (nextFocusedTrackId !== focusedTrackId) {
+      setFocusedTrackId(nextFocusedTrackId)
+    }
+
+    window.requestAnimationFrame(() => {
+      rowRefs.current[nextFocusedTrackId]?.focus()
+    })
+  }, [expanded, focusedTrackId, tracks])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (isEditableTarget(event.target) || event.repeat) {
         return
       }
 
-      setHeight(clampHeight(resizeRef.current.startHeight + resizeRef.current.startY - event.clientY))
+      if (event.code === 'KeyK') {
+        event.preventDefault()
+        toggleExpanded()
+        return
+      }
+
+      if (expanded && event.key === 'Escape') {
+        event.preventDefault()
+        setExpanded(false)
+      }
     }
 
-    const handlePointerUp = (): void => {
-      resizeRef.current = null
-    }
-
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp)
-    window.addEventListener('pointercancel', handlePointerUp)
+    window.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
-      window.removeEventListener('pointercancel', handlePointerUp)
+      window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [])
+  }, [expanded, toggleExpanded])
 
   const handleFileChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -101,6 +141,72 @@ export function LibraryPanel({
       event.currentTarget.value = ''
     },
     [onAddFiles]
+  )
+
+  const focusTrackAtIndex = useCallback(
+    (index: number): void => {
+      const track = tracks[index]
+
+      if (!track) {
+        return
+      }
+
+      setFocusedTrackId(track.id)
+      rowRefs.current[track.id]?.focus()
+    },
+    [tracks]
+  )
+
+  const loadTrackFromKeyboard = useCallback(
+    (track: LibraryTrack): void => {
+      setExpanded(false)
+      void onLoadTrack(keyboardLoadDeckId, track)
+    },
+    [keyboardLoadDeckId, onLoadTrack]
+  )
+
+  const handleRowKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTableRowElement>, track: LibraryTrack): void => {
+      if (event.target !== event.currentTarget) {
+        return
+      }
+
+      const currentIndex = tracks.findIndex((item) => item.id === track.id)
+
+      if (currentIndex < 0) {
+        return
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        loadTrackFromKeyboard(track)
+        return
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        focusTrackAtIndex(Math.min(tracks.length - 1, currentIndex + 1))
+        return
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        focusTrackAtIndex(Math.max(0, currentIndex - 1))
+        return
+      }
+
+      if (event.key === 'Home') {
+        event.preventDefault()
+        focusTrackAtIndex(0)
+        return
+      }
+
+      if (event.key === 'End') {
+        event.preventDefault()
+        focusTrackAtIndex(tracks.length - 1)
+      }
+    },
+    [focusTrackAtIndex, loadTrackFromKeyboard, tracks]
   )
 
   const handleDragStart = useCallback(
@@ -130,36 +236,9 @@ export function LibraryPanel({
     [onAddFiles]
   )
 
-  const handleResizeStart = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>): void => {
-      if (collapsed) {
-        return
-      }
-
-      event.preventDefault()
-      event.currentTarget.setPointerCapture(event.pointerId)
-      resizeRef.current = { startHeight: height, startY: event.clientY }
-    },
-    [collapsed, height]
-  )
-
-  const handleResizeMove = useCallback((event: React.PointerEvent<HTMLDivElement>): void => {
-    if (!resizeRef.current) {
-      return
-    }
-
-    setHeight(clampHeight(resizeRef.current.startHeight + resizeRef.current.startY - event.clientY))
-  }, [])
-
-  const handleResizeEnd = useCallback((): void => {
-    resizeRef.current = null
-  }, [])
-
-  const handleResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-      event.preventDefault()
-      setHeight((current) => clampHeight(current + (event.key === 'ArrowUp' ? 24 : -24)))
-    }
+  const handleCollapsedToggle = useCallback((): void => {
+    setExpanded(false)
+    setCollapsed((current) => !current)
   }, [])
 
   const handleYoutubeImport = useCallback(async (): Promise<void> => {
@@ -193,30 +272,11 @@ export function LibraryPanel({
 
   return (
     <section
-      className={`console-panel library-panel ${collapsed ? 'library-collapsed' : ''} ${isDropTarget ? 'library-panel-drop-target' : ''}`}
-      style={{ '--library-height': `${height}px` } as React.CSSProperties}
+      className={`console-panel library-panel ${collapsed ? 'library-collapsed' : ''} ${expanded ? 'library-expanded' : ''} ${isDropTarget ? 'library-panel-drop-target' : ''}`}
       onDragLeave={() => setIsDropTarget(false)}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <div
-        aria-label="Resize crate"
-        aria-orientation="horizontal"
-        aria-valuemax={MAX_HEIGHT}
-        aria-valuemin={MIN_HEIGHT}
-        aria-valuenow={height}
-        className="library-resize-handle"
-        role="separator"
-        tabIndex={collapsed ? -1 : 0}
-        title="Drag to resize crate"
-        onDoubleClick={() => setHeight(DEFAULT_HEIGHT)}
-        onKeyDown={handleResizeKeyDown}
-        onPointerCancel={handleResizeEnd}
-        onPointerDown={handleResizeStart}
-        onPointerMove={handleResizeMove}
-        onPointerUp={handleResizeEnd}
-      />
-
       <div className="library-header">
         <div className="library-title">
           <Music size={13} strokeWidth={2.4} />
@@ -245,11 +305,20 @@ export function LibraryPanel({
             <Plus size={15} strokeWidth={2.4} />
           </button>
           <button
-            aria-label={collapsed ? 'Expand library' : 'Collapse library'}
-            className="icon-button"
-            title={collapsed ? 'Expand library' : 'Collapse library'}
+            aria-label={expanded ? 'Shrink crate' : 'Expand crate'}
+            className={`icon-button ${expanded ? 'icon-button-active' : ''}`}
+            title={expanded ? 'Shrink crate (K)' : 'Expand crate (K)'}
             type="button"
-            onClick={() => setCollapsed((current) => !current)}
+            onClick={toggleExpanded}
+          >
+            {expanded ? <Minimize2 size={15} strokeWidth={2.4} /> : <Maximize2 size={15} strokeWidth={2.4} />}
+          </button>
+          <button
+            aria-label={collapsed ? 'Show crate' : 'Hide crate'}
+            className="icon-button"
+            title={collapsed ? 'Show crate' : 'Hide crate'}
+            type="button"
+            onClick={handleCollapsedToggle}
           >
             {collapsed ? <ChevronUp size={15} strokeWidth={2.4} /> : <ChevronDown size={15} strokeWidth={2.4} />}
           </button>
@@ -308,9 +377,16 @@ export function LibraryPanel({
               <tbody>
                 {tracks.map((track) => (
                   <tr
+                    ref={(element) => {
+                      rowRefs.current[track.id] = element
+                    }}
                     key={track.id}
+                    aria-label={`${track.title}. Press Enter to load into deck ${keyboardLoadDeckId}`}
                     draggable
+                    tabIndex={focusedTrackId === track.id ? 0 : -1}
                     onDragStart={(event) => handleDragStart(event, track.id)}
+                    onFocus={() => setFocusedTrackId(track.id)}
+                    onKeyDown={(event) => handleRowKeyDown(event, track)}
                   >
                     <td>
                       <span className="block truncate" title={track.title}>
