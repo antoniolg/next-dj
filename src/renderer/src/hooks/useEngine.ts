@@ -240,6 +240,10 @@ export function useEngine(): {
     error: null
   })
   const [masterDeckId, setMasterDeckId] = useState<DeckId | null>(null)
+  const deckPitchRef = useRef<Record<DeckId, number>>({
+    A: persistedControlsRef.current?.deckPitch.A ?? 0,
+    B: persistedControlsRef.current?.deckPitch.B ?? 0
+  })
 
   const updateMasterDeck = useCallback((nextMasterDeckId: DeckId | null): void => {
     if (masterDeckIdRef.current === nextMasterDeckId) {
@@ -382,6 +386,9 @@ export function useEngine(): {
     async (deckId: DeckId, file: File): Promise<void> => {
       const deck = getDeck(deckId)
       await deck.loadFile(file)
+      const pitch = deck.setPitch(deckPitchRef.current[deckId])
+
+      deckPitchRef.current[deckId] = pitch
       setDecks((current) => ({
         ...current,
         [deckId]: {
@@ -390,6 +397,7 @@ export function useEngine(): {
           duration: deck.duration,
           position: 0,
           isPlaying: false,
+          pitch,
           bpm: deck.metadata.bpm,
           firstBeatOffset: deck.metadata.firstBeatOffset,
           effectiveBpm: deck.getEffectiveBpm(),
@@ -468,6 +476,8 @@ export function useEngine(): {
     (deckId: DeckId, percent: number): void => {
       const deck = getDeck(deckId)
       const pitch = deck.setPitch(percent)
+
+      deckPitchRef.current[deckId] = pitch
       setDecks((current) => ({
         ...current,
         [deckId]: { ...current[deckId], pitch, effectiveBpm: deck.getEffectiveBpm() }
@@ -488,6 +498,7 @@ export function useEngine(): {
 
       const pitch = clamp((targetBpm / deck.metadata.bpm - 1) * 100, MIN_PITCH_PERCENT, MAX_PITCH_PERCENT)
       deck.setPitch(pitch)
+      deckPitchRef.current[deckId] = pitch
 
       const deckFraction = getBeatFraction(
         deck.getPosition(),
