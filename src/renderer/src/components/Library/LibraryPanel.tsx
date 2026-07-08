@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, Info, Link, Maximize2, Minimize2, Music, Plus } from 'lucide-react'
+import { ChevronDown, ChevronUp, Cloud, Info, Link, Maximize2, Minimize2, Music, Plus } from 'lucide-react'
 import type { DeckId } from '../../hooks/useEngine'
 import type { LibraryTrack } from '../../hooks/useLibrary'
 
@@ -389,10 +389,18 @@ export function LibraryPanel({
                     onKeyDown={(event) => handleRowKeyDown(event, track)}
                   >
                     <td>
-                      <span className="block truncate" title={track.title}>
-                        {track.title}
+                      <span className="library-track-title" title={track.title}>
+                        <span className="library-track-title-text">{track.title}</span>
+                        {track.source === 'youtube' && !track.file ? (
+                          <span
+                            aria-label="Not stored locally"
+                            className="library-track-remote"
+                            title="Not stored locally"
+                          >
+                            <Cloud aria-hidden="true" size={13} strokeWidth={2.3} />
+                          </span>
+                        ) : null}
                       </span>
-                      {track.source === 'youtube' && !track.file ? <span className="library-track-source">YouTube</span> : null}
                     </td>
                     <td className="library-col-time">{formatTime(track.duration)}</td>
                     <td className="library-col-bpm">{formatBpm(track.bpm)}</td>

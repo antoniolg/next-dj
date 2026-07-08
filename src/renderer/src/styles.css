@@ -1747,14 +1747,26 @@ select {
   font-weight: 600;
 }
 
-.library-track-source {
+.library-track-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.library-track-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-track-remote {
   display: inline-flex;
-  margin-top: 0.12rem;
+  flex: none;
+  align-items: center;
   color: #67e8f9;
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  opacity: 0.9;
 }
 
 .library-col-time {
