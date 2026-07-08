@@ -85,6 +85,7 @@ export function Fader({
         return
       }
 
+      event.preventDefault()
       event.currentTarget.setPointerCapture(event.pointerId)
       draggingRef.current = true
       commitValue(valueFromPointer(event))
@@ -101,8 +102,12 @@ export function Fader({
     [commitValue, valueFromPointer]
   )
 
-  const clearDrag = useCallback((): void => {
+  const clearDrag = useCallback((event: React.PointerEvent<HTMLDivElement>): void => {
     draggingRef.current = false
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
   }, [])
 
   const handleKeyDown = useCallback(

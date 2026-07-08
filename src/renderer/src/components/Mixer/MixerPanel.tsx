@@ -1,9 +1,11 @@
 import { Activity, Settings } from 'lucide-react'
 import type { EqBand } from '../../audio/deck'
 import type { DeckId } from '../../hooks/useEngine'
+import type { RecorderState } from '../../hooks/useRecorder'
 import { Fader } from '../controls/Fader'
 import { Knob } from '../controls/Knob'
 import { VUMeter } from '../controls/VUMeter'
+import { RecordControl } from './RecordControl'
 
 interface ChannelValues {
   trim: number
@@ -21,6 +23,7 @@ interface MixerPanelProps {
   masterBeatIndex: number
   masterBpm: number
   masterVolume: number
+  recorder: RecorderState
   analyserA: AnalyserNode | null
   analyserB: AnalyserNode | null
   onTrimChange: (deckId: DeckId, value: number) => void
@@ -124,6 +127,7 @@ export function MixerPanel({
   masterBeatIndex,
   masterBpm,
   masterVolume,
+  recorder,
   analyserA,
   analyserB,
   onTrimChange,
@@ -182,6 +186,7 @@ export function MixerPanel({
                 />
               ))}
             </span>
+            <RecordControl recorder={recorder} />
             <div className="mixer-session-actions">
               <button
                 aria-label="Show keyboard shortcuts"

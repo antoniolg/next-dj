@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, Menu, session } from 'electron'
+import { registerRecordingIpc } from './recording.js'
 import { execFile } from 'node:child_process'
 import { mkdir, readFile, readdir, stat } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -262,9 +263,21 @@ app.whenReady().then(() => {
   }
 
   session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-    callback(permission === 'media')
+    callback(permission === 'media' || permission === 'display-capture')
   })
 
+  // Recording captures the app's own window content (WebFrameMain), which
+  // needs no macOS Screen Recording permission and never picks up
+  // overlapping windows.
+  session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+    if (request.frame) {
+      callback({ video: request.frame })
+    } else {
+      callback({})
+    }
+  })
+
+  registerRecordingIpc()
   createWindow()
 
   app.on('activate', () => {

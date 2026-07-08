@@ -10,4 +10,7 @@ mac:
     - dmg
   category: public.app-category.music
   identity: null
+  extendInfo:
+    NSCameraUsageDescription: NextDJ uses the camera for the picture-in-picture overlay in session recordings.
+    NSMicrophoneUsageDescription: NextDJ requests audio access to list and route your audio output devices.
 npmRebuild: false

@@ -6,6 +6,7 @@ import { MixerPanel } from './components/Mixer/MixerPanel'
 import { SettingsPanel } from './components/Settings/SettingsPanel'
 import { useEngine } from './hooks/useEngine'
 import { useLibrary, type LibraryTrack } from './hooks/useLibrary'
+import { useRecorder } from './hooks/useRecorder'
 
 const CROSSFADER_NUDGE = 0.08
 const PITCH_NUDGE = 0.1
@@ -64,6 +65,7 @@ export function App(): JSX.Element {
     refreshOutputDevices
   } = useEngine()
   const { tracks, isReady: libraryReady, addFiles, addYouTubeTracks, resolveTrackFile, getTrack } = useLibrary()
+  const recorder = useRecorder(engine)
 
   const setDeckLoading = useCallback((deckId: DeckId, message: string | null): void => {
     setLoadingDecks((current) => {
@@ -401,6 +403,7 @@ export function App(): JSX.Element {
             masterBeatIndex={masterBeatIndex}
             masterBpm={masterDeck?.effectiveBpm ?? 0}
             masterVolume={mixer.masterVolume}
+            recorder={recorder}
             onChannelVolumeChange={setChannelVolume}
             onCrossfadeChange={setCrossfade}
             onCueMixChange={setCueMix}

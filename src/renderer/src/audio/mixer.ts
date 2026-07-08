@@ -23,6 +23,12 @@ export class Mixer {
   readonly masterAnalyser: AnalyserNode
   readonly masterGain: GainNode
 
+  // REC OUT: post-crossfader, pre-master-volume, so recordings keep a
+  // constant level while the room volume moves. Sibling branch of the
+  // output router, so output-device switches never touch it.
+  private readonly recordBus: GainNode
+  private readonly recordDestination: MediaStreamAudioDestinationNode
+
   private readonly channelACrossfadeGain: GainNode
   private readonly channelBCrossfadeGain: GainNode
   private readonly channelACueGain: GainNode
@@ -51,6 +57,8 @@ export class Mixer {
     this.cueMasterBlendGain = context.createGain()
     this.cueCueBlendGain = context.createGain()
     this.cueOutputGain = context.createGain()
+    this.recordBus = context.createGain()
+    this.recordDestination = context.createMediaStreamDestination()
 
     this.configureAnalyser(this.channelAAnalyser)
     this.configureAnalyser(this.channelBAnalyser)
@@ -70,6 +78,10 @@ export class Mixer {
       .connect(this.channelBCrossfadeGain)
       .connect(this.masterGain)
 
+    this.channelACrossfadeGain.connect(this.recordBus)
+    this.channelBCrossfadeGain.connect(this.recordBus)
+    this.recordBus.connect(this.recordDestination)
+
     this.channelACueInput.connect(this.channelACueGain).connect(this.cueBus)
     this.channelBCueInput.connect(this.channelBCueGain).connect(this.cueBus)
     this.cueBus.connect(this.cueCueBlendGain).connect(this.cueOutputGain)
@@ -79,6 +91,10 @@ export class Mixer {
 
     this.setCrossfade(0)
     this.setCueMix(0)
+  }
+
+  get recordStream(): MediaStream {
+    return this.recordDestination.stream
   }
 
   setCrossfade(x: number): void {
