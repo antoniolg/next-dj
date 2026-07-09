@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { calculateMeterLevel, getPeakSegment, getVuSegmentColor } from './vuMeterMath'
 
 interface VUMeterProps {
   analyser: AnalyserNode | null
@@ -36,14 +37,7 @@ export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.E
 
       if (data) {
         analyser.getByteTimeDomainData(data)
-        let sum = 0
-
-        for (const sample of data) {
-          const centered = (sample - 128) / 128
-          sum += centered * centered
-        }
-
-        const targetLevel = Math.min(1, Math.sqrt(sum / data.length) * 3.2)
+        const targetLevel = calculateMeterLevel(data)
         const nextLevel =
           targetLevel > levelRef.current
             ? targetLevel
@@ -68,7 +62,7 @@ export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.E
     return () => window.cancelAnimationFrame(frameId)
   }, [analyser])
 
-  const peakSegment = peak > 0.01 ? Math.min(segments - 1, Math.floor(peak * segments)) : -1
+  const peakSegment = getPeakSegment(peak, segments)
 
   return (
     <div className="vu">
@@ -76,7 +70,7 @@ export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.E
         {segmentItems.map((segment) => {
           const threshold = (segment + 1) / segments
           const lit = level >= threshold || segment === peakSegment
-          const color = segment > segments * 0.82 ? 'red' : segment > segments * 0.62 ? 'yellow' : 'green'
+          const color = getVuSegmentColor(segment, segments)
 
           return <span key={segment} className={`vu-segment vu-${color} ${lit ? 'vu-lit' : ''}`} />
         })}
