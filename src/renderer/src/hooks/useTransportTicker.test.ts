@@ -117,6 +117,52 @@ describe('useTransportTicker', () => {
     expect(raf.requestAnimationFrame).toHaveBeenCalledTimes(2)
   })
 
+  it('keeps the current deck state object when transport snapshots are unchanged', () => {
+    const raf = installAnimationFrameMock()
+    const engine = createEngine({
+      deckAPlaying: false,
+      deckBPlaying: false,
+      deckAPosition: 0,
+      deckBPosition: 0
+    })
+    const updateMasterDeck = vi.fn()
+    const initialDecks = {
+      A: {
+        ...createDeckState(),
+        effectiveBpm: 124,
+        hotCues: engine.deckA.hotCues,
+        loop: engine.deckA.loop
+      },
+      B: {
+        ...createDeckState(),
+        effectiveBpm: 118,
+        hotCues: engine.deckB.hotCues,
+        loop: engine.deckB.loop
+      }
+    }
+    let renderCount = 0
+
+    const { result } = renderHook(() => {
+      renderCount += 1
+      const masterDeckIdRef = useRef<DeckId | null>(null)
+      const [decks, setDecks] = useState(initialDecks)
+
+      useTransportTicker(engine, masterDeckIdRef, updateMasterDeck, setDecks)
+
+      return decks
+    })
+
+    act(() => {
+      raf.runFrame(1)
+    })
+
+    expect(engine.deckA.tickLoop).toHaveBeenCalledTimes(1)
+    expect(engine.deckB.tickLoop).toHaveBeenCalledTimes(1)
+    expect(updateMasterDeck).toHaveBeenCalledWith(null)
+    expect(result.current).toBe(initialDecks)
+    expect(renderCount).toBe(1)
+  })
+
   it.each([
     { currentMaster: 'A' as DeckId, deckAPlaying: true, deckBPlaying: true, expected: 'A' },
     { currentMaster: 'B' as DeckId, deckAPlaying: true, deckBPlaying: true, expected: 'B' },

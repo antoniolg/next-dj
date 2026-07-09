@@ -4,6 +4,18 @@ import type { DJEngine } from '../audio/engine'
 import type { DeckState } from './deckState'
 import type { DeckId } from './engineTypes'
 
+type TransportDeckSnapshot = Pick<DeckState, 'position' | 'isPlaying' | 'effectiveBpm' | 'hotCues' | 'loop'>
+
+function hasTransportSnapshotChanged(current: DeckState, snapshot: TransportDeckSnapshot): boolean {
+  return (
+    current.position !== snapshot.position ||
+    current.isPlaying !== snapshot.isPlaying ||
+    current.effectiveBpm !== snapshot.effectiveBpm ||
+    current.hotCues !== snapshot.hotCues ||
+    current.loop !== snapshot.loop
+  )
+}
+
 export function useTransportTicker(
   engine: DJEngine,
   masterDeckIdRef: MutableRefObject<DeckId | null>,
@@ -32,24 +44,37 @@ export function useTransportTicker(
         updateMasterDeck(null)
       }
 
-      setDecks((current) => ({
-        A: {
-          ...current.A,
+      setDecks((current) => {
+        const deckA: TransportDeckSnapshot = {
           position: engine.deckA.getPosition(),
           isPlaying: engine.deckA.isPlaying,
           effectiveBpm: engine.deckA.getEffectiveBpm(),
           hotCues: engine.deckA.hotCues,
           loop: engine.deckA.loop
-        },
-        B: {
-          ...current.B,
+        }
+        const deckB: TransportDeckSnapshot = {
           position: engine.deckB.getPosition(),
           isPlaying: engine.deckB.isPlaying,
           effectiveBpm: engine.deckB.getEffectiveBpm(),
           hotCues: engine.deckB.hotCues,
           loop: engine.deckB.loop
         }
-      }))
+
+        if (!hasTransportSnapshotChanged(current.A, deckA) && !hasTransportSnapshotChanged(current.B, deckB)) {
+          return current
+        }
+
+        return {
+          A: {
+            ...current.A,
+            ...deckA
+          },
+          B: {
+            ...current.B,
+            ...deckB
+          }
+        }
+      })
       frameId = window.requestAnimationFrame(tick)
     }
 
