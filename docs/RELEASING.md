@@ -47,8 +47,35 @@ The performance snapshots should report empty `longTasks` and `slowFrames`.
 
 ## Distribution
 
+GitHub Releases are built from version tags:
+
 ```bash
-npm run dist
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The release workflow builds macOS, Windows, and Linux artifacts on native GitHub runners and attaches them to the GitHub Release.
+
+For local packaging:
+
+```bash
+npm run dist:mac
+npm run dist:win
+npm run dist:linux
+```
+
+`npm run dist` builds the default macOS release. `npm run dist:all` asks Electron Builder to create macOS, Windows, and Linux artifacts in `release/`.
+
+Expected release assets:
+
+- macOS x64/arm64: `.dmg` and `.zip`
+- Windows x64: NSIS installer and portable executable
+- Linux x64: `.AppImage` and `.deb`
+
+App icons are generated from `build/icon-source.png`:
+
+```bash
+npm run icons:generate
 ```
 
 Before publishing, decide and document the signing/notarization path for the target platform. Do not treat an unsigned local `.app` as production-ready.

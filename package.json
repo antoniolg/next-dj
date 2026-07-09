@@ -2,12 +2,27 @@
   "name": "next-dj",
   "version": "0.1.0",
   "description": "NextDJ desktop app",
+  "desktopName": "nextdj",
+  "author": {
+    "name": "Antonio Leiva",
+    "email": "antonio@devexperto.com"
+  },
+  "homepage": "https://github.com/antoniolg/next-dj",
   "main": "./out/main/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/antoniolg/next-dj.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "dist": "electron-vite build && electron-builder --mac",
+    "dist": "npm run dist:mac",
+    "dist:all": "electron-vite build && electron-builder --mac --x64 --arm64 && electron-builder --win --x64 && electron-builder --linux --x64",
+    "dist:linux": "electron-vite build && electron-builder --linux --x64",
+    "dist:mac": "electron-vite build && electron-builder --mac --x64 --arm64",
+    "dist:win": "electron-vite build && electron-builder --win --x64",
+    "icons:generate": "node scripts/generate-icons.mjs",
     "lint": "eslint .",
     "perf:snapshot": "node scripts/capture-renderer-perf.mjs",
     "test": "vitest run",
