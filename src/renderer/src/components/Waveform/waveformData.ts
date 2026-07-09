@@ -1,3 +1,5 @@
+import { buildMonoSamples } from '../../audio/monoSamples'
+
 export interface PeakBuckets {
   bucketCount: number
   peaks: Float32Array
@@ -17,30 +19,6 @@ const LOW_BAND_CUTOFF_HZ = 180
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
-}
-
-function buildMonoSamples(buffer: AudioBuffer): Float32Array {
-  const frameCount = buffer.length
-  const channelCount = Math.max(1, buffer.numberOfChannels)
-  const channels = Array.from({ length: buffer.numberOfChannels }, (_, index) => buffer.getChannelData(index))
-  const samples = new Float32Array(frameCount)
-
-  if (channels.length === 1) {
-    samples.set(channels[0])
-    return samples
-  }
-
-  for (let frame = 0; frame < frameCount; frame += 1) {
-    let sample = 0
-
-    for (const channel of channels) {
-      sample += channel[frame] ?? 0
-    }
-
-    samples[frame] = sample / channelCount
-  }
-
-  return samples
 }
 
 function buildPeakBuckets(samples: Float32Array, sampleRate: number, bucketCount: number): PeakBuckets {

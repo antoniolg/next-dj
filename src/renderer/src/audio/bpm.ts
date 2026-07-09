@@ -1,3 +1,5 @@
+import { buildMonoSamples } from './monoSamples'
+
 export interface BpmDetectionResult {
   bpm: number
   firstBeatOffset: number
@@ -37,25 +39,13 @@ function median(values: number[]): number {
   return sorted.length % 2 === 0 ? (sorted[midpoint - 1] + sorted[midpoint]) / 2 : sorted[midpoint]
 }
 
-function getMonoSample(buffer: AudioBuffer, frame: number): number {
-  let sample = 0
-
-  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
-    sample += buffer.getChannelData(channel)[frame] ?? 0
-  }
-
-  return sample / Math.max(1, buffer.numberOfChannels)
-}
-
 async function renderLowpassed(buffer: AudioBuffer): Promise<AudioBuffer> {
   const frameCount = Math.min(buffer.length, Math.floor(buffer.sampleRate * MAX_ANALYSIS_SECONDS))
   const offline = new OfflineAudioContext(1, frameCount, buffer.sampleRate)
   const sourceBuffer = offline.createBuffer(1, frameCount, buffer.sampleRate)
   const channelData = sourceBuffer.getChannelData(0)
 
-  for (let frame = 0; frame < frameCount; frame += 1) {
-    channelData[frame] = getMonoSample(buffer, frame)
-  }
+  channelData.set(buildMonoSamples(buffer, frameCount))
 
   const source = offline.createBufferSource()
   const filter = offline.createBiquadFilter()
