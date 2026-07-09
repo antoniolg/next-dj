@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { createFrameMeter } from '../../performance/frameMetrics'
 import type { WaveformData } from './waveformData'
 import { getLowPeakAt, getPeakAt } from './waveformData'
 
@@ -184,12 +185,15 @@ export function ZoomWaveform({
 
   useEffect(() => {
     let frameId = 0
+    const frameMeter = createFrameMeter('waveform.zoom')
 
     const tick = (): void => {
       const canvas = canvasRef.current
 
       if (canvas) {
-        drawCanvas(canvas, waveform, accent, duration, getPosition(), bpm, firstBeatOffset)
+        frameMeter.measure(() => {
+          drawCanvas(canvas, waveform, accent, duration, getPosition(), bpm, firstBeatOffset)
+        })
       }
 
       frameId = window.requestAnimationFrame(tick)

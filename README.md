@@ -52,6 +52,8 @@ localStorage.setItem('nextdj.perf', '1')
 
 Reload the app or open it with `?nextdjPerf=1`, record a Chrome Performance session, and inspect `nextdj.deck.loadFile.*` measures. The app currently records read, decode, waveform, and BPM phases. The flag also logs those measures to the console with the `[nextdj:perf]` prefix.
 
+During playback, the same flag reports slow waveform draw frames as `waveform.overview slow frame` and `waveform.zoom slow frame`. Treat repeated slow-frame logs as evidence before changing waveform fidelity or animation cadence.
+
 Performance changes should preserve the existing UI. Any optimization that visibly changes waveform fidelity, animation cadence, layout, or interaction timing needs visual validation before shipping.
 
 ## Production Checklist

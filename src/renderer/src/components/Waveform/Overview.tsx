@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
+import { createFrameMeter } from '../../performance/frameMetrics'
 import type { WaveformData } from './waveformData'
 import { getLowPeakAt, getPeakAt } from './waveformData'
 
@@ -113,12 +114,15 @@ export function Overview({
 
   useEffect(() => {
     let frameId = 0
+    const frameMeter = createFrameMeter('waveform.overview')
 
     const tick = (): void => {
       const canvas = canvasRef.current
 
       if (canvas) {
-        drawCanvas(canvas, waveform, accent, duration, getPosition())
+        frameMeter.measure(() => {
+          drawCanvas(canvas, waveform, accent, duration, getPosition())
+        })
       }
 
       frameId = window.requestAnimationFrame(tick)
