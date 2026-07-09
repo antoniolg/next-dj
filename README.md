@@ -22,15 +22,23 @@ npm run check
 
 `npm run check` is the handoff gate and runs lint, typecheck, unit tests, and production build.
 
+Coverage is intentionally modest while the codebase is being carved out of the prototype:
+
+- Global floor: 10% statements, branches, functions, and lines.
+- Raise the floor only after adding meaningful regression tests, not by excluding risky code.
+
 ## Architecture
 
 - `src/main`: Electron lifecycle and desktop IPC. YouTube/yt-dlp and recording write paths live here because they need Node/Electron APIs.
+- `src/main/appSecurity.ts`: Electron session permission policy.
+- `src/main/recordingValidation.ts`: IPC input validation for recording calls.
 - `src/preload`: the stable `window.nextdj` bridge exposed to the renderer.
 - `src/shared`: types shared by main, preload, and renderer without importing React or Electron UI code.
-- `src/renderer/src/audio`: WebAudio engine, decks, mixer, output routing, BPM analysis, and deck persistence helpers.
-- `src/renderer/src/hooks`: React orchestration around the audio engine, library, recording, shortcuts, and output devices.
+- `src/renderer/src/audio`: WebAudio engine, decks, mixer, output routing, BPM analysis, deck persistence, hot-cue state, and loop state.
+- `src/renderer/src/hooks`: React orchestration around the audio engine, library, recording, shortcuts, output devices, deck actions, and mixer actions.
 - `src/renderer/src/components`: presentation components for decks, mixer, library, settings, waveforms, and controls.
 - `src/renderer/src/library`: local library persistence, file helpers, and audio metadata readers.
+- `src/renderer/src/styles`: renderer CSS split by UI domain.
 
 ## Production Checklist
 
@@ -39,4 +47,12 @@ npm run check
 - Keep existing `nextdj.*` storage keys stable unless a migration is added.
 - Validate all IPC inputs in main before touching disk, shell, or external processes.
 - Keep Electron permissions narrow; media and display capture are currently the only allowed runtime permissions.
+- Keep `BrowserWindow` hardened with `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`.
 - Avoid large multi-purpose files. Split new behavior into testable modules before it grows past roughly 500 LOC.
+
+## Next Refactor Targets
+
+- Add smoke tests around `App` and high-value component flows with WebAudio and `window.nextdj` mocks.
+- Continue carving `Deck` into transport/source scheduling and jog behavior modules.
+- Split `LibraryPanel` and `MixerPanel` when adding new UI behavior; do not grow them in place.
+- Add focused tests for recording state and renderer-side recorder orchestration before changing capture behavior.
