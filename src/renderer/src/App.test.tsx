@@ -102,7 +102,7 @@ vi.mock('./hooks/useLibrary', () => ({
     tracks: [],
     isReady: true,
     addFiles: vi.fn(),
-    addYouTubeTracks: vi.fn(),
+    addPlaylistImportTracks: vi.fn(),
     resolveTrackFile: vi.fn(),
     getTrack: vi.fn()
   })

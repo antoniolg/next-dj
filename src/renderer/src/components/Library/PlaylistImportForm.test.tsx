@@ -1,52 +1,52 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { YouTubeImportForm } from './YouTubeImportForm'
+import { PlaylistImportForm } from './PlaylistImportForm'
 
-describe('YouTubeImportForm', () => {
+describe('PlaylistImportForm', () => {
   it('submits only when a URL is present', () => {
     const onSubmit = vi.fn()
 
-    render(<YouTubeImportForm disabled={false} status={null} url="" onSubmit={onSubmit} onUrlChange={vi.fn()} />)
+    render(<PlaylistImportForm disabled={false} input="" status={null} onInputChange={vi.fn()} onSubmit={onSubmit} />)
 
     expect(screen.getByRole('button', { name: 'Import' })).toBeDisabled()
   })
 
   it('reports URL changes and submit events', () => {
     const onSubmit = vi.fn()
-    const onUrlChange = vi.fn()
+    const onInputChange = vi.fn()
 
     render(
-      <YouTubeImportForm
+      <PlaylistImportForm
         disabled={false}
+        input="demo:playlist"
         status="Ready"
-        url="https://music.youtube.com/playlist"
+        onInputChange={onInputChange}
         onSubmit={onSubmit}
-        onUrlChange={onUrlChange}
       />
     )
 
-    fireEvent.change(screen.getByLabelText('YouTube Music playlist URL'), {
-      target: { value: 'https://youtube.com/watch?v=abc' }
+    fireEvent.change(screen.getByLabelText('Playlist URL'), {
+      target: { value: 'demo:other-playlist' }
     })
     fireEvent.click(screen.getByRole('button', { name: 'Import' }))
 
-    expect(onUrlChange).toHaveBeenCalledWith('https://youtube.com/watch?v=abc')
+    expect(onInputChange).toHaveBeenCalledWith('demo:other-playlist')
     expect(onSubmit).toHaveBeenCalled()
     expect(screen.getByText('Ready')).toBeInTheDocument()
   })
 
   it('reflects the importing state', () => {
     render(
-      <YouTubeImportForm
+      <PlaylistImportForm
         disabled
+        input="demo:playlist"
         status="Reading playlist..."
-        url="https://music.youtube.com/playlist"
+        onInputChange={vi.fn()}
         onSubmit={vi.fn()}
-        onUrlChange={vi.fn()}
       />
     )
 
     expect(screen.getByRole('button', { name: 'Reading' })).toBeDisabled()
-    expect(screen.getByLabelText('YouTube Music playlist URL')).toBeDisabled()
+    expect(screen.getByLabelText('Playlist URL')).toBeDisabled()
   })
 })

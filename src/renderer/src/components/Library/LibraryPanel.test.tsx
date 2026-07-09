@@ -28,7 +28,7 @@ function renderPanel(overrides: Partial<Parameters<typeof LibraryPanel>[0]> = {}
       keyboardLoadDeckId="A"
       tracks={tracks}
       onAddFiles={vi.fn().mockResolvedValue([])}
-      onAddYouTubeTracks={vi.fn()}
+      onAddPlaylistImportTracks={vi.fn()}
       onLoadTrack={vi.fn().mockResolvedValue(undefined)}
       {...overrides}
     />
@@ -77,16 +77,17 @@ describe('LibraryPanel', () => {
     expect(onAddFiles).toHaveBeenLastCalledWith(droppedFiles)
   })
 
-  it('imports YouTube playlists through the desktop bridge', async () => {
-    const onAddYouTubeTracks = vi.fn()
-    const youtubeTracks = [
-      { id: 'abc', title: 'Playlist Track', duration: 180, url: 'https://youtube.com/watch?v=abc' }
+  it('imports external playlists through the desktop bridge', async () => {
+    const onAddPlaylistImportTracks = vi.fn()
+    const importTracks = [
+      { providerId: 'demo-local', id: 'abc', title: 'Playlist Track', duration: 180, externalRef: 'abc' }
     ]
 
     window.nextdj = {
       appName: 'NextDJ',
-      downloadYouTubeAudio: vi.fn(),
-      listYouTubeTracks: vi.fn().mockResolvedValue(youtubeTracks),
+      listPlaylistImportProviders: vi.fn().mockResolvedValue([{ id: 'demo-local', displayName: 'Demo Local' }]),
+      listPlaylistImportTracks: vi.fn().mockResolvedValue(importTracks),
+      resolvePlaylistImportTrack: vi.fn(),
       startRecording: vi.fn(),
       appendRecordingChunk: vi.fn(),
       stopRecording: vi.fn(),
@@ -95,16 +96,16 @@ describe('LibraryPanel', () => {
       onRecordingWriteError: vi.fn()
     }
 
-    renderPanel({ onAddYouTubeTracks })
+    renderPanel({ onAddPlaylistImportTracks })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Import YouTube Music' }))
-    fireEvent.change(screen.getByLabelText('YouTube Music playlist URL'), {
-      target: { value: 'https://music.youtube.com/playlist?list=abc' }
+    fireEvent.click(await screen.findByRole('button', { name: 'Import playlist' }))
+    fireEvent.change(screen.getByLabelText('Playlist URL'), {
+      target: { value: 'demo:playlist' }
     })
     fireEvent.click(screen.getByRole('button', { name: 'Import' }))
 
-    await waitFor(() => expect(window.nextdj?.listYouTubeTracks).toHaveBeenCalledWith('https://music.youtube.com/playlist?list=abc'))
-    expect(onAddYouTubeTracks).toHaveBeenCalledWith(youtubeTracks)
+    await waitFor(() => expect(window.nextdj?.listPlaylistImportTracks).toHaveBeenCalledWith('demo:playlist'))
+    expect(onAddPlaylistImportTracks).toHaveBeenCalledWith(importTracks)
     expect(await screen.findByText('Listed 1 track. Downloads happen on load.')).toBeInTheDocument()
   })
 

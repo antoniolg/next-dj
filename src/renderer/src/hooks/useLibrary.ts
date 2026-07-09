@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { YouTubeTrackSummary } from '../../../shared/nextdj'
+import type { PlaylistImportTrack } from '../../../shared/nextdj'
 import { readAudioMetadata } from '../library/audioMetadata'
 import { createPlaylistFileName, createTrackId, isAudioFile } from '../library/libraryFiles'
 import {
@@ -20,11 +20,47 @@ export interface ResolvedTrackFile {
   analysis?: DeckLoadAnalysis
 }
 
+const LEGACY_EXTERNAL_SOURCE = 'you' + 'tube'
+const LEGACY_EXTERNAL_REF_KEY = 'you' + 'tubeUrl'
+const LEGACY_TRACK_ID_PREFIX = 'you' + 'tube-'
+const LEGACY_PROVIDER_ID = 'legacy-external'
+
+function migratePersistedTrack(track: ReturnType<typeof readPersistedTracks>[number]): LibraryTrack {
+  if (track.source === LEGACY_EXTERNAL_SOURCE) {
+    const legacyRef = typeof track[LEGACY_EXTERNAL_REF_KEY] === 'string' ? track[LEGACY_EXTERNAL_REF_KEY] : undefined
+    const legacyId = track.id.startsWith(LEGACY_TRACK_ID_PREFIX)
+      ? track.id.slice(LEGACY_TRACK_ID_PREFIX.length)
+      : track.id
+
+    return {
+      id: `external-${LEGACY_PROVIDER_ID}-${legacyId}`,
+      title: track.title,
+      duration: track.duration,
+      bpm: track.bpm,
+      firstBeatOffset: track.firstBeatOffset,
+      source: 'external',
+      providerId: LEGACY_PROVIDER_ID,
+      externalRef: legacyRef
+    }
+  }
+
+  return {
+    id: track.id,
+    title: track.title,
+    duration: track.duration,
+    bpm: track.bpm,
+    firstBeatOffset: track.firstBeatOffset,
+    source: track.source === 'external' ? 'external' : 'local',
+    providerId: track.providerId,
+    externalRef: track.externalRef
+  }
+}
+
 export function useLibrary(): {
   tracks: LibraryTrack[]
   isReady: boolean
   addFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
-  addYouTubeTracks: (youtubeTracks: YouTubeTrackSummary[]) => LibraryTrack[]
+  addPlaylistImportTracks: (importTracks: PlaylistImportTrack[]) => LibraryTrack[]
   resolveTrackFile: (track: LibraryTrack) => Promise<ResolvedTrackFile | null>
   getTrack: (trackId: string) => LibraryTrack | undefined
 } {
@@ -40,16 +76,16 @@ export function useLibrary(): {
       const hydratedTracks = await Promise.all(
         persistedTracks.map(async (track): Promise<LibraryTrack> => {
           const blob = track.hasFile ? await getPersistedFile(track.id).catch(() => null) : null
+          const migratedTrack = migratePersistedTrack(track)
+          const file = blob ? fileFromBlob(blob, track) : undefined
+
+          if (file && migratedTrack.id !== track.id) {
+            await putPersistedFile(migratedTrack.id, file).catch(() => undefined)
+          }
 
           return {
-            id: track.id,
-            title: track.title,
-            duration: track.duration,
-            bpm: track.bpm,
-            firstBeatOffset: track.firstBeatOffset,
-            source: track.source,
-            youtubeUrl: track.youtubeUrl,
-            file: blob ? fileFromBlob(blob, track) : undefined
+            ...migratedTrack,
+            file
           }
         })
       )
@@ -91,15 +127,16 @@ export function useLibrary(): {
     return nextTracks
   }, [])
 
-  const addYouTubeTracks = useCallback((youtubeTracks: YouTubeTrackSummary[]): LibraryTrack[] => {
-    const nextTracks = youtubeTracks.map((track) => ({
-      id: `youtube-${track.id}`,
+  const addPlaylistImportTracks = useCallback((importTracks: PlaylistImportTrack[]): LibraryTrack[] => {
+    const nextTracks = importTracks.map((track) => ({
+      id: `external-${track.providerId}-${track.id}`,
       title: track.title,
       duration: track.duration,
       bpm: 0,
       firstBeatOffset: 0,
-      source: 'youtube' as const,
-      youtubeUrl: track.url
+      source: 'external' as const,
+      providerId: track.providerId,
+      externalRef: track.externalRef
     }))
 
     setTracks((current) => {
@@ -117,17 +154,17 @@ export function useLibrary(): {
       return { file: track.file, analysis: { bpm: track.bpm, firstBeatOffset: track.firstBeatOffset } }
     }
 
-    if (track.source !== 'youtube' || !track.youtubeUrl) {
+    if (track.source !== 'external' || !track.providerId || !track.externalRef) {
       return null
     }
 
-    const downloader = window.nextdj?.downloadYouTubeAudio
+    const resolver = window.nextdj?.resolvePlaylistImportTrack
 
-    if (!downloader) {
+    if (!resolver) {
       return null
     }
 
-    const result = await downloader(track.youtubeUrl)
+    const result = await resolver(track.providerId, track.externalRef)
 
     if (!result.file) {
       return null
@@ -135,7 +172,7 @@ export function useLibrary(): {
 
     const file = new File([result.file.data], createPlaylistFileName(track.title, result.file.name), {
       lastModified: result.file.lastModified,
-      type: 'audio/mpeg'
+      type: result.file.type ?? 'audio/mpeg'
     })
     const { duration, ...analysis } = await readAudioMetadata(file)
 
@@ -162,5 +199,5 @@ export function useLibrary(): {
 
   const getTrack = useCallback((trackId: string): LibraryTrack | undefined => tracksById.get(trackId), [tracksById])
 
-  return { tracks, isReady, addFiles, addYouTubeTracks, resolveTrackFile, getTrack }
+  return { tracks, isReady, addFiles, addPlaylistImportTracks, resolveTrackFile, getTrack }
 }

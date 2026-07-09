@@ -3,15 +3,15 @@ import { ChevronDown, ChevronUp, Info, Link, Maximize2, Minimize2, Music, Plus }
 import type { DeckId } from '../../hooks/useEngine'
 import type { LibraryTrack } from '../../hooks/useLibrary'
 import { LibraryTrackTable } from './LibraryTrackTable'
-import { YouTubeImportForm } from './YouTubeImportForm'
+import { PlaylistImportForm } from './PlaylistImportForm'
 import { createTrackIdIndex, isEditableTarget } from './libraryPanelUtils'
-import { useYouTubeImport } from './useYouTubeImport'
+import { usePlaylistImport } from './usePlaylistImport'
 
 interface LibraryPanelProps {
   tracks: LibraryTrack[]
   keyboardLoadDeckId: DeckId
   onAddFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
-  onAddYouTubeTracks: (youtubeTracks: YouTubeTrackSummary[]) => LibraryTrack[]
+  onAddPlaylistImportTracks: (importTracks: PlaylistImportTrack[]) => LibraryTrack[]
   onLoadTrack: (deckId: DeckId, track: LibraryTrack) => Promise<void>
 }
 
@@ -21,7 +21,7 @@ export const LibraryPanel = memo(function LibraryPanel({
   tracks,
   keyboardLoadDeckId,
   onAddFiles,
-  onAddYouTubeTracks,
+  onAddPlaylistImportTracks,
   onLoadTrack
 }: LibraryPanelProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -30,9 +30,16 @@ export const LibraryPanel = memo(function LibraryPanel({
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1')
   const [expanded, setExpanded] = useState(false)
   const [focusedTrackId, setFocusedTrackId] = useState<string | null>(null)
-  const [youtubeOpen, setYoutubeOpen] = useState(false)
-  const { handleYoutubeImport, isImportingYoutube, setYoutubeUrl, youtubeStatus, youtubeUrl } = useYouTubeImport({
-    onAddYouTubeTracks
+  const [playlistImportOpen, setPlaylistImportOpen] = useState(false)
+  const {
+    handlePlaylistImport,
+    hasPlaylistImportProviders,
+    isImportingPlaylist,
+    playlistInput,
+    playlistStatus,
+    setPlaylistInput
+  } = usePlaylistImport({
+    onAddPlaylistImportTracks
   })
   const trackIdIndex = useMemo(() => createTrackIdIndex(tracks), [tracks])
   const firstTrackId = tracks[0]?.id ?? null
@@ -231,15 +238,17 @@ export const LibraryPanel = memo(function LibraryPanel({
           </span>
         </div>
         <div className="library-actions">
-          <button
-            aria-label="Import YouTube Music"
-            className={`icon-button ${youtubeOpen ? 'icon-button-active' : ''}`}
-            title="Import YouTube Music"
-            type="button"
-            onClick={() => setYoutubeOpen((current) => !current)}
-          >
-            <Link size={15} strokeWidth={2.4} />
-          </button>
+          {hasPlaylistImportProviders ? (
+            <button
+              aria-label="Import playlist"
+              className={`icon-button ${playlistImportOpen ? 'icon-button-active' : ''}`}
+              title="Import playlist"
+              type="button"
+              onClick={() => setPlaylistImportOpen((current) => !current)}
+            >
+              <Link size={15} strokeWidth={2.4} />
+            </button>
+          ) : null}
           <button
             aria-label="Add tracks"
             className="icon-button"
@@ -280,13 +289,13 @@ export const LibraryPanel = memo(function LibraryPanel({
 
       {collapsed ? null : (
         <>
-          {youtubeOpen ? (
-            <YouTubeImportForm
-              disabled={isImportingYoutube}
-              status={youtubeStatus}
-              url={youtubeUrl}
-              onSubmit={() => void handleYoutubeImport()}
-              onUrlChange={setYoutubeUrl}
+          {playlistImportOpen && hasPlaylistImportProviders ? (
+            <PlaylistImportForm
+              disabled={isImportingPlaylist}
+              input={playlistInput}
+              status={playlistStatus}
+              onInputChange={setPlaylistInput}
+              onSubmit={() => void handlePlaylistImport()}
             />
           ) : null}
 

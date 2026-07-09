@@ -61,8 +61,9 @@ function createSnapshot(overrides: Partial<RecorderSnapshot>): RecorderSnapshot 
 function installBridge() {
   const bridge = {
     appName: 'NextDJ',
-    downloadYouTubeAudio: vi.fn(),
-    listYouTubeTracks: vi.fn(),
+    listPlaylistImportProviders: vi.fn(),
+    listPlaylistImportTracks: vi.fn(),
+    resolvePlaylistImportTrack: vi.fn(),
     startRecording: vi.fn(),
     appendRecordingChunk: vi.fn(),
     stopRecording: vi.fn(),

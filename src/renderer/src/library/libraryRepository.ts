@@ -14,7 +14,8 @@ function serializeTrack(track: LibraryTrack): PersistedTrack {
     bpm: track.bpm,
     firstBeatOffset: track.firstBeatOffset,
     source: track.source,
-    youtubeUrl: track.youtubeUrl,
+    providerId: track.providerId,
+    externalRef: track.externalRef,
     fileName: track.file?.name,
     fileType: track.file?.type,
     fileLastModified: track.file?.lastModified,
@@ -80,7 +81,7 @@ export async function getPersistedFile(trackId: string): Promise<Blob | null> {
 
 export function fileFromBlob(blob: Blob, track: PersistedTrack): File {
   const fileName =
-    track.source === 'youtube'
+    track.source === 'external'
       ? createPlaylistFileName(track.title, track.fileName ?? `${track.title}.mp3`)
       : track.fileName ?? `${track.title}.mp3`
 

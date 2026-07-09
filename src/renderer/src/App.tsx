@@ -46,7 +46,7 @@ export function App(): JSX.Element {
     setCueDevice,
     refreshOutputDevices
   } = useEngine()
-  const { tracks, isReady: libraryReady, addFiles, addYouTubeTracks, resolveTrackFile, getTrack } = useLibrary()
+  const { tracks, isReady: libraryReady, addFiles, addPlaylistImportTracks, resolveTrackFile, getTrack } = useLibrary()
   const recorder = useRecorder(engine)
   const { loadingDecks, loadFileToDeck, loadLibraryTrack, loadLibraryTrackById } = useDeckLoading({
     libraryReady,
@@ -222,7 +222,7 @@ export function App(): JSX.Element {
               tracks={tracks}
               keyboardLoadDeckId={masterDeckId === 'A' ? 'B' : 'A'}
               onAddFiles={addFiles}
-              onAddYouTubeTracks={addYouTubeTracks}
+              onAddPlaylistImportTracks={addPlaylistImportTracks}
               onLoadTrack={loadLibraryTrack}
             />
           </div>

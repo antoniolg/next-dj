@@ -77,8 +77,9 @@ function installBridge() {
   const unsubscribe = vi.fn()
   const bridge = {
     appName: 'NextDJ',
-    downloadYouTubeAudio: vi.fn(),
-    listYouTubeTracks: vi.fn(),
+    listPlaylistImportProviders: vi.fn(),
+    listPlaylistImportTracks: vi.fn(),
+    resolvePlaylistImportTrack: vi.fn(),
     startRecording: vi.fn().mockResolvedValue({ id: 'recording-1', filePath: '/recordings/live.m4a' }),
     appendRecordingChunk: vi.fn().mockResolvedValue(undefined),
     stopRecording: vi.fn().mockResolvedValue({ filePath: '/recordings/final.m4a' }),

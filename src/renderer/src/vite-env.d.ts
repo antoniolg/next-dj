@@ -1,11 +1,11 @@
-import type { NextDjBridge, YouTubeTrackSummary as SharedYouTubeTrackSummary } from '../../shared/nextdj'
+import type { NextDjBridge, PlaylistImportTrack as SharedPlaylistImportTrack } from '../../shared/nextdj'
 
 declare global {
   interface Window {
     nextdj?: NextDjBridge
   }
 
-  type YouTubeTrackSummary = SharedYouTubeTrackSummary
+  type PlaylistImportTrack = SharedPlaylistImportTrack
 }
 
 export {}

@@ -14,13 +14,14 @@ const tracks: LibraryTrack[] = [
     source: 'local'
   },
   {
-    id: 'yt-1',
+    id: 'external-1',
     title: 'Remote Track',
     duration: 0,
     bpm: 0,
     firstBeatOffset: 0,
-    source: 'youtube',
-    youtubeUrl: 'https://youtube.com/watch?v=abc'
+    source: 'external',
+    providerId: 'demo-local',
+    externalRef: 'track-1'
   }
 ]
 

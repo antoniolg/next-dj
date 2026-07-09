@@ -66,7 +66,7 @@ describe('library repository', () => {
     vi.useRealTimers()
   })
 
-  it('uses sanitized playlist names for YouTube files', () => {
+  it('uses sanitized playlist names for external files', () => {
     const blob = new Blob(['audio'])
     const track: PersistedTrack = {
       id: 'track-1',
@@ -74,7 +74,7 @@ describe('library repository', () => {
       duration: 120,
       bpm: 124,
       firstBeatOffset: 0.12,
-      source: 'youtube',
+      source: 'external',
       fileName: 'download.webm',
       fileType: 'audio/webm',
       fileLastModified: 123,

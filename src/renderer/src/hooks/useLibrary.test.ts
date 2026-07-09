@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createPlaylistFileName } from '../library/libraryFiles'
 
 describe('createPlaylistFileName', () => {
-  it('uses the playlist title instead of the yt-dlp cache name', () => {
+  it('uses the playlist title instead of the downloaded cache name', () => {
     expect(createPlaylistFileName('PokyFair (Poky Mix)', '-PokyFair_Poky_Mix-HW1i2qNqB-w.mp3')).toBe(
       'PokyFair (Poky Mix).mp3'
     )

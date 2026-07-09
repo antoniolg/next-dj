@@ -5,8 +5,9 @@ export interface LibraryTrack {
   bpm: number
   firstBeatOffset: number
   file?: File
-  source: 'local' | 'youtube'
-  youtubeUrl?: string
+  source: 'local' | 'external'
+  providerId?: string
+  externalRef?: string
 }
 
 export interface PersistedTrack {
@@ -15,10 +16,12 @@ export interface PersistedTrack {
   duration: number
   bpm: number
   firstBeatOffset: number
-  source: 'local' | 'youtube'
-  youtubeUrl?: string
+  source: 'local' | 'external' | string
+  providerId?: string
+  externalRef?: string
   fileName?: string
   fileType?: string
   fileLastModified?: number
   hasFile: boolean
+  [key: string]: unknown
 }

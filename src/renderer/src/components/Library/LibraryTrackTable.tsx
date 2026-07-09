@@ -52,7 +52,7 @@ export function LibraryTrackTable({
             <td>
               <span className="library-track-title" title={track.title}>
                 <span className="library-track-title-text">{track.title}</span>
-                {track.source === 'youtube' && !track.file ? (
+                {track.source === 'external' && !track.file ? (
                   <span aria-label="Not stored locally" className="library-track-remote" title="Not stored locally">
                     <Cloud aria-hidden="true" size={13} strokeWidth={2.3} />
                   </span>

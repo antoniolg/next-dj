@@ -19,8 +19,9 @@ const remoteTrack: LibraryTrack = {
   duration: 60,
   bpm: 120,
   firstBeatOffset: 0,
-  source: 'youtube',
-  youtubeUrl: 'https://youtube.com/watch?v=abc'
+  source: 'external',
+  providerId: 'demo-local',
+  externalRef: 'track-1'
 }
 
 function createOptions(overrides: Partial<Parameters<typeof useDeckLoading>[0]> = {}) {
