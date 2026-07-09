@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createFrameMeter } from '../../performance/frameMetrics'
 import { calculateMeterLevel, getLitSegmentCount, getPeakSegment, getVuSegmentColor } from './vuMeterMath'
 
 interface VUMeterProps {
@@ -41,38 +42,41 @@ export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.E
 
     dataRef.current = new Uint8Array(analyser.frequencyBinCount) as Uint8Array<ArrayBuffer>
     let frameId = 0
+    const frameMeter = createFrameMeter('vu.meter')
 
     const tick = (): void => {
       const data = dataRef.current
 
       if (data) {
-        analyser.getByteTimeDomainData(data)
-        const targetLevel = calculateMeterLevel(data)
-        const nextLevel =
-          targetLevel > levelRef.current
-            ? targetLevel
-            : levelRef.current * 0.88 + targetLevel * 0.12
+        frameMeter.measure(() => {
+          analyser.getByteTimeDomainData(data)
+          const targetLevel = calculateMeterLevel(data)
+          const nextLevel =
+            targetLevel > levelRef.current
+              ? targetLevel
+              : levelRef.current * 0.88 + targetLevel * 0.12
 
-        levelRef.current = nextLevel < 0.01 ? 0 : nextLevel
+          levelRef.current = nextLevel < 0.01 ? 0 : nextLevel
 
-        const now = performance.now()
+          const now = performance.now()
 
-        if (levelRef.current >= peakRef.current.value || now - peakRef.current.at > PEAK_HOLD_MS) {
-          peakRef.current = { value: levelRef.current, at: now }
-        }
+          if (levelRef.current >= peakRef.current.value || now - peakRef.current.at > PEAK_HOLD_MS) {
+            peakRef.current = { value: levelRef.current, at: now }
+          }
 
-        const nextMeter = {
-          litSegments: getLitSegmentCount(levelRef.current, segments),
-          peakSegment: getPeakSegment(peakRef.current.value, segments)
-        }
+          const nextMeter = {
+            litSegments: getLitSegmentCount(levelRef.current, segments),
+            peakSegment: getPeakSegment(peakRef.current.value, segments)
+          }
 
-        if (
-          nextMeter.litSegments !== meterRef.current.litSegments ||
-          nextMeter.peakSegment !== meterRef.current.peakSegment
-        ) {
-          meterRef.current = nextMeter
-          setMeter(nextMeter)
-        }
+          if (
+            nextMeter.litSegments !== meterRef.current.litSegments ||
+            nextMeter.peakSegment !== meterRef.current.peakSegment
+          ) {
+            meterRef.current = nextMeter
+            setMeter(nextMeter)
+          }
+        })
       }
 
       frameId = window.requestAnimationFrame(tick)
