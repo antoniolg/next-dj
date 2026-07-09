@@ -3,13 +3,18 @@ import { createWriteStream, type WriteStream } from 'node:fs'
 import { mkdir, rm, statfs } from 'node:fs/promises'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import type { RecordingStartOptions } from '../shared/nextdj.js'
 import {
-  isAllowedRecordingExtension,
   isPathInsideDirectory,
   MIN_RECORDING_FREE_BYTES,
   timestampedRecordingFileName
 } from './recordingPaths.js'
+import {
+  parseDeleteFileFlag,
+  parseRecordingChunk,
+  parseRecordingPath,
+  parseRecordingSessionId,
+  parseRecordingStartOptions
+} from './recordingValidation.js'
 
 interface RecordingSession {
   stream: WriteStream
@@ -76,10 +81,8 @@ function finalizeSessionsFor(webContentsId: number): void {
 }
 
 export function registerRecordingIpc(): void {
-  ipcMain.handle('recording:start', async (event, options: RecordingStartOptions) => {
-    if (!isAllowedRecordingExtension(options?.extension)) {
-      throw new Error('Unsupported recording format.')
-    }
+  ipcMain.handle('recording:start', async (event, rawOptions: unknown) => {
+    const options = parseRecordingStartOptions(rawOptions)
 
     const directory = getRecordingsDirectory()
     await mkdir(directory, { recursive: true })
@@ -111,7 +114,9 @@ export function registerRecordingIpc(): void {
     return { id, filePath }
   })
 
-  ipcMain.handle('recording:append-chunk', async (event, id: string, chunk: ArrayBuffer) => {
+  ipcMain.handle('recording:append-chunk', async (event, rawId: unknown, rawChunk: unknown) => {
+    const id = parseRecordingSessionId(rawId)
+    const chunk = parseRecordingChunk(rawChunk)
     const session = sessions.get(id)
 
     if (!session) {
@@ -131,7 +136,8 @@ export function registerRecordingIpc(): void {
     }
   })
 
-  ipcMain.handle('recording:stop', async (_event, id: string) => {
+  ipcMain.handle('recording:stop', async (_event, rawId: unknown) => {
+    const id = parseRecordingSessionId(rawId)
     const session = await finalizeSession(id)
 
     if (!session) {
@@ -141,7 +147,9 @@ export function registerRecordingIpc(): void {
     return { filePath: session.filePath, bytes: session.bytes }
   })
 
-  ipcMain.handle('recording:cancel', async (_event, id: string, deleteFile: boolean) => {
+  ipcMain.handle('recording:cancel', async (_event, rawId: unknown, rawDeleteFile: unknown) => {
+    const id = parseRecordingSessionId(rawId)
+    const deleteFile = parseDeleteFileFlag(rawDeleteFile)
     const session = await finalizeSession(id)
 
     if (session && deleteFile) {
@@ -149,7 +157,8 @@ export function registerRecordingIpc(): void {
     }
   })
 
-  ipcMain.handle('recording:reveal', (_event, filePath: string) => {
+  ipcMain.handle('recording:reveal', (_event, rawFilePath: unknown) => {
+    const filePath = parseRecordingPath(rawFilePath)
     const directory = getRecordingsDirectory()
 
     if (!isPathInsideDirectory(filePath, directory)) {
