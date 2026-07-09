@@ -9,6 +9,7 @@ import {
   putPersistedFile,
   readPersistedTracks
 } from '../library/libraryRepository'
+import { mergeUniqueTracks } from '../library/libraryTracks'
 import type { LibraryTrack } from '../library/libraryTypes'
 import type { DeckLoadAnalysis } from '../audio/deck'
 
@@ -81,9 +82,7 @@ export function useLibrary(): {
     await Promise.all(nextTracks.map((track) => (track.file ? putPersistedFile(track.id, track.file) : Promise.resolve())))
 
     setTracks((current) => {
-      const existingIds = new Set(current.map((track) => track.id))
-      const uniqueNextTracks = nextTracks.filter((track) => !existingIds.has(track.id))
-      const updatedTracks = [...current, ...uniqueNextTracks]
+      const updatedTracks = mergeUniqueTracks(current, nextTracks)
 
       persistTrackMetadata(updatedTracks)
       return updatedTracks
@@ -104,9 +103,7 @@ export function useLibrary(): {
     }))
 
     setTracks((current) => {
-      const existingIds = new Set(current.map((track) => track.id))
-      const uniqueNextTracks = nextTracks.filter((track) => !existingIds.has(track.id))
-      const updatedTracks = [...current, ...uniqueNextTracks]
+      const updatedTracks = mergeUniqueTracks(current, nextTracks)
 
       persistTrackMetadata(updatedTracks)
       return updatedTracks
