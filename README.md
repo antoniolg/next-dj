@@ -1,6 +1,42 @@
 # NextDJ
 
-NextDJ is an Electron + Vite + React desktop DJ console. The app keeps real-time audio work in renderer-side WebAudio modules, desktop-only integrations in Electron main/preload, and UI workflows in React hooks/components.
+NextDJ is an open-source desktop DJ console built with Electron, Vite, React,
+and WebAudio. It focuses on local-first mixing: load tracks, inspect waveforms,
+control two decks, mix, route output devices, and record sessions from a desktop
+app.
+
+The public repository is service-neutral. Playlist import support is exposed
+through a local provider plugin API, but NextDJ does not ship with integrations
+for specific external services.
+
+## Status
+
+NextDJ is early software. The app is usable for development and testing, but
+the first public binaries should be treated as pre-release builds until signing,
+notarization, and broader device testing are complete.
+
+## Features
+
+- Two-deck local audio playback with pitch, cue, loop, hot-cue, sync, and jog controls.
+- Overview and zoom waveforms generated in the renderer.
+- Mixer controls with crossfader, channel gain, EQ, filters, and VU meters.
+- Output device selection where supported by the platform.
+- Session recording with Electron-side file writes.
+- Optional playlist import providers loaded from local user configuration.
+- Performance snapshot tooling for load, playback, and recording smoke checks.
+
+## Downloads
+
+GitHub Releases are configured to publish:
+
+- macOS x64/arm64: `.dmg` and `.zip`
+- Windows x64: installer and portable `.exe`
+- Linux x64: `.AppImage` and `.deb`
+- `SHA256SUMS.txt` for artifact verification
+
+Until signing and notarization are configured, downloaded binaries may show
+operating-system warnings. Build locally if you prefer to inspect the source
+before running the app.
 
 ## Development
 
@@ -8,6 +44,8 @@ NextDJ is an Electron + Vite + React desktop DJ console. The app keeps real-time
 npm install
 npm run dev
 ```
+
+Use npm for this repository because `package-lock.json` is committed.
 
 Useful gates:
 
@@ -27,6 +65,35 @@ Coverage is intentionally modest while the codebase is being carved out of the p
 - Global floor: 40% statements, branches, functions, and lines.
 - Raise the floor only after adding meaningful regression tests, not by excluding risky code.
 
+## Packaging
+
+Generate app icons from `build/icon-source.png`:
+
+```bash
+npm run icons:generate
+```
+
+Build local installers:
+
+```bash
+npm run dist:mac
+npm run dist:win
+npm run dist:linux
+npm run release:checksums
+```
+
+See [docs/RELEASING.md](docs/RELEASING.md) before publishing a release.
+
+## Playlist Import Plugins
+
+NextDJ can load local playlist import providers from the Electron main process.
+Providers are configured outside the repository in the app user data directory,
+and the renderer only talks to the stable `window.nextdj` bridge.
+
+See [docs/PLAYLIST_PLUGINS.md](docs/PLAYLIST_PLUGINS.md) for the neutral plugin
+API. Providers are responsible for only importing content that the user has the
+right to access, copy, and use.
+
 ## Architecture
 
 - `src/main`: Electron lifecycle, desktop IPC, recording write paths, and playlist import plugin loading.
@@ -39,8 +106,6 @@ Coverage is intentionally modest while the codebase is being carved out of the p
 - `src/renderer/src/components`: presentation components for decks, mixer, library, settings, waveforms, and controls.
 - `src/renderer/src/library`: local library persistence, file helpers, and audio metadata readers.
 - `src/renderer/src/styles`: renderer CSS split by UI domain.
-
-Playlist import support is provider-based. The public app exposes a neutral plugin API for user-configured providers, but ships without service-specific importers.
 
 ## Performance Profiling
 
@@ -109,4 +174,13 @@ Performance changes should preserve the existing UI. Any optimization that visib
 - Continue carving `Deck` only when a new behavior needs it; source scheduling is already separated.
 - Keep `LibraryPanel` and `MixerPanel` split by hooks/subcomponents when adding new UI behavior.
 - Add screen/camera-focused recorder tests before changing capture or compositor behavior.
-- Add GitHub release packaging once signing/notarization decisions are explicit.
+- Decide whether the first public release is unsigned pre-release software or requires signing/notarization first.
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Security
+reports should follow [SECURITY.md](SECURITY.md).
+
+## License
+
+NextDJ is released under the [MIT License](LICENSE).

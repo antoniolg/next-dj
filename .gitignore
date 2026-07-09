@@ -8,3 +8,5 @@ coverage
 vendor
 *.tsbuildinfo
 release/
+.claude/
+AGENTS.md
