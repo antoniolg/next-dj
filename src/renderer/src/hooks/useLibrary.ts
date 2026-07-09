@@ -112,10 +112,33 @@ async function getPersistedFile(trackId: string): Promise<Blob | null> {
 }
 
 function fileFromBlob(blob: Blob, track: PersistedTrack): File {
-  return new File([blob], track.fileName ?? `${track.title}.mp3`, {
+  const fileName =
+    track.source === 'youtube'
+      ? createPlaylistFileName(track.title, track.fileName ?? `${track.title}.mp3`)
+      : track.fileName ?? `${track.title}.mp3`
+
+  return new File([blob], fileName, {
     lastModified: track.fileLastModified ?? Date.now(),
     type: track.fileType || blob.type || 'audio/mpeg'
   })
+}
+
+function readFileExtension(fileName: string): string {
+  const match = /\.[a-z0-9]{2,5}$/i.exec(fileName)
+  return match?.[0] ?? '.mp3'
+}
+
+const FILE_NAME_UNSAFE_CHARACTERS = new Set(['\\', '/', ':', '*', '?', '"', '<', '>', '|'])
+
+export function createPlaylistFileName(title: string, downloadedFileName: string): string {
+  const cleanedTitle = title
+    .split('')
+    .map((character) => (FILE_NAME_UNSAFE_CHARACTERS.has(character) || character.charCodeAt(0) < 32 ? ' ' : character))
+    .join('')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return cleanedTitle ? `${cleanedTitle}${readFileExtension(downloadedFileName)}` : downloadedFileName
 }
 
 function readDuration(file: File): Promise<number> {
@@ -275,7 +298,7 @@ export function useLibrary(): {
       return null
     }
 
-    const file = new File([result.file.data], result.file.name, {
+    const file = new File([result.file.data], createPlaylistFileName(track.title, result.file.name), {
       lastModified: result.file.lastModified,
       type: 'audio/mpeg'
     })
