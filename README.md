@@ -24,7 +24,7 @@ npm run check
 
 Coverage is intentionally modest while the codebase is being carved out of the prototype:
 
-- Global floor: 28% statements, branches, functions, and lines.
+- Global floor: 29% statements, branches, functions, and lines.
 - Raise the floor only after adding meaningful regression tests, not by excluding risky code.
 
 ## Architecture
