@@ -62,6 +62,12 @@ npm run perf:snapshot -- --wait-ms 5000
 
 That command starts the dev Electron app with `NEXTDJ_PERF=1`, opens a temporary remote debugging port, reads `window.__NEXTDJ_PERF__.snapshot()`, prints JSON, and shuts the app down. It proves the profiling path works, but it does not replace a real session with loaded tracks and recording.
 
+To exercise the real deck file input with a generated WAV fixture and capture library + deck load phases:
+
+```bash
+npm run perf:snapshot -- --scenario deck-load --wait-ms 1000
+```
+
 During playback, the same flag reports slow waveform draw frames as `waveform.overview slow frame` and `waveform.zoom slow frame`, plus analyser-heavy meter frames as `vu.meter slow frame`. Treat repeated slow-frame logs as evidence before changing waveform fidelity, animation cadence, or meter behavior.
 
 The flag also starts a renderer long-task observer when the runtime supports it. Repeated `renderer long task` logs indicate main-thread blocking that should be traced before changing UI behavior.

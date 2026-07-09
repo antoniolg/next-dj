@@ -15,6 +15,10 @@ export function isRendererPerfEnabled(value = process.env.NEXTDJ_PERF): boolean 
   return value === '1'
 }
 
+export function readPerfUserDataDir(value = process.env.NEXTDJ_PERF_USER_DATA_DIR): string | null {
+  return value && value.trim() ? value : null
+}
+
 export function appendRendererPerfFlag(rendererUrl: string | undefined, enabled = isRendererPerfEnabled()): string | undefined {
   if (!rendererUrl || !enabled) {
     return rendererUrl
