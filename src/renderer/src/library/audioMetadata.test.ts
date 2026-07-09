@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { waitFor } from '@testing-library/react'
 import { detectBpm } from '../audio/bpm'
 import { readAudioMetadata, readBpm, readDuration } from './audioMetadata'
 
@@ -129,8 +130,7 @@ describe('audio metadata', () => {
     vi.spyOn(file, 'arrayBuffer').mockResolvedValue(new ArrayBuffer(8))
     const metadataPromise = readAudioMetadata(file)
 
-    await Promise.resolve()
-    expect(decodeAudioData).toHaveBeenCalled()
+    await waitFor(() => expect(decodeAudioData).toHaveBeenCalled())
     audio.onloadedmetadata?.()
     decodeState.resolve?.(decodedBuffer)
 

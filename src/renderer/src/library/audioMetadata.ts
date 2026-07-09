@@ -1,4 +1,5 @@
 import { detectBpm } from '../audio/bpm'
+import { measureAsync } from '../performance/perfMarks'
 
 export interface AudioMetadata {
   duration: number
@@ -35,10 +36,12 @@ export async function readBpm(file: File): Promise<{ bpm: number; firstBeatOffse
   const context = new AudioContext()
 
   try {
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = await context.decodeAudioData(arrayBuffer.slice(0))
+    const arrayBuffer = await measureAsync('library.audioMetadata.readFile', () => file.arrayBuffer())
+    const buffer = await measureAsync('library.audioMetadata.decodeAudioData', () =>
+      context.decodeAudioData(arrayBuffer.slice(0))
+    )
 
-    return detectBpm(buffer)
+    return measureAsync('library.audioMetadata.detectBpm', () => detectBpm(buffer))
   } catch {
     return { bpm: 0, firstBeatOffset: 0 }
   } finally {
@@ -47,7 +50,10 @@ export async function readBpm(file: File): Promise<{ bpm: number; firstBeatOffse
 }
 
 export async function readAudioMetadata(file: File): Promise<AudioMetadata> {
-  const [duration, bpm] = await Promise.all([readDuration(file), readBpm(file)])
+  const [duration, bpm] = await Promise.all([
+    measureAsync('library.audioMetadata.readDuration', () => readDuration(file)),
+    readBpm(file)
+  ])
 
   return {
     duration,

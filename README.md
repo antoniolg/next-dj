@@ -44,13 +44,13 @@ Coverage is intentionally modest while the codebase is being carved out of the p
 
 Use real DJ workflows before optimizing. The highest-risk paths are track loading, waveform/BPM analysis, RAF-driven transport updates, VU meters, recording, and library rendering.
 
-To profile track loading in DevTools, enable the opt-in renderer trace and then load a track:
+To profile track loading in DevTools, enable the opt-in renderer trace and then load or import a track:
 
 ```js
 localStorage.setItem('nextdj.perf', '1')
 ```
 
-Reload the app or open it with `?nextdjPerf=1`, record a Chrome Performance session, and inspect `nextdj.deck.loadFile.*` measures. The app currently records read, decode, waveform, and BPM phases. The flag also logs those measures to the console with the `[nextdj:perf]` prefix.
+Reload the app or open it with `?nextdjPerf=1`, record a Chrome Performance session, and inspect `nextdj.deck.loadFile.*` plus `library.audioMetadata.*` measures. The app currently records file reads, audio decode, waveform, duration, and BPM phases. The flag also logs those measures to the console with the `[nextdj:perf]` prefix.
 
 With the same flag enabled, DevTools also exposes `window.__NEXTDJ_PERF__.snapshot()` and `window.__NEXTDJ_PERF__.reset()` for a compact in-session summary of measured phases, slow waveform frames, and renderer long tasks.
 
