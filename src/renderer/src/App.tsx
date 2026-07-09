@@ -10,6 +10,7 @@ import { useDeckLoading } from './hooks/useDeckLoading'
 import { useEngine } from './hooks/useEngine'
 import { useLibrary } from './hooks/useLibrary'
 import { useRecorder } from './hooks/useRecorder'
+import { startLongTaskObserver } from './performance/longTaskObserver'
 
 export function App(): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -91,6 +92,7 @@ export function App(): JSX.Element {
 
   useEffect(() => {
     document.title = 'NextDJ'
+    return startLongTaskObserver()
   }, [])
 
   useAppShortcuts({

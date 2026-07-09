@@ -54,6 +54,8 @@ Reload the app or open it with `?nextdjPerf=1`, record a Chrome Performance sess
 
 During playback, the same flag reports slow waveform draw frames as `waveform.overview slow frame` and `waveform.zoom slow frame`. Treat repeated slow-frame logs as evidence before changing waveform fidelity or animation cadence.
 
+The flag also starts a renderer long-task observer when the runtime supports it. Repeated `renderer long task` logs indicate main-thread blocking that should be traced before changing UI behavior.
+
 Performance changes should preserve the existing UI. Any optimization that visibly changes waveform fidelity, animation cadence, layout, or interaction timing needs visual validation before shipping.
 
 ## Production Checklist
