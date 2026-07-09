@@ -60,6 +60,34 @@ export function App(): JSX.Element {
   const closeSettings = useCallback((): void => setSettingsOpen(false), [])
   const openShortcuts = useCallback((): void => setShortcutsOpen(true), [])
   const closeShortcuts = useCallback((): void => setShortcutsOpen(false), [])
+  const autoLoopDeckA = useCallback((beats: number): void => setAutoLoop('A', beats), [setAutoLoop])
+  const autoLoopDeckB = useCallback((beats: number): void => setAutoLoop('B', beats), [setAutoLoop])
+  const cueDownDeckA = useCallback((): Promise<void> => cuePress('A'), [cuePress])
+  const cueDownDeckB = useCallback((): Promise<void> => cuePress('B'), [cuePress])
+  const cueUpDeckA = useCallback((): void => cueRelease('A'), [cueRelease])
+  const cueUpDeckB = useCallback((): void => cueRelease('B'), [cueRelease])
+  const jogBendDeckA = useCallback((degrees: number): void => jogBend('A', degrees), [jogBend])
+  const jogBendDeckB = useCallback((degrees: number): void => jogBend('B', degrees), [jogBend])
+  const loadFileToDeckA = useCallback((file: File): Promise<void> => loadFileToDeck('A', file), [loadFileToDeck])
+  const loadFileToDeckB = useCallback((file: File): Promise<void> => loadFileToDeck('B', file), [loadFileToDeck])
+  const loopExitDeckA = useCallback((): void => exitLoop('A'), [exitLoop])
+  const loopExitDeckB = useCallback((): void => exitLoop('B'), [exitLoop])
+  const nudgeDeckA = useCallback((direction: -1 | 1): void => nudgeDeck('A', direction), [nudgeDeck])
+  const nudgeDeckB = useCallback((direction: -1 | 1): void => nudgeDeck('B', direction), [nudgeDeck])
+  const pitchDeckA = useCallback((value: number): void => setPitch('A', value), [setPitch])
+  const pitchDeckB = useCallback((value: number): void => setPitch('B', value), [setPitch])
+  const seekDeckA = useCallback((seconds: number): void => seek('A', seconds), [seek])
+  const seekDeckB = useCallback((seconds: number): void => seek('B', seconds), [seek])
+  const syncDeckA = useCallback((): void => syncDeck('A'), [syncDeck])
+  const syncDeckB = useCallback((): void => syncDeck('B'), [syncDeck])
+  const togglePlaybackDeckA = useCallback((): Promise<void> => togglePlayback('A'), [togglePlayback])
+  const togglePlaybackDeckB = useCallback((): Promise<void> => togglePlayback('B'), [togglePlayback])
+  const trackDropDeckA = useCallback((trackId: string): Promise<void> => loadLibraryTrackById('A', trackId), [
+    loadLibraryTrackById
+  ])
+  const trackDropDeckB = useCallback((trackId: string): Promise<void> => loadLibraryTrackById('B', trackId), [
+    loadLibraryTrackById
+  ])
 
   useEffect(() => {
     document.title = 'NextDJ'
@@ -109,18 +137,18 @@ export function App(): JSX.Element {
               position={decks.A.position}
               trackName={decks.A.trackName}
               waveform={decks.A.waveform}
-              onAutoLoop={(beats) => setAutoLoop('A', beats)}
-              onCueDown={() => cuePress('A')}
-              onCueUp={() => cueRelease('A')}
-              onJogBend={(degrees) => jogBend('A', degrees)}
-              onLoad={(file) => loadFileToDeck('A', file)}
-              onLoopExit={() => exitLoop('A')}
-              onNudge={(direction) => nudgeDeck('A', direction)}
-              onPitchChange={(value) => setPitch('A', value)}
-              onSeek={(seconds) => seek('A', seconds)}
-              onSync={() => syncDeck('A')}
-              onTogglePlayback={() => togglePlayback('A')}
-              onTrackDrop={(trackId) => loadLibraryTrackById('A', trackId)}
+              onAutoLoop={autoLoopDeckA}
+              onCueDown={cueDownDeckA}
+              onCueUp={cueUpDeckA}
+              onJogBend={jogBendDeckA}
+              onLoad={loadFileToDeckA}
+              onLoopExit={loopExitDeckA}
+              onNudge={nudgeDeckA}
+              onPitchChange={pitchDeckA}
+              onSeek={seekDeckA}
+              onSync={syncDeckA}
+              onTogglePlayback={togglePlaybackDeckA}
+              onTrackDrop={trackDropDeckA}
             />
 
             <MixerPanel
@@ -165,18 +193,18 @@ export function App(): JSX.Element {
               position={decks.B.position}
               trackName={decks.B.trackName}
               waveform={decks.B.waveform}
-              onAutoLoop={(beats) => setAutoLoop('B', beats)}
-              onCueDown={() => cuePress('B')}
-              onCueUp={() => cueRelease('B')}
-              onJogBend={(degrees) => jogBend('B', degrees)}
-              onLoad={(file) => loadFileToDeck('B', file)}
-              onLoopExit={() => exitLoop('B')}
-              onNudge={(direction) => nudgeDeck('B', direction)}
-              onPitchChange={(value) => setPitch('B', value)}
-              onSeek={(seconds) => seek('B', seconds)}
-              onSync={() => syncDeck('B')}
-              onTogglePlayback={() => togglePlayback('B')}
-              onTrackDrop={(trackId) => loadLibraryTrackById('B', trackId)}
+              onAutoLoop={autoLoopDeckB}
+              onCueDown={cueDownDeckB}
+              onCueUp={cueUpDeckB}
+              onJogBend={jogBendDeckB}
+              onLoad={loadFileToDeckB}
+              onLoopExit={loopExitDeckB}
+              onNudge={nudgeDeckB}
+              onPitchChange={pitchDeckB}
+              onSeek={seekDeckB}
+              onSync={syncDeckB}
+              onTogglePlayback={togglePlaybackDeckB}
+              onTrackDrop={trackDropDeckB}
             />
           </div>
 

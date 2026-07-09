@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { FolderOpen, Pause, Play } from 'lucide-react'
 import { MAX_PITCH_PERCENT } from '../../audio/deck'
 import type { LoopState } from '../../audio/deckTypes'
@@ -41,6 +41,8 @@ interface DeckPanelProps {
   onSeek: (seconds: number) => void
 }
 
+const PITCH_SCALE = { count: 17, majorEvery: 2 }
+
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds)) {
     return '0:00'
@@ -64,7 +66,7 @@ function formatPhaseOffset(seconds: number): string {
   return seconds > 0 ? 'EARLY' : 'LATE'
 }
 
-export function DeckPanel({
+export const DeckPanel = memo(function DeckPanel({
   deckId,
   accent,
   trackName,
@@ -279,7 +281,7 @@ export function DeckPanel({
             label="Pitch"
             max={8}
             min={-8}
-            scale={{ count: 17, majorEvery: 2 }}
+            scale={PITCH_SCALE}
             step={0.1}
             value={pitch}
             valueFormatter={(value) => `${value > 0 ? '+' : ''}${value.toFixed(1)}%`}
@@ -386,4 +388,4 @@ export function DeckPanel({
       </div>
     </section>
   )
-}
+})
