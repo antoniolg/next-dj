@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { detectBpm } from '../audio/bpm'
-import { readBpm, readDuration } from './audioMetadata'
+import { readAudioMetadata, readBpm, readDuration } from './audioMetadata'
 
 vi.mock('../audio/bpm', () => ({
   detectBpm: vi.fn()
@@ -102,5 +102,42 @@ describe('audio metadata', () => {
       firstBeatOffset: 0
     })
     expect(close).toHaveBeenCalled()
+  })
+
+  it('reads duration and BPM metadata in parallel', async () => {
+    const audio = new MockAudio()
+    audio.duration = 45
+    installAudioMock(audio)
+    const decodedBuffer = { duration: 45 } as AudioBuffer
+    const close = vi.fn()
+    const decodeState: { resolve?: (buffer: AudioBuffer) => void } = {}
+    const decodeAudioData = vi.fn(
+      () =>
+        new Promise<AudioBuffer>((resolve) => {
+          decodeState.resolve = resolve
+        })
+    )
+    Object.defineProperty(globalThis, 'AudioContext', {
+      configurable: true,
+      value: vi.fn(function AudioContextMock() {
+        return { close, decodeAudioData }
+      })
+    })
+    vi.mocked(detectBpm).mockResolvedValue({ bpm: 126, firstBeatOffset: 0.1 })
+
+    const file = new File(['audio'], 'track.mp3')
+    vi.spyOn(file, 'arrayBuffer').mockResolvedValue(new ArrayBuffer(8))
+    const metadataPromise = readAudioMetadata(file)
+
+    await Promise.resolve()
+    expect(decodeAudioData).toHaveBeenCalled()
+    audio.onloadedmetadata?.()
+    decodeState.resolve?.(decodedBuffer)
+
+    await expect(metadataPromise).resolves.toEqual({
+      duration: 45,
+      bpm: 126,
+      firstBeatOffset: 0.1
+    })
   })
 })

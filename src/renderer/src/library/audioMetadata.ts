@@ -1,5 +1,11 @@
 import { detectBpm } from '../audio/bpm'
 
+export interface AudioMetadata {
+  duration: number
+  bpm: number
+  firstBeatOffset: number
+}
+
 export function readDuration(file: File): Promise<number> {
   return new Promise((resolve) => {
     const audio = new Audio()
@@ -37,5 +43,14 @@ export async function readBpm(file: File): Promise<{ bpm: number; firstBeatOffse
     return { bpm: 0, firstBeatOffset: 0 }
   } finally {
     void context.close()
+  }
+}
+
+export async function readAudioMetadata(file: File): Promise<AudioMetadata> {
+  const [duration, bpm] = await Promise.all([readDuration(file), readBpm(file)])
+
+  return {
+    duration,
+    ...bpm
   }
 }

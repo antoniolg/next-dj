@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { YouTubeTrackSummary } from '../../../shared/nextdj'
-import { readBpm, readDuration } from '../library/audioMetadata'
+import { readAudioMetadata } from '../library/audioMetadata'
 import { createPlaylistFileName, createTrackId, isAudioFile } from '../library/libraryFiles'
 import {
   fileFromBlob,
@@ -71,8 +71,7 @@ export function useLibrary(): {
       audioFiles.map(async (file) => ({
         id: createTrackId(file),
         title: file.name,
-        duration: await readDuration(file),
-        ...(await readBpm(file)),
+        ...(await readAudioMetadata(file)),
         file,
         source: 'local' as const
       }))
@@ -140,8 +139,7 @@ export function useLibrary(): {
       lastModified: result.file.lastModified,
       type: 'audio/mpeg'
     })
-    const duration = await readDuration(file)
-    const analysis = await readBpm(file)
+    const { duration, ...analysis } = await readAudioMetadata(file)
 
     await putPersistedFile(track.id, file)
 
