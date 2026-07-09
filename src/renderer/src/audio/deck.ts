@@ -17,22 +17,23 @@ import {
 } from './deckPersistence'
 import {
   calculateJogPlaybackRate,
-  clamp,
   clampEqDb,
   clampPitchPercent,
   clampPositiveValue,
   clampUnitValue,
   pitchPercentToRate
 } from './deckMath'
+import {
+  getJogConsumedSeconds,
+  getPlaybackPosition,
+  getScheduledOffset,
+  getScheduledStart,
+  clampPosition as clampDeckPosition
+} from './deckTransport'
 import { EMPTY_HOT_CUES, type HotCue, type LoopState, type TrackMetadata } from './deckTypes'
 
 export type EqBand = 'low' | 'mid' | 'high'
 
-// Sources are scheduled this far ahead so playback starts exactly when the
-// position accounting says it does, instead of "whenever the render thread
-// picks it up"; the buffer offset is advanced to match, keeping restarts
-// (seek, nudge, loop) gap-free relative to the other deck.
-const START_SCHEDULE_DELAY = 0.01
 const JOG_TICK_MS = 40
 
 export { MAX_PITCH_PERCENT, MIN_PITCH_PERCENT } from './deckMath'
@@ -317,8 +318,14 @@ export class Deck {
       return this.clampPosition(this.offsetSeconds)
     }
 
-    const elapsed = Math.max(0, this.context.currentTime - this.startContextTime) * this.playbackRate
-    return this.clampPosition(this.offsetSeconds + elapsed)
+    return getPlaybackPosition(
+      this.started,
+      this.offsetSeconds,
+      this.context.currentTime,
+      this.startContextTime,
+      this.playbackRate,
+      this.duration
+    )
   }
 
   private startSourceAt(offsetSeconds: number): void {
@@ -327,8 +334,8 @@ export class Deck {
     }
 
     const source = this.context.createBufferSource()
-    const when = this.context.currentTime + START_SCHEDULE_DELAY
-    const offset = this.clampPosition(offsetSeconds + START_SCHEDULE_DELAY * this.playbackRate)
+    const when = getScheduledStart(this.context.currentTime)
+    const offset = getScheduledOffset(offsetSeconds, this.playbackRate, this.duration)
 
     source.buffer = this.buffer
     source.playbackRate.value = this.playbackRate
@@ -366,9 +373,12 @@ export class Deck {
   }
 
   private jogTick(): void {
-    const consumed =
-      (this.playbackRate - this.basePlaybackRate) *
-      (this.context.currentTime - this.jogLastFoldTime)
+    const consumed = getJogConsumedSeconds(
+      this.playbackRate,
+      this.basePlaybackRate,
+      this.context.currentTime,
+      this.jogLastFoldTime
+    )
     this.jogPendingSeconds -= consumed
 
     if (!this.started || Math.abs(this.jogPendingSeconds) < 0.0005) {
@@ -418,7 +428,7 @@ export class Deck {
   }
 
   private clampPosition(seconds: number): number {
-    return clamp(seconds, 0, this.duration)
+    return clampDeckPosition(seconds, this.duration)
   }
 
   private getEqFilter(band: EqBand): BiquadFilterNode {
