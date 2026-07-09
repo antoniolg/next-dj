@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DJEngine } from '../audio/engine'
 import { Recorder } from '../recording/recorder'
 import { createIdleRecorderSnapshot } from '../recording/recorderState'
@@ -89,17 +89,32 @@ export function useRecorder(engine: DJEngine): RecorderState {
     recorderRef.current?.dismiss()
   }, [])
 
-  return {
-    phase: snapshot.phase,
-    mode: snapshot.mode,
-    elapsedMs,
-    countdownRemaining: snapshot.countdownRemaining,
-    warning: snapshot.warning,
-    error: snapshot.error,
-    filePath: snapshot.filePath,
-    start,
-    stop,
-    reveal,
-    dismiss
-  }
+  return useMemo(
+    () => ({
+      phase: snapshot.phase,
+      mode: snapshot.mode,
+      elapsedMs,
+      countdownRemaining: snapshot.countdownRemaining,
+      warning: snapshot.warning,
+      error: snapshot.error,
+      filePath: snapshot.filePath,
+      start,
+      stop,
+      reveal,
+      dismiss
+    }),
+    [
+      dismiss,
+      elapsedMs,
+      reveal,
+      snapshot.countdownRemaining,
+      snapshot.error,
+      snapshot.filePath,
+      snapshot.mode,
+      snapshot.phase,
+      snapshot.warning,
+      start,
+      stop
+    ]
+  )
 }

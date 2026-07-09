@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Activity, Settings } from 'lucide-react'
 import type { EqBand } from '../../audio/deck'
 import type { DeckId } from '../../hooks/useEngine'
@@ -42,8 +43,9 @@ const EQ_BANDS: Array<{ band: EqBand; label: string }> = [
   { band: 'mid', label: 'Mid' },
   { band: 'low', label: 'Low' }
 ]
+const BEAT_DOTS = [0, 1, 2, 3]
 
-function ChannelStrip({
+const ChannelStrip = memo(function ChannelStrip({
   deckId,
   accent,
   values,
@@ -116,9 +118,9 @@ function ChannelStrip({
       </div>
     </div>
   )
-}
+})
 
-export function MixerPanel({
+export const MixerPanel = memo(function MixerPanel({
   channelA,
   channelB,
   crossfade,
@@ -178,7 +180,7 @@ export function MixerPanel({
               {masterBpm > 0 ? `${masterBpm.toFixed(1)} BPM` : '--.- BPM'}
             </span>
             <span aria-hidden="true" className="mixer-session-dots">
-              {[0, 1, 2, 3].map((beat) => (
+              {BEAT_DOTS.map((beat) => (
                 <span
                   key={beat}
                   className={`status-dot ${beat === masterBeatIndex ? 'status-dot-lit' : ''}`}
@@ -272,4 +274,4 @@ export function MixerPanel({
       </div>
     </section>
   )
-}
+})
