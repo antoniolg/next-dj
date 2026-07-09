@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import type { DJEngine } from '../audio/engine'
 import type { OutputState } from './engineTypes'
 
-const MASTER_OUTPUT_STORAGE_KEY = 'nextdj.masterOutputDeviceId'
-const CUE_OUTPUT_STORAGE_KEY = 'nextdj.cueOutputDeviceId'
+export const MASTER_OUTPUT_STORAGE_KEY = 'nextdj.masterOutputDeviceId'
+export const CUE_OUTPUT_STORAGE_KEY = 'nextdj.cueOutputDeviceId'
 
 export function useEngineOutput(engine: DJEngine): {
   output: OutputState
