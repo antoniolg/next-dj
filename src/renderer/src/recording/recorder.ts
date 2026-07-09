@@ -1,18 +1,17 @@
 import { RECORDING_FRAME_RATE, VideoCompositor } from './compositor'
 import { pickAudioMime, pickVideoMime } from './mimeTypes'
+import {
+  canStartRecordingFromPhase,
+  createCountdownSnapshot,
+  createErrorSnapshot,
+  createIdleRecorderSnapshot,
+  createRecordingSnapshot,
+  createSavedSnapshot,
+  createStartingSnapshot
+} from './recorderState'
+import type { RecorderSnapshot, RecordingMode } from './recorderTypes'
 
-export type RecordingMode = 'audio' | 'audio-screen' | 'audio-screen-camera'
-export type RecorderPhase = 'idle' | 'countdown' | 'starting' | 'recording' | 'stopping' | 'saved' | 'error'
-
-export interface RecorderSnapshot {
-  phase: RecorderPhase
-  mode: RecordingMode | null
-  startedAtMs: number | null
-  countdownRemaining: number | null
-  filePath: string | null
-  warning: string | null
-  error: string | null
-}
+export type { RecorderPhase, RecorderSnapshot, RecordingMode } from './recorderTypes'
 
 const COUNTDOWN_SECONDS = 5
 const TIMESLICE_MS = 1000
@@ -33,15 +32,7 @@ export class Recorder {
   onChange: ((snapshot: RecorderSnapshot) => void) | null = null
 
   private readonly getRecordStream: () => MediaStream
-  private snapshot: RecorderSnapshot = {
-    phase: 'idle',
-    mode: null,
-    startedAtMs: null,
-    countdownRemaining: null,
-    filePath: null,
-    warning: null,
-    error: null
-  }
+  private snapshot: RecorderSnapshot = createIdleRecorderSnapshot()
 
   private countdownTimeoutId: number | null = null
   private countdownResolve: ((completed: boolean) => void) | null = null
@@ -62,7 +53,7 @@ export class Recorder {
   }
 
   async start(mode: RecordingMode): Promise<void> {
-    if (!['idle', 'saved', 'error'].includes(this.snapshot.phase)) {
+    if (!canStartRecordingFromPhase(this.snapshot.phase)) {
       return
     }
 
@@ -73,15 +64,7 @@ export class Recorder {
         return
       }
 
-      this.update({
-        phase: 'starting',
-        mode,
-        startedAtMs: null,
-        countdownRemaining: null,
-        filePath: null,
-        warning: null,
-        error: null
-      })
+      this.update(createStartingSnapshot(mode))
 
       await this.startInternal(mode)
     } catch (error) {
@@ -93,11 +76,9 @@ export class Recorder {
         void getBridge().cancelRecording(sessionId, true)
       }
 
-      this.update({
-        ...this.snapshot,
-        phase: 'error',
-        error: error instanceof Error ? error.message : 'Could not start the recording.'
-      })
+      this.update(
+        createErrorSnapshot(this.snapshot, error instanceof Error ? error.message : 'Could not start the recording.')
+      )
     }
   }
 
@@ -117,15 +98,7 @@ export class Recorder {
 
   dismiss(): void {
     if (this.snapshot.phase === 'saved' || this.snapshot.phase === 'error') {
-      this.update({
-        phase: 'idle',
-        mode: null,
-        startedAtMs: null,
-        countdownRemaining: null,
-        filePath: null,
-        warning: null,
-        error: null
-      })
+      this.update(createIdleRecorderSnapshot())
     }
   }
 
@@ -149,15 +122,7 @@ export class Recorder {
           return
         }
 
-        this.update({
-          phase: 'countdown',
-          mode,
-          startedAtMs: null,
-          countdownRemaining: remaining,
-          filePath: null,
-          warning: null,
-          error: null
-        })
+        this.update(createCountdownSnapshot(mode, remaining))
 
         remaining -= 1
         this.countdownTimeoutId = window.setTimeout(tick, 1000)
@@ -173,15 +138,7 @@ export class Recorder {
     this.resolveCountdown(false)
 
     if (updateState && wasCountingDown) {
-      this.update({
-        phase: 'idle',
-        mode: null,
-        startedAtMs: null,
-        countdownRemaining: null,
-        filePath: null,
-        warning: null,
-        error: null
-      })
+      this.update(createIdleRecorderSnapshot())
     }
   }
 
@@ -315,14 +272,7 @@ export class Recorder {
     }
 
     mediaRecorder.onstart = (): void => {
-      this.update({
-        ...this.snapshot,
-        phase: 'recording',
-        startedAtMs: Date.now(),
-        countdownRemaining: null,
-        filePath,
-        warning
-      })
+      this.update(createRecordingSnapshot(this.snapshot, filePath, warning, Date.now()))
     }
 
     this.mediaRecorder = mediaRecorder
@@ -358,18 +308,11 @@ export class Recorder {
 
     try {
       const { filePath } = await bridge.stopRecording(sessionId)
-      this.update({
-        ...this.snapshot,
-        phase: 'saved',
-        filePath,
-        warning: warning ?? this.snapshot.warning
-      })
+      this.update(createSavedSnapshot(this.snapshot, filePath, warning ?? this.snapshot.warning))
     } catch (error) {
-      this.update({
-        ...this.snapshot,
-        phase: 'error',
-        error: error instanceof Error ? error.message : 'Could not save the recording.'
-      })
+      this.update(
+        createErrorSnapshot(this.snapshot, error instanceof Error ? error.message : 'Could not save the recording.')
+      )
     }
   }
 
@@ -384,7 +327,7 @@ export class Recorder {
     }
 
     await this.releaseMediaResources()
-    this.update({ ...this.snapshot, phase: 'error', error: message })
+    this.update(createErrorSnapshot(this.snapshot, message))
   }
 
   private async releaseMediaResources(): Promise<void> {

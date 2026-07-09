@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, Circle, Video, Webcam, AudioLines } from 'lucide-react'
 import type { RecorderState } from '../../hooks/useRecorder'
-import type { RecordingMode } from '../../recording/recorder'
+import type { RecordingMode } from '../../recording/recorderTypes'
 
 const MODE_OPTIONS: Array<{ mode: RecordingMode; label: string; icon: JSX.Element }> = [
   { mode: 'audio', label: 'Audio', icon: <AudioLines size={13} strokeWidth={2.2} /> },

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DJEngine } from '../audio/engine'
-import { Recorder, type RecorderPhase, type RecordingMode, type RecorderSnapshot } from '../recording/recorder'
+import { Recorder } from '../recording/recorder'
+import { createIdleRecorderSnapshot } from '../recording/recorderState'
+import type { RecorderPhase, RecordingMode, RecorderSnapshot } from '../recording/recorderTypes'
 
 export interface RecorderState {
   phase: RecorderPhase
@@ -20,15 +22,7 @@ const SAVED_AUTO_DISMISS_MS = 8000
 
 export function useRecorder(engine: DJEngine): RecorderState {
   const recorderRef = useRef<Recorder | null>(null)
-  const [snapshot, setSnapshot] = useState<RecorderSnapshot>({
-    phase: 'idle',
-    mode: null,
-    startedAtMs: null,
-    countdownRemaining: null,
-    filePath: null,
-    warning: null,
-    error: null
-  })
+  const [snapshot, setSnapshot] = useState<RecorderSnapshot>(() => createIdleRecorderSnapshot())
   const [elapsedMs, setElapsedMs] = useState(0)
 
   if (!recorderRef.current) {
