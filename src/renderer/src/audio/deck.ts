@@ -27,11 +27,10 @@ import {
 import {
   getJogConsumedSeconds,
   getPlaybackPosition,
-  getScheduledOffset,
-  getScheduledStart,
   clampPosition as clampDeckPosition
 } from './deckTransport'
 import { EMPTY_HOT_CUES, type HotCue, type LoopState, type TrackMetadata } from './deckTypes'
+import { startDeckSource } from './deckSource'
 
 export type EqBand = 'low' | 'mid' | 'high'
 export interface DeckLoadAnalysis {
@@ -344,32 +343,32 @@ export class Deck {
       return
     }
 
-    const source = this.context.createBufferSource()
-    const when = getScheduledStart(this.context.currentTime)
-    const offset = getScheduledOffset(offsetSeconds, this.playbackRate, this.duration)
+    const { source, offsetSeconds: scheduledOffset, startContextTime } = startDeckSource({
+      buffer: this.buffer,
+      context: this.context,
+      destination: this.trimGain,
+      duration: this.duration,
+      offsetSeconds,
+      playbackRate: this.playbackRate,
+      onEnded: () => {
+        if (this.suppressEnded) {
+          this.suppressEnded = false
+          return
+        }
 
-    source.buffer = this.buffer
-    source.playbackRate.value = this.playbackRate
-    source.connect(this.trimGain)
-    source.onended = (): void => {
-      if (this.suppressEnded) {
-        this.suppressEnded = false
-        return
+        this.started = false
+        this.source = null
+        this.offsetSeconds = this.duration
+        this.startContextTime = 0
+        this.onEnded?.()
       }
-
-      this.started = false
-      this.source = null
-      this.offsetSeconds = this.duration
-      this.startContextTime = 0
-      this.onEnded?.()
-    }
+    })
 
     this.source = source
     this.started = true
-    this.offsetSeconds = offset
-    this.startContextTime = when
+    this.offsetSeconds = scheduledOffset
+    this.startContextTime = startContextTime
     this.suppressEnded = false
-    source.start(when, offset)
   }
 
   // Fold elapsed time at the current rate into the offset, then bend the
