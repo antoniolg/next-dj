@@ -17,6 +17,7 @@ import {
   createStartingSnapshot
 } from './recorderState'
 import type { RecorderSnapshot, RecordingMode } from './recorderTypes'
+import { measureAsync } from '../performance/perfMarks'
 
 export type { RecorderPhase, RecorderSnapshot, RecordingMode } from './recorderTypes'
 
@@ -236,10 +237,12 @@ export class Recorder {
     const tracks = videoTrack ? [videoTrack, audioTrack] : [audioTrack]
     const stream = new MediaStream(tracks)
 
-    const { id, filePath } = await bridge.startRecording({
-      extension: mime.extension,
-      video: wantsVideo
-    })
+    const { id, filePath } = await measureAsync('recording.startRecording', () =>
+      bridge.startRecording({
+        extension: mime.extension,
+        video: wantsVideo
+      })
+    )
     this.sessionId = id
 
     this.unsubscribeWriteError?.()
@@ -264,8 +267,10 @@ export class Recorder {
       // Chunks must land on disk in order; invoke resolution order across
       // separate calls is not guaranteed, so writes are chained.
       this.pendingWrites = this.pendingWrites
-        .then(() => event.data.arrayBuffer())
-        .then((buffer) => bridge.appendRecordingChunk(sessionId, buffer))
+        .then(() => measureAsync('recording.chunk.arrayBuffer', () => event.data.arrayBuffer()))
+        .then((buffer) =>
+          measureAsync('recording.appendRecordingChunk', () => bridge.appendRecordingChunk(sessionId, buffer))
+        )
         .catch(() => undefined)
     }
 
@@ -306,12 +311,12 @@ export class Recorder {
     // at the end of the stop turn. Let that handler append to pendingWrites
     // before we decide all bytes are on disk.
     await new Promise((resolve) => window.setTimeout(resolve, 0))
-    await this.pendingWrites
+    await measureAsync('recording.pendingWrites', () => this.pendingWrites)
     this.sessionId = null
     await this.releaseMediaResources()
 
     try {
-      const { filePath } = await bridge.stopRecording(sessionId)
+      const { filePath } = await measureAsync('recording.stopRecording', () => bridge.stopRecording(sessionId))
       this.update(createSavedSnapshot(this.snapshot, filePath, warning ?? this.snapshot.warning))
     } catch (error) {
       this.update(
