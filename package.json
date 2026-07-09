@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "NextDJ desktop app",
   "desktopName": "nextdj",
+  "license": "MIT",
   "author": {
     "name": "Antonio Leiva",
     "email": "antonio@devexperto.com"
@@ -25,6 +26,7 @@
     "icons:generate": "node scripts/generate-icons.mjs",
     "lint": "eslint .",
     "perf:snapshot": "node scripts/capture-renderer-perf.mjs",
+    "release:checksums": "node scripts/generate-release-checksums.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",

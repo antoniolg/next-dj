@@ -62,6 +62,7 @@ For local packaging:
 npm run dist:mac
 npm run dist:win
 npm run dist:linux
+npm run release:checksums
 ```
 
 `npm run dist` builds the default macOS release. `npm run dist:all` asks Electron Builder to create macOS, Windows, and Linux artifacts in `release/`.
@@ -71,6 +72,7 @@ Expected release assets:
 - macOS x64/arm64: `.dmg` and `.zip`
 - Windows x64: NSIS installer and portable executable
 - Linux x64: `.AppImage` and `.deb`
+- `SHA256SUMS.txt`: checksums for downloadable artifacts
 
 App icons are generated from `build/icon-source.png`:
 
@@ -79,3 +81,14 @@ npm run icons:generate
 ```
 
 Before publishing, decide and document the signing/notarization path for the target platform. Do not treat an unsigned local `.app` as production-ready.
+
+## Public Release Checklist
+
+- Confirm `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `CHANGELOG.md` are present.
+- Confirm the changelog entry matches the tag being released.
+- Confirm `package.json` version and the Git tag match, for example `0.1.0` and `v0.1.0`.
+- Confirm release artifacts include app icons on macOS, Windows, and Linux.
+- Confirm `SHA256SUMS.txt` is attached to the GitHub Release.
+- Confirm the release notes mention whether binaries are signed or unsigned.
+- Confirm this repository contains no service-specific playlist import providers.
+- Confirm any private plugin repositories are not referenced by public docs, tests, or release notes.
