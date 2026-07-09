@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { EqBand } from '../audio/deck'
+import type { DeckLoadAnalysis, EqBand } from '../audio/deck'
 import { getEngine, type DJEngine } from '../audio/engine'
 import { createDeckState, type DeckState } from './deckState'
 import { getPhaseOffsetSeconds } from './engineMath'
@@ -26,7 +26,7 @@ export function useEngine(): {
   channels: Record<DeckId, ChannelState>
   mixer: MixerState
   output: OutputState
-  loadTrack: (deckId: DeckId, file: File) => Promise<void>
+  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis) => Promise<void>
   togglePlayback: (deckId: DeckId) => Promise<void>
   seek: (deckId: DeckId, seconds: number) => void
   cueToStart: (deckId: DeckId) => void

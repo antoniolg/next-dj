@@ -49,7 +49,7 @@ describe('useDeckLoading', () => {
     })
 
     expect(options.addFiles).toHaveBeenCalledWith([file])
-    expect(options.loadTrack).toHaveBeenCalledWith('A', file)
+    expect(options.loadTrack).toHaveBeenCalledWith('A', file, { bpm: 120, firstBeatOffset: 0 })
     expect(localStorage.getItem('nextdj.deckTracks.v1')).toContain(localTrack.id)
     expect(result.current.loadingDecks.A).toBeUndefined()
   })
@@ -66,9 +66,24 @@ describe('useDeckLoading', () => {
     })
 
     expect(options.resolveTrackFile).toHaveBeenCalledWith(remoteTrack)
-    expect(options.loadTrack).toHaveBeenCalledWith('B', file)
+    expect(options.loadTrack).toHaveBeenCalledWith('B', file, { bpm: 120, firstBeatOffset: 0 })
     expect(localStorage.getItem('nextdj.deckTracks.v1')).toContain(remoteTrack.id)
     expect(result.current.loadingDecks.B).toBeUndefined()
+  })
+
+  it('falls back to deck-side BPM detection when stored analysis is invalid', async () => {
+    const file = new File(['audio'], 'resolved.mp3', { type: 'audio/mpeg' })
+    const unanalysedTrack: LibraryTrack = { ...remoteTrack, bpm: 0 }
+    const options = createOptions({
+      resolveTrackFile: vi.fn().mockResolvedValue(file)
+    })
+    const { result } = renderHook(() => useDeckLoading(options))
+
+    await act(async () => {
+      await result.current.loadLibraryTrack('A', unanalysedTrack)
+    })
+
+    expect(options.loadTrack).toHaveBeenCalledWith('A', file, undefined)
   })
 
   it('skips deck loading when a library track cannot be resolved', async () => {
@@ -103,7 +118,9 @@ describe('useDeckLoading', () => {
 
     renderHook(() => useDeckLoading(options))
 
-    await waitFor(() => expect(options.loadTrack).toHaveBeenCalledWith('A', localTrack.file))
+    await waitFor(() =>
+      expect(options.loadTrack).toHaveBeenCalledWith('A', localTrack.file, { bpm: 120, firstBeatOffset: 0 })
+    )
   })
 
   it('does not restore until the library is ready', async () => {

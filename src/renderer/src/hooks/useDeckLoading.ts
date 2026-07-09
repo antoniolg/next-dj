@@ -4,6 +4,7 @@ import {
   persistDeckTrack,
   readDeckTrackSelection
 } from '../app/deckTrackPersistence'
+import type { DeckLoadAnalysis } from '../audio/deck'
 import type { LibraryTrack } from './useLibrary'
 import type { DeckId } from './useEngine'
 
@@ -14,7 +15,18 @@ interface UseDeckLoadingOptions {
   addFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
   resolveTrackFile: (track: LibraryTrack) => Promise<File | null>
   getTrack: (trackId: string) => LibraryTrack | undefined
-  loadTrack: (deckId: DeckId, file: File) => Promise<void>
+  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis) => Promise<void>
+}
+
+function getTrackAnalysis(track: LibraryTrack | undefined): DeckLoadAnalysis | undefined {
+  if (!track || track.bpm <= 0 || !Number.isFinite(track.bpm) || !Number.isFinite(track.firstBeatOffset)) {
+    return undefined
+  }
+
+  return {
+    bpm: track.bpm,
+    firstBeatOffset: track.firstBeatOffset
+  }
 }
 
 export function useDeckLoading({
@@ -53,7 +65,7 @@ export function useDeckLoading({
       try {
         const [track] = await addFiles([file])
         setDeckLoading(deckId, 'Loading deck...')
-        await loadTrack(deckId, file)
+        await loadTrack(deckId, file, getTrackAnalysis(track))
 
         if (track) {
           persistDeckTrack(deckId, track.id)
@@ -77,7 +89,7 @@ export function useDeckLoading({
         }
 
         setDeckLoading(deckId, 'Decoding waveform...')
-        await loadTrack(deckId, file)
+        await loadTrack(deckId, file, getTrackAnalysis(track))
         persistDeckTrack(deckId, track.id)
       } finally {
         setDeckLoading(deckId, null)

@@ -34,6 +34,10 @@ import {
 import { EMPTY_HOT_CUES, type HotCue, type LoopState, type TrackMetadata } from './deckTypes'
 
 export type EqBand = 'low' | 'mid' | 'high'
+export interface DeckLoadAnalysis {
+  bpm: number
+  firstBeatOffset: number
+}
 
 const JOG_TICK_MS = 40
 
@@ -111,7 +115,7 @@ export class Deck {
     return this.started
   }
 
-  async loadFile(file: File | ArrayBuffer): Promise<void> {
+  async loadFile(file: File | ArrayBuffer, analysis?: DeckLoadAnalysis): Promise<void> {
     const arrayBuffer =
       file instanceof File ? await measureAsync('deck.loadFile.readFile', () => file.arrayBuffer()) : file
     const decoded = await measureAsync('deck.loadFile.decodeAudioData', () =>
@@ -122,7 +126,10 @@ export class Deck {
     this.buffer = decoded
     this.duration = decoded.duration
     this.waveform = measureSync('deck.loadFile.computeWaveform', () => computeWaveformData(decoded))
-    const { bpm, firstBeatOffset } = await measureAsync('deck.loadFile.detectBpm', () => detectBpm(decoded))
+    const { bpm, firstBeatOffset } =
+      analysis && analysis.bpm > 0 && Number.isFinite(analysis.bpm) && Number.isFinite(analysis.firstBeatOffset)
+        ? analysis
+        : await measureAsync('deck.loadFile.detectBpm', () => detectBpm(decoded))
     this.metadata = {
       name: file instanceof File ? file.name : 'Loaded audio',
       bpm,

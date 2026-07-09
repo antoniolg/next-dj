@@ -1,5 +1,5 @@
 import { type Dispatch, type MutableRefObject, type SetStateAction, useCallback } from 'react'
-import type { Deck } from '../audio/deck'
+import type { Deck, DeckLoadAnalysis } from '../audio/deck'
 import type { DeckState } from './deckState'
 import { getDeckSnapshot } from './deckState'
 import { calculatePhaseNudgeSeconds, calculateSyncPitch } from './engineMath'
@@ -12,7 +12,7 @@ type GetDeck = (deckId: DeckId) => Deck
 type SetDecks = Dispatch<SetStateAction<Record<DeckId, DeckState>>>
 
 export interface DeckActions {
-  loadTrack: (deckId: DeckId, file: File) => Promise<void>
+  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis) => Promise<void>
   togglePlayback: (deckId: DeckId) => Promise<void>
   seek: (deckId: DeckId, seconds: number) => void
   cueToStart: (deckId: DeckId) => void
@@ -36,9 +36,9 @@ export function useDeckActions(
   deckPitchRef: MutableRefObject<Record<DeckId, number>>
 ): DeckActions {
   const loadTrack = useCallback(
-    async (deckId: DeckId, file: File): Promise<void> => {
+    async (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis): Promise<void> => {
       const deck = getDeck(deckId)
-      await deck.loadFile(file)
+      await deck.loadFile(file, analysis)
       const pitch = deck.setPitch(deckPitchRef.current[deckId])
 
       deckPitchRef.current[deckId] = pitch
