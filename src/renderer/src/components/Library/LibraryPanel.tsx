@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp, Cloud, Info, Link, Maximize2, Minimize2, Music, Plus } from 'lucide-react'
 import type { DeckId } from '../../hooks/useEngine'
 import type { LibraryTrack } from '../../hooks/useLibrary'
+import { YouTubeImportForm } from './YouTubeImportForm'
 import { formatBpm, formatTime, isEditableTarget } from './libraryPanelUtils'
 
 interface LibraryPanelProps {
@@ -308,26 +309,13 @@ export function LibraryPanel({
       {collapsed ? null : (
         <>
           {youtubeOpen ? (
-            <form
-              className="youtube-import"
-              onSubmit={(event) => {
-                event.preventDefault()
-                void handleYoutubeImport()
-              }}
-            >
-              <input
-                aria-label="YouTube Music playlist URL"
-                disabled={isImportingYoutube}
-                placeholder="Paste YouTube Music playlist URL"
-                type="url"
-                value={youtubeUrl}
-                onChange={(event) => setYoutubeUrl(event.currentTarget.value)}
-              />
-              <button disabled={isImportingYoutube || youtubeUrl.trim().length === 0} type="submit">
-                {isImportingYoutube ? 'Reading' : 'Import'}
-              </button>
-              {youtubeStatus ? <span className="youtube-import-status">{youtubeStatus}</span> : null}
-            </form>
+            <YouTubeImportForm
+              disabled={isImportingYoutube}
+              status={youtubeStatus}
+              url={youtubeUrl}
+              onSubmit={() => void handleYoutubeImport()}
+              onUrlChange={setYoutubeUrl}
+            />
           ) : null}
 
           <div className="library-table-wrap">
