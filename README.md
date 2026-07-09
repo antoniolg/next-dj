@@ -12,8 +12,8 @@ for specific external services.
 ## Status
 
 NextDJ is early software. The app is usable for development and testing, but
-the first public binaries should be treated as pre-release builds until signing,
-notarization, and broader device testing are complete.
+the first public binaries are unsigned pre-release builds until signing,
+notarization, and broader device testing are worth the maintenance cost.
 
 ## Features
 
@@ -34,9 +34,9 @@ GitHub Releases are configured to publish:
 - Linux x64: `.AppImage` and `.deb`
 - `SHA256SUMS.txt` for artifact verification
 
-Until signing and notarization are configured, downloaded binaries may show
-operating-system warnings. Build locally if you prefer to inspect the source
-before running the app.
+Early downloadable builds are intentionally unsigned. macOS and Windows may show
+security warnings or require an extra manual confirmation before opening the app.
+Build locally if you prefer to inspect the source before running it.
 
 ## Development
 
@@ -174,7 +174,7 @@ Performance changes should preserve the existing UI. Any optimization that visib
 - Continue carving `Deck` only when a new behavior needs it; source scheduling is already separated.
 - Keep `LibraryPanel` and `MixerPanel` split by hooks/subcomponents when adding new UI behavior.
 - Add screen/camera-focused recorder tests before changing capture or compositor behavior.
-- Decide whether the first public release is unsigned pre-release software or requires signing/notarization first.
+- Keep early public binaries marked as unsigned pre-release software until signing/notarization becomes worth the maintenance cost.
 
 ## Contributing
 
