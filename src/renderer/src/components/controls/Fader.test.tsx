@@ -67,4 +67,14 @@ describe('Fader', () => {
 
     expect(screen.getByRole('slider', { name: 'Disabled' })).toHaveAttribute('tabindex', '-1')
   })
+
+  it('does not emit unchanged stepped values', () => {
+    const onChange = vi.fn()
+
+    render(<Fader accent="#22d3ee" label="Pitch" max={8} min={-8} step={0.5} value={8} onChange={onChange} />)
+
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'Pitch' }), { key: 'ArrowUp' })
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
 })

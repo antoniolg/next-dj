@@ -41,9 +41,13 @@ export function Knob({
   const commitValue = useCallback(
     (nextValue: number): void => {
       const stepped = Math.round(nextValue / step) * step
-      onChange(Number(clamp(stepped, min, max).toFixed(4)))
+      const committed = Number(clamp(stepped, min, max).toFixed(4))
+
+      if (committed !== value) {
+        onChange(committed)
+      }
     },
-    [max, min, onChange, step]
+    [max, min, onChange, step, value]
   )
 
   const handlePointerDown = useCallback(

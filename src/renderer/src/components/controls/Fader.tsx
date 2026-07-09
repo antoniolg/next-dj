@@ -56,9 +56,13 @@ export function Fader({
         stepped = (min + max) / 2
       }
 
-      onChange(Number(clamp(stepped, min, max).toFixed(4)))
+      const committed = Number(clamp(stepped, min, max).toFixed(4))
+
+      if (committed !== value) {
+        onChange(committed)
+      }
     },
-    [centerDetent, max, min, onChange, range, step]
+    [centerDetent, max, min, onChange, range, step, value]
   )
 
   const valueFromPointer = useCallback(
@@ -117,10 +121,10 @@ export function Fader({
 
       if (increase || decrease) {
         event.preventDefault()
-        onChange(Number(clamp(value + (increase ? step : -step), min, max).toFixed(4)))
+        commitValue(value + (increase ? step : -step))
       }
     },
-    [isVertical, max, min, onChange, step, value]
+    [commitValue, isVertical, step, value]
   )
 
   const trackStyle = { '--fader-accent': accent }

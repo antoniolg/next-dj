@@ -42,6 +42,27 @@ describe('Knob', () => {
     expect(onChange).toHaveBeenCalledWith(0)
   })
 
+  it('does not emit unchanged reset values', () => {
+    const onChange = vi.fn()
+
+    render(
+      <Knob
+        accent="#22d3ee"
+        defaultValue={0}
+        label="Trim"
+        max={2}
+        min={0}
+        step={0.1}
+        value={0}
+        onChange={onChange}
+      />
+    )
+
+    fireEvent.doubleClick(screen.getByRole('button', { name: /Trim/ }))
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('shows the formatted value while hovered', () => {
     render(
       <Knob
