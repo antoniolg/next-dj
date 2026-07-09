@@ -16,7 +16,7 @@ export function createMainWindow({ dirname, isDev, rendererUrl }: CreateMainWind
     backgroundColor: '#0a0b0e',
     title: 'NextDJ',
     webPreferences: {
-      preload: join(dirname, '../preload/index.mjs'),
+      preload: join(dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true

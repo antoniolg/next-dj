@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   appendRendererPerfFlag,
   isRendererPerfEnabled,
+  readPerfRecordingsDir,
   readPerfUserDataDir,
   readRemoteDebuggingPort
 } from './performanceFlags.js'
@@ -26,6 +27,13 @@ describe('main performance flags', () => {
     expect(readPerfUserDataDir('')).toBeNull()
     expect(readPerfUserDataDir('   ')).toBeNull()
     expect(readPerfUserDataDir(undefined)).toBeNull()
+  })
+
+  it('accepts an explicit temporary recordings directory for perf runs', () => {
+    expect(readPerfRecordingsDir('/tmp/nextdj-recordings')).toBe('/tmp/nextdj-recordings')
+    expect(readPerfRecordingsDir('')).toBeNull()
+    expect(readPerfRecordingsDir('   ')).toBeNull()
+    expect(readPerfRecordingsDir(undefined)).toBeNull()
   })
 
   it('appends the renderer perf query only when enabled', () => {

@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
 const DEFAULT_WAIT_MS = 5000
-const SCENARIOS = new Set(['', 'deck-load', 'deck-play'])
+const SCENARIOS = new Set(['', 'deck-load', 'deck-play', 'deck-record'])
 
 function readOption(name, fallback) {
   const index = process.argv.indexOf(name)
@@ -184,6 +184,49 @@ async function waitForSelectorNode(client, selector, timeoutMs) {
   throw new Error(`Could not find selector: ${selector}`)
 }
 
+async function querySelectorNode(client, selector) {
+  await client.send('DOM.enable')
+  const documentResult = await client.send('DOM.getDocument', { depth: -1, pierce: true })
+  const queryResult = await client.send('DOM.querySelectorAll', {
+    nodeId: documentResult.root.nodeId,
+    selector
+  })
+  const [nodeId] = queryResult.nodeIds ?? []
+
+  return nodeId ?? null
+}
+
+async function getRecorderStatusText(client) {
+  const result = await client.send('Runtime.evaluate', {
+    expression: `document.querySelector('.rec-control')?.innerText ?? ''`,
+    returnByValue: true
+  })
+
+  return result.result?.value ?? ''
+}
+
+async function waitForRecordingButton(client, timeoutMs) {
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    const stopNodeId = await querySelectorNode(client, '.rec-control button[aria-label="Stop recording"]:not(:disabled)')
+
+    if (stopNodeId) {
+      return stopNodeId
+    }
+
+    const errorNodeId = await querySelectorNode(client, '.rec-note-error')
+
+    if (errorNodeId) {
+      throw new Error(`Recording failed: ${await getRecorderStatusText(client)}`)
+    }
+
+    await delay(250)
+  }
+
+  throw new Error(`Recording did not start: ${await getRecorderStatusText(client)}`)
+}
+
 async function clickNode(client, nodeId) {
   const { model } = await client.send('DOM.getBoxModel', { nodeId })
 
@@ -242,11 +285,11 @@ function createSyntheticWavBuffer({ durationSeconds = 2, frequencyHz = 440, samp
   return buffer
 }
 
-async function createSyntheticAudioFile() {
+async function createSyntheticAudioFile(options) {
   const directory = await mkdtemp(join(tmpdir(), 'nextdj-perf-'))
   const filePath = join(directory, 'synthetic-track.wav')
 
-  await writeFile(filePath, createSyntheticWavBuffer())
+  await writeFile(filePath, createSyntheticWavBuffer(options))
 
   return {
     filePath,
@@ -254,8 +297,8 @@ async function createSyntheticAudioFile() {
   }
 }
 
-async function loadSyntheticDeckTrack(client) {
-  const fixture = await createSyntheticAudioFile()
+async function loadSyntheticDeckTrack(client, options) {
+  const fixture = await createSyntheticAudioFile(options)
 
   try {
     const nodeId = await waitForSelectorNode(client, '.deck-panel input[type="file"]', 10000)
@@ -287,9 +330,46 @@ async function playSyntheticDeckTrack(client) {
   await waitForSelectorNode(client, '.deck-panel button[aria-label="Pause"]', 10000)
 }
 
+async function recordSyntheticDeckTrack(client) {
+  await loadSyntheticDeckTrack(client, { durationSeconds: 12 })
+
+  const playNodeId = await waitForSelectorNode(client, '.deck-panel button[aria-label="Play"]:not(:disabled)', 10000)
+  await clickNode(client, playNodeId)
+  await waitForSelectorNode(client, '.deck-panel button[aria-label="Pause"]', 10000)
+
+  const recordNodeId = await waitForSelectorNode(client, '.rec-control button[aria-label="Start recording"]', 10000)
+  await clickNode(client, recordNodeId)
+  const audioModeNodeId = await waitForSelectorNode(client, '.rec-popover-item', 10000)
+  await clickNode(client, audioModeNodeId)
+
+  const stopNodeId = await waitForRecordingButton(client, 15000)
+  await delay(1500)
+  await clickNode(client, stopNodeId)
+  await waitForSelectorNode(client, '.rec-control button[aria-label="Recording saved, show in Finder"]', 10000)
+  await waitForMeasures(
+    client,
+    [
+      'recording.startRecording',
+      'recording.chunk.arrayBuffer',
+      'recording.appendRecordingChunk',
+      'recording.pendingWrites',
+      'recording.stopRecording'
+    ],
+    10000
+  )
+}
+
 async function runScenario(client, scenario) {
-  if (scenario === 'deck-load' || scenario === 'deck-play') {
-    return scenario === 'deck-play' ? playSyntheticDeckTrack(client) : loadSyntheticDeckTrack(client)
+  if (scenario === 'deck-load') {
+    return loadSyntheticDeckTrack(client)
+  }
+
+  if (scenario === 'deck-play') {
+    return playSyntheticDeckTrack(client)
+  }
+
+  if (scenario === 'deck-record') {
+    return recordSyntheticDeckTrack(client)
   }
 
   return null
@@ -339,13 +419,15 @@ if (!SCENARIOS.has(scenario)) {
 }
 
 const userDataDirectory = scenario ? await mkdtemp(join(tmpdir(), 'nextdj-perf-user-data-')) : ''
+const recordingsDirectory = scenario === 'deck-record' ? await mkdtemp(join(tmpdir(), 'nextdj-perf-recordings-')) : ''
 const child = spawn('npm', ['run', 'dev'], {
   detached: true,
   env: {
     ...process.env,
     NEXTDJ_PERF: '1',
     NEXTDJ_REMOTE_DEBUGGING_PORT: String(port),
-    ...(userDataDirectory ? { NEXTDJ_PERF_USER_DATA_DIR: userDataDirectory } : {})
+    ...(userDataDirectory ? { NEXTDJ_PERF_USER_DATA_DIR: userDataDirectory } : {}),
+    ...(recordingsDirectory ? { NEXTDJ_PERF_RECORDINGS_DIR: recordingsDirectory } : {})
   },
   stdio: ['ignore', 'pipe', 'pipe']
 })
@@ -375,5 +457,8 @@ try {
   await stop(child)
   if (userDataDirectory) {
     await rm(userDataDirectory, { force: true, recursive: true })
+  }
+  if (recordingsDirectory) {
+    await rm(recordingsDirectory, { force: true, recursive: true })
   }
 }

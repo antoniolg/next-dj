@@ -15,6 +15,7 @@ import {
   parseRecordingSessionId,
   parseRecordingStartOptions
 } from './recordingValidation.js'
+import { readPerfRecordingsDir } from './performanceFlags.js'
 
 interface RecordingSession {
   stream: WriteStream
@@ -27,7 +28,7 @@ interface RecordingSession {
 const sessions = new Map<string, RecordingSession>()
 
 function getRecordingsDirectory(): string {
-  return join(app.getPath('music'), 'NextDJ Recordings')
+  return readPerfRecordingsDir() ?? join(app.getPath('music'), 'NextDJ Recordings')
 }
 
 function setThrottling(webContentsId: number, throttled: boolean): void {
