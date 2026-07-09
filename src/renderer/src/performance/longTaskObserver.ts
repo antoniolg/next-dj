@@ -1,4 +1,5 @@
-import { isPerformanceTracingEnabled } from './perfMarks'
+import { isPerformanceTracingEnabled } from './perfConfig'
+import { recordLongTask } from './perfCollector'
 
 const LONG_TASK_ENTRY_TYPE = 'longtask'
 
@@ -26,6 +27,7 @@ export function startLongTaskObserver(): () => void {
 
   const observer = new Observer((list) => {
     for (const entry of list.getEntries()) {
+      recordLongTask(entry.duration)
       console.debug(`[nextdj:perf] renderer long task: ${entry.duration.toFixed(1)}ms`)
     }
   })

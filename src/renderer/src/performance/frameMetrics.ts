@@ -1,4 +1,5 @@
-import { isPerformanceTracingEnabled } from './perfMarks'
+import { isPerformanceTracingEnabled } from './perfConfig'
+import { recordSlowFrame } from './perfCollector'
 
 const DEFAULT_SLOW_FRAME_MS = 12
 
@@ -26,6 +27,7 @@ export function createFrameMeter(name: string, slowFrameMs = DEFAULT_SLOW_FRAME_
       const duration = now() - startedAt
 
       if (duration >= slowFrameMs) {
+        recordSlowFrame(name, duration)
         console.debug(`[nextdj:perf] ${name} slow frame: ${duration.toFixed(1)}ms`)
       }
     }

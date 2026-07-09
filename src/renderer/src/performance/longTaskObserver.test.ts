@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { PERFORMANCE_TRACE_STORAGE_KEY } from './perfMarks'
+import { getPerformanceSnapshot, resetPerformanceSummary } from './perfCollector'
+import { PERFORMANCE_TRACE_STORAGE_KEY } from './perfConfig'
 import { startLongTaskObserver } from './longTaskObserver'
 
 class MockPerformanceObserver {
@@ -28,6 +29,7 @@ describe('long task observer', () => {
 
   beforeEach(() => {
     localStorage.clear()
+    resetPerformanceSummary()
     MockPerformanceObserver.instances = []
     Object.defineProperty(globalThis, 'PerformanceObserver', {
       configurable: true,
@@ -38,6 +40,7 @@ describe('long task observer', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     localStorage.clear()
+    resetPerformanceSummary()
     Object.defineProperty(globalThis, 'PerformanceObserver', {
       configurable: true,
       value: originalPerformanceObserver
@@ -76,6 +79,11 @@ describe('long task observer', () => {
 
     expect(observer.observe).toHaveBeenCalledWith({ entryTypes: ['longtask'] })
     expect(debug).toHaveBeenCalledWith('[nextdj:perf] renderer long task: 67.4ms')
+    expect(getPerformanceSnapshot().longTasks.renderer).toMatchObject({
+      count: 1,
+      latestMs: 67.42,
+      maxMs: 67.42
+    })
     expect(observer.disconnect).toHaveBeenCalledTimes(1)
   })
 })

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getPerformanceSnapshot, resetPerformanceSummary } from './perfCollector'
 import {
   PERFORMANCE_TRACE_STORAGE_KEY,
   isPerformanceTracingEnabled,
@@ -9,6 +10,7 @@ import {
 describe('performance marks', () => {
   beforeEach(() => {
     localStorage.clear()
+    resetPerformanceSummary()
     performance.clearMarks()
     performance.clearMeasures()
   })
@@ -16,6 +18,7 @@ describe('performance marks', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     localStorage.clear()
+    resetPerformanceSummary()
     performance.clearMarks()
     performance.clearMeasures()
   })
@@ -46,6 +49,7 @@ describe('performance marks', () => {
 
     await expect(measureAsync('test.async.on', async () => 'loud')).resolves.toBe('loud')
     expect(debug).toHaveBeenCalledWith(expect.stringMatching(/^\[nextdj:perf\] test\.async\.on: \d+\.\dms$/))
+    expect(getPerformanceSnapshot().measures['test.async.on']).toMatchObject({ count: 1 })
   })
 
   it('keeps measurements when the operation throws', () => {

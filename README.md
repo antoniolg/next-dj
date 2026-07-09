@@ -52,6 +52,8 @@ localStorage.setItem('nextdj.perf', '1')
 
 Reload the app or open it with `?nextdjPerf=1`, record a Chrome Performance session, and inspect `nextdj.deck.loadFile.*` measures. The app currently records read, decode, waveform, and BPM phases. The flag also logs those measures to the console with the `[nextdj:perf]` prefix.
 
+With the same flag enabled, DevTools also exposes `window.__NEXTDJ_PERF__.snapshot()` and `window.__NEXTDJ_PERF__.reset()` for a compact in-session summary of measured phases, slow waveform frames, and renderer long tasks.
+
 During playback, the same flag reports slow waveform draw frames as `waveform.overview slow frame` and `waveform.zoom slow frame`. Treat repeated slow-frame logs as evidence before changing waveform fidelity or animation cadence.
 
 The flag also starts a renderer long-task observer when the runtime supports it. Repeated `renderer long task` logs indicate main-thread blocking that should be traced before changing UI behavior.

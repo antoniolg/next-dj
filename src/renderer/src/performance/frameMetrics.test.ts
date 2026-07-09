@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { PERFORMANCE_TRACE_STORAGE_KEY } from './perfMarks'
+import { getPerformanceSnapshot, resetPerformanceSummary } from './perfCollector'
+import { PERFORMANCE_TRACE_STORAGE_KEY } from './perfConfig'
 import { createFrameMeter } from './frameMetrics'
 
 describe('frame metrics', () => {
@@ -7,6 +8,7 @@ describe('frame metrics', () => {
 
   beforeEach(() => {
     localStorage.clear()
+    resetPerformanceSummary()
     nowValue = 0
     vi.spyOn(performance, 'now').mockImplementation(() => nowValue)
   })
@@ -14,6 +16,7 @@ describe('frame metrics', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     localStorage.clear()
+    resetPerformanceSummary()
   })
 
   it('runs operations without logging when tracing is disabled', () => {
@@ -41,5 +44,10 @@ describe('frame metrics', () => {
 
     expect(debug).toHaveBeenCalledTimes(1)
     expect(debug).toHaveBeenCalledWith('[nextdj:perf] waveform.zoom slow frame: 16.0ms')
+    expect(getPerformanceSnapshot().slowFrames['waveform.zoom']).toMatchObject({
+      count: 1,
+      latestMs: 16,
+      maxMs: 16
+    })
   })
 })

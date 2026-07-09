@@ -1,4 +1,6 @@
-export const PERFORMANCE_TRACE_STORAGE_KEY = 'nextdj.perf'
+import { recordPerformanceMeasure } from './perfCollector'
+import { isPerformanceTracingEnabled } from './perfConfig'
+export { PERFORMANCE_TRACE_STORAGE_KEY, isPerformanceTracingEnabled } from './perfConfig'
 
 let measurementId = 0
 
@@ -6,31 +8,17 @@ function hasPerformanceApi(): boolean {
   return typeof performance !== 'undefined' && typeof performance.mark === 'function'
 }
 
-export function isPerformanceTracingEnabled(): boolean {
-  try {
-    if (typeof localStorage !== 'undefined' && localStorage.getItem(PERFORMANCE_TRACE_STORAGE_KEY) === '1') {
-      return true
-    }
-
-    if (typeof window !== 'undefined') {
-      return new URLSearchParams(window.location.search).get('nextdjPerf') === '1'
-    }
-  } catch {
-    return false
-  }
-
-  return false
-}
-
 function finishMeasurement(name: string, startMark: string, endMark: string): void {
   performance.mark(endMark)
   performance.measure(`nextdj.${name}`, startMark, endMark)
 
-  if (isPerformanceTracingEnabled()) {
-    const entries = performance.getEntriesByName(`nextdj.${name}`)
-    const latestEntry = entries[entries.length - 1]
+  const entries = performance.getEntriesByName(`nextdj.${name}`)
+  const latestEntry = entries[entries.length - 1]
 
-    if (latestEntry) {
+  if (latestEntry) {
+    recordPerformanceMeasure(name, latestEntry.duration)
+
+    if (isPerformanceTracingEnabled()) {
       console.debug(`[nextdj:perf] ${name}: ${latestEntry.duration.toFixed(1)}ms`)
     }
   }

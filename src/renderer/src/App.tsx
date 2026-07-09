@@ -10,6 +10,7 @@ import { useDeckLoading } from './hooks/useDeckLoading'
 import { useEngine } from './hooks/useEngine'
 import { useLibrary } from './hooks/useLibrary'
 import { useRecorder } from './hooks/useRecorder'
+import { installPerformanceProfiler } from './performance/perfCollector'
 import { startLongTaskObserver } from './performance/longTaskObserver'
 
 export function App(): JSX.Element {
@@ -92,7 +93,13 @@ export function App(): JSX.Element {
 
   useEffect(() => {
     document.title = 'NextDJ'
-    return startLongTaskObserver()
+    const stopProfiler = installPerformanceProfiler()
+    const stopLongTaskObserver = startLongTaskObserver()
+
+    return () => {
+      stopLongTaskObserver()
+      stopProfiler()
+    }
   }, [])
 
   useAppShortcuts({
