@@ -1,8 +1,11 @@
 {
   "include": [
     "electron.vite.config.*",
+    "eslint.config.js",
+    "src/shared/**/*",
     "src/main/**/*",
-    "src/preload/**/*"
+    "src/preload/**/*",
+    "vitest.config.ts"
   ],
   "compilerOptions": {
     "composite": true,

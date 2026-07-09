@@ -1,183 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  MAX_PITCH_PERCENT,
-  MIN_PITCH_PERCENT,
-  type EqBand,
-} from '../audio/deck'
+import type { EqBand } from '../audio/deck'
 import { getEngine, type DJEngine } from '../audio/engine'
-import type { OutputDeviceInfo } from '../audio/output'
 import { createDeckState, getDeckSnapshot, type DeckState } from './deckState'
+import { calculatePhaseNudgeSeconds, calculateSyncPitch, getPhaseOffsetSeconds } from './engineMath'
+import {
+  createChannelState,
+  createMixerState,
+  persistControls,
+  readPersistedControls,
+  type PersistedControls
+} from './enginePersistence'
+import type { ChannelState, DeckId, MixerState, OutputState } from './engineTypes'
+import { useEngineOutput } from './useEngineOutput'
+import { useTransportTicker } from './useTransportTicker'
 
-export type DeckId = 'A' | 'B'
+export type { DeckId } from './engineTypes'
 
-interface ChannelState {
-  trim: number
-  eq: Record<EqBand, number>
-  volume: number
-  cue: boolean
-}
-
-interface MixerState {
-  crossfade: number
-  cueMix: number
-  masterVolume: number
-}
-
-interface OutputState {
-  devices: OutputDeviceInfo[]
-  masterDeviceId: string
-  cueDeviceId: string
-  error: string | null
-}
-
-const MASTER_OUTPUT_STORAGE_KEY = 'nextdj.masterOutputDeviceId'
-const CUE_OUTPUT_STORAGE_KEY = 'nextdj.cueOutputDeviceId'
-const CONTROLS_STORAGE_KEY = 'nextdj.controls.v1'
 const NUDGE_SECONDS = 0.035
 const JOG_SECONDS_PER_DEGREE = 0.001
-
-interface PersistedControls {
-  channels: Record<DeckId, Pick<ChannelState, 'trim' | 'eq' | 'volume'>>
-  mixer: MixerState
-  deckPitch: Record<DeckId, number>
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
-}
-
-function positiveModulo(value: number, modulus: number): number {
-  return ((value % modulus) + modulus) % modulus
-}
-
-// Positions are in track time, where beats are spaced by the native BPM
-// regardless of playback rate — so each deck's phase must be measured as a
-// fraction of its own beat grid before the two are compared.
-function getBeatFraction(position: number, firstBeatOffset: number, nativeBpm: number): number {
-  return positiveModulo(((position - firstBeatOffset) * nativeBpm) / 60, 1)
-}
-
-function normalizeFractionOffset(fraction: number): number {
-  const wrapped = positiveModulo(fraction, 1)
-  return wrapped > 0.5 ? wrapped - 1 : wrapped
-}
-
-function getPhaseOffsetSeconds(deck: DeckState, masterDeck: DeckState): number {
-  if (deck.bpm <= 0 || masterDeck.bpm <= 0 || masterDeck.effectiveBpm <= 0) {
-    return 0
-  }
-
-  const deckFraction = getBeatFraction(deck.position, deck.firstBeatOffset, deck.bpm)
-  const masterFraction = getBeatFraction(masterDeck.position, masterDeck.firstBeatOffset, masterDeck.bpm)
-
-  return normalizeFractionOffset(deckFraction - masterFraction) * (60 / masterDeck.effectiveBpm)
-}
-
-const createChannelState = (): ChannelState => ({
-  trim: 1,
-  eq: { high: 0, mid: 0, low: 0 },
-  volume: 1,
-  cue: false
-})
-
-const createMixerState = (): MixerState => ({
-  crossfade: 0,
-  cueMix: 0,
-  masterVolume: 0.9
-})
-
-const DEFAULT_PITCH: Record<DeckId, number> = { A: 0, B: 0 }
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function numberFromRecord(
-  value: Record<string, unknown> | undefined,
-  key: string,
-  fallback: number,
-  min: number,
-  max: number
-): number {
-  const nextValue = value?.[key]
-  return typeof nextValue === 'number' && Number.isFinite(nextValue)
-    ? clamp(nextValue, min, max)
-    : fallback
-}
-
-function readPersistedControls(): PersistedControls {
-  const fallbackChannels: Record<DeckId, ChannelState> = {
-    A: createChannelState(),
-    B: createChannelState()
-  }
-  const fallbackMixer = createMixerState()
-
-  try {
-    const parsed = JSON.parse(localStorage.getItem(CONTROLS_STORAGE_KEY) ?? '{}') as unknown
-    const root = isRecord(parsed) ? parsed : {}
-    const channelsRoot = isRecord(root.channels) ? root.channels : {}
-    const mixerRoot = isRecord(root.mixer) ? root.mixer : {}
-    const pitchRoot = isRecord(root.deckPitch) ? root.deckPitch : {}
-
-    const readChannel = (deckId: DeckId): Pick<ChannelState, 'trim' | 'eq' | 'volume'> => {
-      const channelRoot = isRecord(channelsRoot[deckId]) ? channelsRoot[deckId] : {}
-      const eqRoot = isRecord(channelRoot.eq) ? channelRoot.eq : {}
-      const fallback = fallbackChannels[deckId]
-
-      return {
-        trim: numberFromRecord(channelRoot, 'trim', fallback.trim, 0, 1.5),
-        volume: numberFromRecord(channelRoot, 'volume', fallback.volume, 0, 1),
-        eq: {
-          high: numberFromRecord(eqRoot, 'high', fallback.eq.high, -26, 6),
-          mid: numberFromRecord(eqRoot, 'mid', fallback.eq.mid, -26, 6),
-          low: numberFromRecord(eqRoot, 'low', fallback.eq.low, -26, 6)
-        }
-      }
-    }
-
-    return {
-      channels: {
-        A: readChannel('A'),
-        B: readChannel('B')
-      },
-      mixer: {
-        crossfade: numberFromRecord(mixerRoot, 'crossfade', fallbackMixer.crossfade, -1, 1),
-        cueMix: numberFromRecord(mixerRoot, 'cueMix', fallbackMixer.cueMix, 0, 1),
-        masterVolume: numberFromRecord(mixerRoot, 'masterVolume', fallbackMixer.masterVolume, 0, 1)
-      },
-      deckPitch: {
-        A: numberFromRecord(pitchRoot, 'A', DEFAULT_PITCH.A, MIN_PITCH_PERCENT, MAX_PITCH_PERCENT),
-        B: numberFromRecord(pitchRoot, 'B', DEFAULT_PITCH.B, MIN_PITCH_PERCENT, MAX_PITCH_PERCENT)
-      }
-    }
-  } catch {
-    return {
-      channels: fallbackChannels,
-      mixer: fallbackMixer,
-      deckPitch: DEFAULT_PITCH
-    }
-  }
-}
-
-function persistControls(
-  channels: Record<DeckId, ChannelState>,
-  mixer: MixerState,
-  decks: Record<DeckId, DeckState>
-): void {
-  const payload: PersistedControls = {
-    channels: {
-      A: { trim: channels.A.trim, eq: channels.A.eq, volume: channels.A.volume },
-      B: { trim: channels.B.trim, eq: channels.B.eq, volume: channels.B.volume }
-    },
-    mixer,
-    deckPitch: {
-      A: decks.A.pitch,
-      B: decks.B.pitch
-    }
-  }
-
-  localStorage.setItem(CONTROLS_STORAGE_KEY, JSON.stringify(payload))
-}
 
 export function useEngine(): {
   engine: DJEngine
@@ -233,12 +73,6 @@ export function useEngine(): {
   const [mixer, setMixer] = useState<MixerState>(() => {
     return persistedControlsRef.current?.mixer ?? createMixerState()
   })
-  const [output, setOutput] = useState<OutputState>({
-    devices: [],
-    masterDeviceId: 'default',
-    cueDeviceId: 'default',
-    error: null
-  })
   const [masterDeckId, setMasterDeckId] = useState<DeckId | null>(null)
   const deckPitchRef = useRef<Record<DeckId, number>>({
     A: persistedControlsRef.current?.deckPitch.A ?? 0,
@@ -259,6 +93,7 @@ export function useEngine(): {
   }
 
   const engine = engineRef.current
+  const { output, setMasterDevice, setCueDevice, refreshOutputDevices } = useEngineOutput(engine)
 
   const getDeck = useCallback(
     (deckId: DeckId) => (deckId === 'A' ? engine.deckA : engine.deckB),
@@ -299,88 +134,10 @@ export function useEngine(): {
   }, [engine])
 
   useEffect(() => {
-    persistControls(channels, mixer, decks)
+    persistControls(channels, mixer, { A: decks.A.pitch, B: decks.B.pitch })
   }, [channels, decks.A.pitch, decks.B.pitch, mixer])
 
-  useEffect(() => {
-    let frameId = 0
-
-    const tick = (): void => {
-      engine.deckA.tickLoop()
-      engine.deckB.tickLoop()
-      const deckAPlaying = engine.deckA.isPlaying
-      const deckBPlaying = engine.deckB.isPlaying
-      const currentMaster = masterDeckIdRef.current
-
-      if (currentMaster === 'A' && deckAPlaying) {
-        updateMasterDeck('A')
-      } else if (currentMaster === 'B' && deckBPlaying) {
-        updateMasterDeck('B')
-      } else if (deckAPlaying) {
-        updateMasterDeck('A')
-      } else if (deckBPlaying) {
-        updateMasterDeck('B')
-      } else {
-        updateMasterDeck(null)
-      }
-
-      setDecks((current) => ({
-        A: {
-          ...current.A,
-          position: engine.deckA.getPosition(),
-          isPlaying: engine.deckA.isPlaying,
-          effectiveBpm: engine.deckA.getEffectiveBpm(),
-          hotCues: engine.deckA.hotCues,
-          loop: engine.deckA.loop
-        },
-        B: {
-          ...current.B,
-          position: engine.deckB.getPosition(),
-          isPlaying: engine.deckB.isPlaying,
-          effectiveBpm: engine.deckB.getEffectiveBpm(),
-          hotCues: engine.deckB.hotCues,
-          loop: engine.deckB.loop
-        }
-      }))
-      frameId = window.requestAnimationFrame(tick)
-    }
-
-    frameId = window.requestAnimationFrame(tick)
-    return () => window.cancelAnimationFrame(frameId)
-  }, [engine, updateMasterDeck])
-
-  const refreshOutputDevices = useCallback(async (): Promise<void> => {
-    try {
-      const devices = await engine.outputRouter.listOutputDevices()
-      setOutput((current) => ({ ...current, devices, error: null }))
-    } catch (error) {
-      setOutput((current) => ({
-        ...current,
-        error: error instanceof Error ? error.message : 'Could not list audio outputs.'
-      }))
-    }
-  }, [engine])
-
-  useEffect(() => {
-    const masterDeviceId = localStorage.getItem(MASTER_OUTPUT_STORAGE_KEY) ?? 'default'
-    const cueDeviceId = localStorage.getItem(CUE_OUTPUT_STORAGE_KEY) ?? 'default'
-
-    setOutput((current) => ({ ...current, masterDeviceId, cueDeviceId }))
-
-    void engine.outputRouter.setMasterDevice(masterDeviceId).catch((error: unknown) => {
-      setOutput((current) => ({
-        ...current,
-        error: error instanceof Error ? error.message : 'Could not set master output.'
-      }))
-    })
-    void engine.outputRouter.setCueDevice(cueDeviceId).catch((error: unknown) => {
-      setOutput((current) => ({
-        ...current,
-        error: error instanceof Error ? error.message : 'Could not set headphones output.'
-      }))
-    })
-    void refreshOutputDevices()
-  }, [engine, refreshOutputDevices])
+  useTransportTicker(engine, masterDeckIdRef, updateMasterDeck, setDecks)
 
   const loadTrack = useCallback(
     async (deckId: DeckId, file: File): Promise<void> => {
@@ -496,24 +253,23 @@ export function useEngine(): {
         return
       }
 
-      const pitch = clamp((targetBpm / deck.metadata.bpm - 1) * 100, MIN_PITCH_PERCENT, MAX_PITCH_PERCENT)
+      const pitch = calculateSyncPitch(deck.metadata.bpm, targetBpm)
+
+      if (pitch === null) {
+        return
+      }
+
       deck.setPitch(pitch)
       deckPitchRef.current[deckId] = pitch
 
-      const deckFraction = getBeatFraction(
+      const nudgeSeconds = calculatePhaseNudgeSeconds(
         deck.getPosition(),
         deck.metadata.firstBeatOffset,
-        deck.metadata.bpm
-      )
-      const masterFraction = getBeatFraction(
+        deck.metadata.bpm,
         otherDeck.getPosition(),
         otherDeck.metadata.firstBeatOffset,
         otherDeck.metadata.bpm
       )
-      // The correction is applied in this deck's track time, so it converts
-      // through this deck's native beat length, not the master's.
-      const nudgeSeconds =
-        normalizeFractionOffset(deckFraction - masterFraction) * (60 / deck.metadata.bpm)
 
       if (Number.isFinite(nudgeSeconds) && Math.abs(nudgeSeconds) > 0.003) {
         deck.nudge(-nudgeSeconds)
@@ -691,40 +447,6 @@ export function useEngine(): {
     (value: number): void => {
       engine.mixer.setMasterGain(value)
       setMixer((current) => ({ ...current, masterVolume: value }))
-    },
-    [engine]
-  )
-
-  const setMasterDevice = useCallback(
-    (deviceId: string): void => {
-      setOutput((current) => ({ ...current, masterDeviceId: deviceId }))
-      localStorage.setItem(MASTER_OUTPUT_STORAGE_KEY, deviceId)
-      void engine.outputRouter
-        .setMasterDevice(deviceId)
-        .then(() => setOutput((current) => ({ ...current, error: null })))
-        .catch((error: unknown) => {
-          setOutput((current) => ({
-            ...current,
-            error: error instanceof Error ? error.message : 'Could not set master output.'
-          }))
-        })
-    },
-    [engine]
-  )
-
-  const setCueDevice = useCallback(
-    (deviceId: string): void => {
-      setOutput((current) => ({ ...current, cueDeviceId: deviceId }))
-      localStorage.setItem(CUE_OUTPUT_STORAGE_KEY, deviceId)
-      void engine.outputRouter
-        .setCueDevice(deviceId)
-        .then(() => setOutput((current) => ({ ...current, error: null })))
-        .catch((error: unknown) => {
-          setOutput((current) => ({
-            ...current,
-            error: error instanceof Error ? error.message : 'Could not set headphones output.'
-          }))
-        })
     },
     [engine]
   )

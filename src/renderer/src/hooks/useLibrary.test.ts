@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createPlaylistFileName } from './useLibrary'
+import { createPlaylistFileName } from '../library/libraryFiles'
 
 describe('createPlaylistFileName', () => {
   it('uses the playlist title instead of the yt-dlp cache name', () => {

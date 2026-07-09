@@ -1,8 +1,15 @@
 import { app, ipcMain, shell, webContents } from 'electron'
 import { createWriteStream, type WriteStream } from 'node:fs'
 import { mkdir, rm, statfs } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import type { RecordingStartOptions } from '../shared/nextdj.js'
+import {
+  isAllowedRecordingExtension,
+  isPathInsideDirectory,
+  MIN_RECORDING_FREE_BYTES,
+  timestampedRecordingFileName
+} from './recordingPaths.js'
 
 interface RecordingSession {
   stream: WriteStream
@@ -12,30 +19,10 @@ interface RecordingSession {
   bytes: number
 }
 
-interface StartRecordingOptions {
-  extension: string
-  video: boolean
-}
-
-const ALLOWED_EXTENSIONS = new Set(['m4a', 'mp4', 'webm'])
-const MIN_FREE_BYTES = 500 * 1024 * 1024
-
 const sessions = new Map<string, RecordingSession>()
 
 function getRecordingsDirectory(): string {
   return join(app.getPath('music'), 'NextDJ Recordings')
-}
-
-function pad(value: number): string {
-  return String(value).padStart(2, '0')
-}
-
-function timestampedFileName(extension: string): string {
-  const now = new Date()
-  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-  const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`
-
-  return `NextDJ ${date} ${time}.${extension}`
 }
 
 function setThrottling(webContentsId: number, throttled: boolean): void {
@@ -89,8 +76,8 @@ function finalizeSessionsFor(webContentsId: number): void {
 }
 
 export function registerRecordingIpc(): void {
-  ipcMain.handle('recording:start', async (event, options: StartRecordingOptions) => {
-    if (!ALLOWED_EXTENSIONS.has(options?.extension)) {
+  ipcMain.handle('recording:start', async (event, options: RecordingStartOptions) => {
+    if (!isAllowedRecordingExtension(options?.extension)) {
       throw new Error('Unsupported recording format.')
     }
 
@@ -100,12 +87,12 @@ export function registerRecordingIpc(): void {
     const stats = await statfs(directory)
     const freeBytes = stats.bavail * stats.bsize
 
-    if (freeBytes < MIN_FREE_BYTES) {
+    if (freeBytes < MIN_RECORDING_FREE_BYTES) {
       throw new Error('Not enough free disk space to record (less than 500 MB available).')
     }
 
     const id = randomUUID()
-    const filePath = join(directory, timestampedFileName(options.extension))
+    const filePath = join(directory, timestampedRecordingFileName(options.extension))
 
     sessions.set(id, {
       stream: createWriteStream(filePath),
@@ -165,7 +152,7 @@ export function registerRecordingIpc(): void {
   ipcMain.handle('recording:reveal', (_event, filePath: string) => {
     const directory = getRecordingsDirectory()
 
-    if (typeof filePath !== 'string' || !resolve(filePath).startsWith(directory)) {
+    if (!isPathInsideDirectory(filePath, directory)) {
       throw new Error('Invalid recording path.')
     }
 

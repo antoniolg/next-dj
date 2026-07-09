@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { NextDjMark } from './NextDjMark'
 
 interface JogWheelProps {
   position: number
@@ -99,9 +100,11 @@ export function JogWheel({
     >
       <span aria-hidden="true" className="jog-arc" />
       <span aria-hidden="true" className="jog-ticks" />
-      <span className="jog-platter" style={{ transform: `rotate(${rotation}deg)` }} />
-      <span className="jog-cap">
-        <span className="jog-label">NEXTDJ</span>
+      <span className="jog-rotor" style={{ transform: `rotate(${rotation}deg)` }}>
+        <span className="jog-platter" />
+        <span className="jog-cap">
+          <NextDjMark className="jog-logo" />
+        </span>
       </span>
     </button>
   )

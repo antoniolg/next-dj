@@ -1,39 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { X } from 'lucide-react'
+import { getMasterBeatIndex } from './app/masterBeat'
 import { DeckPanel } from './components/Deck/DeckPanel'
 import { LibraryPanel } from './components/Library/LibraryPanel'
 import { MixerPanel } from './components/Mixer/MixerPanel'
 import { SettingsPanel } from './components/Settings/SettingsPanel'
+import { useAppShortcuts } from './hooks/useAppShortcuts'
+import { useDeckLoading } from './hooks/useDeckLoading'
 import { useEngine } from './hooks/useEngine'
-import { useLibrary, type LibraryTrack } from './hooks/useLibrary'
+import { useLibrary } from './hooks/useLibrary'
 import { useRecorder } from './hooks/useRecorder'
-
-const CROSSFADER_NUDGE = 0.08
-const PITCH_NUDGE = 0.1
-const DECK_TRACK_STORAGE_KEY = 'nextdj.deckTracks.v1'
-
-type DeckTrackSelection = Partial<Record<'A' | 'B', string>>
-type DeckId = 'A' | 'B'
-type DeckLoadingState = Partial<Record<DeckId, string>>
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false
-  }
-
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement ||
-    target.isContentEditable
-  )
-}
 
 export function App(): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const [loadingDecks, setLoadingDecks] = useState<DeckLoadingState>({})
-  const restoredDecksRef = useRef(false)
   const {
     engine,
     decks,
@@ -66,80 +46,13 @@ export function App(): JSX.Element {
   } = useEngine()
   const { tracks, isReady: libraryReady, addFiles, addYouTubeTracks, resolveTrackFile, getTrack } = useLibrary()
   const recorder = useRecorder(engine)
-
-  const setDeckLoading = useCallback((deckId: DeckId, message: string | null): void => {
-    setLoadingDecks((current) => {
-      const next = { ...current }
-
-      if (message) {
-        next[deckId] = message
-      } else {
-        delete next[deckId]
-      }
-
-      return next
-    })
-  }, [])
-
-  const persistDeckTrack = useCallback((deckId: DeckId, trackId: string): void => {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(DECK_TRACK_STORAGE_KEY) ?? '{}') as DeckTrackSelection
-      localStorage.setItem(DECK_TRACK_STORAGE_KEY, JSON.stringify({ ...parsed, [deckId]: trackId }))
-    } catch {
-      localStorage.setItem(DECK_TRACK_STORAGE_KEY, JSON.stringify({ [deckId]: trackId }))
-    }
-  }, [])
-
-  const loadFileToDeck = useCallback(
-    async (deckId: DeckId, file: File): Promise<void> => {
-      setDeckLoading(deckId, 'Analyzing audio...')
-
-      try {
-        const [track] = await addFiles([file])
-        setDeckLoading(deckId, 'Loading deck...')
-        await loadTrack(deckId, file)
-
-        if (track) {
-          persistDeckTrack(deckId, track.id)
-        }
-      } finally {
-        setDeckLoading(deckId, null)
-      }
-    },
-    [addFiles, loadTrack, persistDeckTrack, setDeckLoading]
-  )
-
-  const loadLibraryTrack = useCallback(
-    async (deckId: DeckId, track: LibraryTrack): Promise<void> => {
-      setDeckLoading(deckId, track.file ? 'Loading deck...' : 'Downloading audio...')
-
-      try {
-        const file = await resolveTrackFile(track)
-
-        if (!file) {
-          return
-        }
-
-        setDeckLoading(deckId, 'Decoding waveform...')
-        await loadTrack(deckId, file)
-        persistDeckTrack(deckId, track.id)
-      } finally {
-        setDeckLoading(deckId, null)
-      }
-    },
-    [loadTrack, persistDeckTrack, resolveTrackFile, setDeckLoading]
-  )
-
-  const loadLibraryTrackById = useCallback(
-    async (deckId: DeckId, trackId: string): Promise<void> => {
-      const track = getTrack(trackId)
-
-      if (track) {
-        await loadLibraryTrack(deckId, track)
-      }
-    },
-    [getTrack, loadLibraryTrack]
-  )
+  const { loadingDecks, loadFileToDeck, loadLibraryTrack, loadLibraryTrackById } = useDeckLoading({
+    libraryReady,
+    addFiles,
+    resolveTrackFile,
+    getTrack,
+    loadTrack
+  })
 
   const getDeckAPosition = useCallback((): number => engine.deckA.getPosition(), [engine])
   const getDeckBPosition = useCallback((): number => engine.deckB.getPosition(), [engine])
@@ -148,212 +61,25 @@ export function App(): JSX.Element {
     document.title = 'NextDJ'
   }, [])
 
-  useEffect(() => {
-    if (!libraryReady || restoredDecksRef.current) {
-      return
-    }
-
-    restoredDecksRef.current = true
-
-    try {
-      const parsed = JSON.parse(localStorage.getItem(DECK_TRACK_STORAGE_KEY) ?? '{}') as DeckTrackSelection
-
-      ;(['A', 'B'] as const).forEach((deckId) => {
-        const trackId = parsed[deckId]
-        const track = trackId ? getTrack(trackId) : undefined
-
-        if (track) {
-          void loadLibraryTrack(deckId, track)
-        }
-      })
-    } catch {
-      localStorage.removeItem(DECK_TRACK_STORAGE_KEY)
-    }
-  }, [getTrack, libraryReady, loadLibraryTrack])
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent): void => {
-      if (isEditableTarget(event.target)) {
-        return
-      }
-
-      const deckALoading = Boolean(loadingDecks.A)
-      const deckBLoading = Boolean(loadingDecks.B)
-
-      const isRepeatSensitive =
-        event.code === 'KeyQ' ||
-        event.code === 'KeyW' ||
-        event.code === 'KeyA' ||
-        event.code === 'KeyS' ||
-        event.code === 'KeyD' ||
-        event.code === 'KeyF' ||
-        event.code === 'KeyT' ||
-        event.code === 'KeyY' ||
-        event.code === 'KeyC'
-
-      if (event.repeat && isRepeatSensitive) {
-        return
-      }
-
-      if (event.key === '?' || (event.code === 'Slash' && event.shiftKey)) {
-        event.preventDefault()
-        setShortcutsOpen((current) => !current)
-        return
-      }
-
-      if (event.code === 'Escape' && shortcutsOpen) {
-        event.preventDefault()
-        setShortcutsOpen(false)
-        return
-      }
-
-      if (event.code === 'KeyQ' && !deckALoading) {
-        event.preventDefault()
-        void togglePlayback('A')
-        return
-      }
-
-      if (event.code === 'KeyW' && !deckBLoading) {
-        event.preventDefault()
-        void togglePlayback('B')
-        return
-      }
-
-      if (event.code === 'KeyA' && !deckALoading) {
-        event.preventDefault()
-        void cuePress('A')
-        return
-      }
-
-      if (event.code === 'KeyS' && !deckBLoading) {
-        event.preventDefault()
-        void cuePress('B')
-        return
-      }
-
-      if (event.code === 'KeyD' && !deckALoading) {
-        event.preventDefault()
-        syncDeck('A')
-        return
-      }
-
-      if (event.code === 'KeyF' && !deckBLoading) {
-        event.preventDefault()
-        syncDeck('B')
-        return
-      }
-
-      if (event.code === 'KeyT') {
-        event.preventDefault()
-        toggleCue('A')
-        return
-      }
-
-      if (event.code === 'KeyY') {
-        event.preventDefault()
-        toggleCue('B')
-        return
-      }
-
-      if (event.code === 'KeyZ') {
-        event.preventDefault()
-        setCrossfade(Math.max(-1, mixer.crossfade - CROSSFADER_NUDGE))
-        return
-      }
-
-      if (event.code === 'KeyX') {
-        event.preventDefault()
-        setCrossfade(Math.min(1, mixer.crossfade + CROSSFADER_NUDGE))
-        return
-      }
-
-      if (event.code === 'KeyC') {
-        event.preventDefault()
-        setCrossfade(0)
-        return
-      }
-
-      if (event.code === 'ArrowUp' || event.code === 'ArrowDown') {
-        const direction = event.code === 'ArrowUp' ? 1 : -1
-
-        if (event.shiftKey) {
-          event.preventDefault()
-          setPitch('A', decks.A.pitch + direction * PITCH_NUDGE)
-          return
-        }
-
-        if (event.altKey) {
-          event.preventDefault()
-          setPitch('B', decks.B.pitch + direction * PITCH_NUDGE)
-          return
-        }
-      }
-
-      if (event.code === 'BracketLeft') {
-        event.preventDefault()
-        nudgeDeck(event.shiftKey ? 'B' : 'A', -1)
-        return
-      }
-
-      if (event.code === 'BracketRight') {
-        event.preventDefault()
-        nudgeDeck(event.shiftKey ? 'B' : 'A', 1)
-        return
-      }
-
-    }
-
-    const handleKeyUp = (event: KeyboardEvent): void => {
-      if (isEditableTarget(event.target)) {
-        return
-      }
-
-      if (event.code === 'KeyA') {
-        cueRelease('A')
-        return
-      }
-
-      if (event.code === 'KeyS') {
-        cueRelease('B')
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
-    }
-  }, [
-    decks.A.pitch,
-    decks.B.pitch,
-    loadingDecks.A,
-    loadingDecks.B,
-    mixer.crossfade,
-    nudgeDeck,
+  useAppShortcuts({
+    deckPitch: { A: decks.A.pitch, B: decks.B.pitch },
+    loadingDecks,
+    crossfade: mixer.crossfade,
+    shortcutsOpen,
+    setShortcutsOpen,
+    togglePlayback,
     cuePress,
     cueRelease,
-    shortcutsOpen,
+    syncDeck,
+    toggleCue,
     setCrossfade,
     setPitch,
-    togglePlayback,
-    syncDeck,
-    toggleCue
-  ])
+    nudgeDeck
+  })
 
   const masterDeck = masterDeckId ? decks[masterDeckId] : null
   const masterAccent = masterDeckId === 'B' ? '#f59e0b' : '#22d3ee'
-  let masterBeatIndex = -1
-
-  if (masterDeck && masterDeck.bpm > 0 && masterDeck.isPlaying) {
-    const beatSeconds = 60 / masterDeck.bpm
-    masterBeatIndex =
-      Math.floor((masterDeck.position - masterDeck.firstBeatOffset) / beatSeconds) % 4
-
-    if (masterBeatIndex < 0) {
-      masterBeatIndex += 4
-    }
-  }
+  const masterBeatIndex = getMasterBeatIndex(masterDeckId, decks)
 
   return (
     <main className="flex h-screen flex-col overflow-hidden text-slate-100">

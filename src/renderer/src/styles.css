@@ -756,6 +756,13 @@ select {
     0 18px 40px rgba(0, 0, 0, 0.5);
 }
 
+.jog-rotor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
 .jog-platter {
   position: absolute;
   inset: 8%;
@@ -771,7 +778,6 @@ select {
     inset 0 -10px 22px rgba(0, 0, 0, 0.45),
     0 0 0 1px rgba(0, 0, 0, 0.62),
     0 0 12px rgba(0, 0, 0, 0.5);
-  will-change: transform;
 }
 
 .jog-cap {
@@ -785,17 +791,15 @@ select {
   box-shadow:
     inset 0 3px 10px rgba(0, 0, 0, 0.45),
     0 1px 0 rgba(255, 255, 255, 0.05);
-  pointer-events: none;
 }
 
-.jog-label {
+.jog-logo {
+  width: 74%;
+  height: 74%;
   color: var(--jog-accent);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  /* compensa el espacio que letter-spacing añade tras la última letra */
-  padding-left: 0.3em;
-  text-shadow: 0 0 12px color-mix(in srgb, var(--jog-accent), transparent 55%);
+  filter:
+    drop-shadow(0 0 3px color-mix(in srgb, var(--jog-accent), transparent 34%))
+    drop-shadow(0 0 10px color-mix(in srgb, var(--jog-accent), transparent 70%));
 }
 
 /* ---------- Fader ---------- */

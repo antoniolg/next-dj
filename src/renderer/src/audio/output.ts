@@ -55,7 +55,7 @@ export class OutputRouter {
 
     let devices = await navigator.mediaDevices.enumerateDevices()
     let outputs = this.filterOutputDevices(devices)
-    let hasBlankOutputLabel = this.hasBlankOutputLabel(devices)
+    const hasBlankOutputLabel = this.hasBlankOutputLabel(devices)
 
     if (!this.requestedMediaPermission && hasBlankOutputLabel) {
       this.requestedMediaPermission = true

@@ -1,5 +1,11 @@
 import { computeWaveformData, type WaveformData } from '../components/Waveform/waveformData'
 import { detectBpm } from './bpm'
+import {
+  loadCuePoint,
+  loadHotCues,
+  saveCuePoint,
+  saveHotCues
+} from './deckPersistence'
 
 export type EqBand = 'low' | 'mid' | 'high'
 
@@ -37,8 +43,6 @@ const JOG_CHASE_SECONDS = 0.15
 const JOG_MAX_RATE_BEND = 0.35
 const JOG_TICK_MS = 40
 const MIN_JOG_RATE = 0.05
-const HOT_CUE_STORAGE_KEY = 'nextdj.hotCues'
-const CUE_POINT_STORAGE_KEY = 'nextdj.cuePoints'
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
@@ -130,8 +134,8 @@ export class Deck {
       bpm,
       firstBeatOffset
     }
-    this.hotCues = this.loadHotCues(this.metadata.name)
-    this.cuePoint = this.loadCuePoint(this.metadata.name)
+    this.hotCues = loadHotCues(this.metadata.name, (seconds) => this.clampPosition(seconds))
+    this.cuePoint = loadCuePoint(this.metadata.name, (seconds) => this.clampPosition(seconds))
     this.loop = { start: null, end: null, active: false }
   }
 
@@ -212,7 +216,7 @@ export class Deck {
 
   setCuePoint(seconds: number = this.getPosition()): void {
     this.cuePoint = this.clampPosition(seconds)
-    this.saveCuePoint()
+    saveCuePoint(this.metadata.name, this.cuePoint)
   }
 
   async cuePress(): Promise<void> {
@@ -267,7 +271,7 @@ export class Deck {
     this.hotCues = this.hotCues.map((cue, cueIndex) =>
       cueIndex === index ? { position: this.getPosition(), color: HOT_CUE_COLORS[index] } : cue
     )
-    this.saveHotCues()
+    saveHotCues(this.metadata.name, this.hotCues)
   }
 
   clearHotCue(index: number): void {
@@ -276,7 +280,7 @@ export class Deck {
     }
 
     this.hotCues = this.hotCues.map((cue, cueIndex) => (cueIndex === index ? null : cue))
-    this.saveHotCues()
+    saveHotCues(this.metadata.name, this.hotCues)
   }
 
   setLoopIn(): void {
@@ -464,70 +468,6 @@ export class Deck {
 
   private isValidHotCueIndex(index: number): boolean {
     return Number.isInteger(index) && index >= 0 && index < this.hotCues.length
-  }
-
-  private loadHotCues(trackName: string): Array<HotCue | null> {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(HOT_CUE_STORAGE_KEY) ?? '{}') as Record<
-        string,
-        Array<HotCue | null>
-      >
-      const stored = parsed[trackName]
-
-      if (!Array.isArray(stored)) {
-        return [null, null, null, null]
-      }
-
-      return HOT_CUE_COLORS.map((color, index) => {
-        const cue = stored[index]
-
-        if (!cue || typeof cue.position !== 'number') {
-          return null
-        }
-
-        return {
-          position: this.clampPosition(cue.position),
-          color: typeof cue.color === 'string' ? cue.color : color
-        }
-      })
-    } catch {
-      return [null, null, null, null]
-    }
-  }
-
-  private saveHotCues(): void {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(HOT_CUE_STORAGE_KEY) ?? '{}') as Record<
-        string,
-        Array<HotCue | null>
-      >
-
-      parsed[this.metadata.name] = this.hotCues
-      localStorage.setItem(HOT_CUE_STORAGE_KEY, JSON.stringify(parsed))
-    } catch {
-      localStorage.setItem(HOT_CUE_STORAGE_KEY, JSON.stringify({ [this.metadata.name]: this.hotCues }))
-    }
-  }
-
-  private loadCuePoint(trackName: string): number {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(CUE_POINT_STORAGE_KEY) ?? '{}') as Record<string, number>
-      const cuePoint = parsed[trackName]
-
-      return typeof cuePoint === 'number' ? this.clampPosition(cuePoint) : 0
-    } catch {
-      return 0
-    }
-  }
-
-  private saveCuePoint(): void {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(CUE_POINT_STORAGE_KEY) ?? '{}') as Record<string, number>
-      parsed[this.metadata.name] = this.cuePoint
-      localStorage.setItem(CUE_POINT_STORAGE_KEY, JSON.stringify(parsed))
-    } catch {
-      localStorage.setItem(CUE_POINT_STORAGE_KEY, JSON.stringify({ [this.metadata.name]: this.cuePoint }))
-    }
   }
 
   private getEqFilter(band: EqBand): BiquadFilterNode {
