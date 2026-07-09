@@ -127,6 +127,10 @@ export function useDeckActions(
 
   const setPitch = useCallback(
     (deckId: DeckId, percent: number): void => {
+      if (deckPitchRef.current[deckId] === percent) {
+        return
+      }
+
       const deck = getDeck(deckId)
       const pitch = deck.setPitch(percent)
 
