@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { createFrameMeter } from '../../performance/frameMetrics'
+import { hasCanvasFrameChanged, type CanvasFrameState } from './canvasFrameState'
 import type { WaveformData } from './waveformData'
 import { getLowPeakAt, getPeakAt } from './waveformData'
 
@@ -115,14 +116,27 @@ export function Overview({
   useEffect(() => {
     let frameId = 0
     const frameMeter = createFrameMeter('waveform.overview')
+    let previousFrame: CanvasFrameState | null = null
 
     const tick = (): void => {
       const canvas = canvasRef.current
 
       if (canvas) {
-        frameMeter.measure(() => {
-          drawCanvas(canvas, waveform, accent, duration, getPosition())
-        })
+        const rect = canvas.getBoundingClientRect()
+        const dpr = window.devicePixelRatio || 1
+        const nextFrame = {
+          dpr,
+          height: Math.max(1, Math.floor(rect.height * dpr)),
+          position: getPosition(),
+          width: Math.max(1, Math.floor(rect.width * dpr))
+        }
+
+        if (hasCanvasFrameChanged(previousFrame, nextFrame)) {
+          previousFrame = nextFrame
+          frameMeter.measure(() => {
+            drawCanvas(canvas, waveform, accent, duration, nextFrame.position)
+          })
+        }
       }
 
       frameId = window.requestAnimationFrame(tick)
