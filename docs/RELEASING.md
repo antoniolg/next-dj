@@ -23,8 +23,9 @@ The performance snapshots should report empty `longTasks` and `slowFrames`.
 ## Desktop Contract
 
 - Confirm `window.nextdj` still exposes:
-  - `downloadYouTubeAudio`
-  - `listYouTubeTracks`
+  - `listPlaylistImportProviders`
+  - `listPlaylistImportTracks`
+  - `resolvePlaylistImportTrack`
   - `startRecording`
   - `appendRecordingChunk`
   - `stopRecording`
@@ -32,6 +33,7 @@ The performance snapshots should report empty `longTasks` and `slowFrames`.
   - `revealRecording`
   - `onRecordingWriteError`
 - Confirm IPC validators reject malformed recording options, chunks, paths, and cancel flags.
+- Confirm playlist import IPC rejects malformed inputs and unknown provider ids.
 - Confirm `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`.
 - Confirm runtime permissions are limited to media/display capture and audio device selection.
 

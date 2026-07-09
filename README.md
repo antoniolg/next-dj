@@ -29,7 +29,7 @@ Coverage is intentionally modest while the codebase is being carved out of the p
 
 ## Architecture
 
-- `src/main`: Electron lifecycle and desktop IPC. YouTube/yt-dlp and recording write paths live here because they need Node/Electron APIs.
+- `src/main`: Electron lifecycle, desktop IPC, recording write paths, and playlist import plugin loading.
 - `src/main/appSecurity.ts`: Electron session permission policy.
 - `src/main/recordingValidation.ts`: IPC input validation for recording calls.
 - `src/preload`: the stable `window.nextdj` bridge exposed to the renderer.
@@ -39,6 +39,8 @@ Coverage is intentionally modest while the codebase is being carved out of the p
 - `src/renderer/src/components`: presentation components for decks, mixer, library, settings, waveforms, and controls.
 - `src/renderer/src/library`: local library persistence, file helpers, and audio metadata readers.
 - `src/renderer/src/styles`: renderer CSS split by UI domain.
+
+Playlist import support is provider-based. The public app exposes a neutral plugin API for user-configured providers, but ships without service-specific importers.
 
 ## Performance Profiling
 
@@ -94,6 +96,7 @@ Performance changes should preserve the existing UI. Any optimization that visib
 - Run `npm run test:coverage` and keep the global floor green.
 - Run `npm run perf:snapshot -- --scenario deck-load --wait-ms 1000` for the default performance smoke.
 - Keep `window.nextdj` backward compatible unless a migration is documented.
+- Keep playlist import providers service-neutral in this repository.
 - Keep existing `nextdj.*` storage keys stable unless a migration is added.
 - Validate all IPC inputs in main before touching disk, shell, or external processes.
 - Keep Electron permissions narrow; media and display capture are currently the only allowed runtime permissions.
