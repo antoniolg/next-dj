@@ -56,6 +56,10 @@ export function App(): JSX.Element {
 
   const getDeckAPosition = useCallback((): number => engine.deckA.getPosition(), [engine])
   const getDeckBPosition = useCallback((): number => engine.deckB.getPosition(), [engine])
+  const openSettings = useCallback((): void => setSettingsOpen(true), [])
+  const closeSettings = useCallback((): void => setSettingsOpen(false), [])
+  const openShortcuts = useCallback((): void => setShortcutsOpen(true), [])
+  const closeShortcuts = useCallback((): void => setShortcutsOpen(false), [])
 
   useEffect(() => {
     document.title = 'NextDJ'
@@ -137,8 +141,8 @@ export function App(): JSX.Element {
               onCueToggle={toggleCue}
               onEqChange={setEq}
               onMasterVolumeChange={setMasterVolume}
-              onOpenSettings={() => setSettingsOpen(true)}
-              onOpenShortcuts={() => setShortcutsOpen(true)}
+              onOpenSettings={openSettings}
+              onOpenShortcuts={openShortcuts}
               onTrimChange={setTrim}
             />
 
@@ -194,7 +198,7 @@ export function App(): JSX.Element {
         error={output.error}
         masterDeviceId={output.masterDeviceId}
         open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        onClose={closeSettings}
         onCueDeviceChange={setCueDevice}
         onMasterDeviceChange={setMasterDevice}
         onRefreshDevices={refreshOutputDevices}
@@ -212,7 +216,7 @@ export function App(): JSX.Element {
                 aria-label="Close keyboard shortcuts"
                 className="icon-button"
                 type="button"
-                onClick={() => setShortcutsOpen(false)}
+                onClick={closeShortcuts}
               >
                 <X size={15} strokeWidth={2.4} />
               </button>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp, Info, Link, Maximize2, Minimize2, Music, Plus } from 'lucide-react'
 import type { DeckId } from '../../hooks/useEngine'
 import type { LibraryTrack } from '../../hooks/useLibrary'
@@ -16,7 +16,7 @@ interface LibraryPanelProps {
 
 const COLLAPSED_KEY = 'nextdj.library.collapsed'
 
-export function LibraryPanel({
+export const LibraryPanel = memo(function LibraryPanel({
   tracks,
   keyboardLoadDeckId,
   onAddFiles,
@@ -342,4 +342,4 @@ export function LibraryPanel({
       )}
     </section>
   )
-}
+})

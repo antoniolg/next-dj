@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Headphones, RefreshCw, Volume2, X } from 'lucide-react'
 import type { OutputDeviceInfo } from '../../audio/output'
 
@@ -13,7 +14,7 @@ interface SettingsPanelProps {
   onRefreshDevices: () => Promise<void>
 }
 
-export function SettingsPanel({
+export const SettingsPanel = memo(function SettingsPanel({
   open,
   devices,
   masterDeviceId,
@@ -101,4 +102,4 @@ export function SettingsPanel({
       </aside>
     </div>
   )
-}
+})
