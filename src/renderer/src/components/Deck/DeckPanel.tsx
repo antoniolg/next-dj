@@ -113,13 +113,14 @@ export const DeckPanel = memo(function DeckPanel({
 
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
-      const file = event.currentTarget.files?.[0]
+      const input = event.currentTarget
+      const file = input.files?.[0]
 
       if (file) {
         await onLoad(file)
       }
 
-      event.currentTarget.value = ''
+      input.value = ''
     },
     [onLoad]
   )
