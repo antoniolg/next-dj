@@ -24,7 +24,7 @@ npm run check
 
 Coverage is intentionally modest while the codebase is being carved out of the prototype:
 
-- Global floor: 30% statements, branches, functions, and lines.
+- Global floor: 40% statements, branches, functions, and lines.
 - Raise the floor only after adding meaningful regression tests, not by excluding risky code.
 
 ## Architecture
@@ -34,7 +34,7 @@ Coverage is intentionally modest while the codebase is being carved out of the p
 - `src/main/recordingValidation.ts`: IPC input validation for recording calls.
 - `src/preload`: the stable `window.nextdj` bridge exposed to the renderer.
 - `src/shared`: types shared by main, preload, and renderer without importing React or Electron UI code.
-- `src/renderer/src/audio`: WebAudio engine, decks, mixer, output routing, BPM analysis, deck persistence, hot-cue state, and loop state.
+- `src/renderer/src/audio`: WebAudio engine, decks, source scheduling, mixer, output routing, BPM analysis, deck persistence, hot-cue state, and loop state.
 - `src/renderer/src/hooks`: React orchestration around the audio engine, library, recording, shortcuts, output devices, deck actions, and mixer actions.
 - `src/renderer/src/components`: presentation components for decks, mixer, library, settings, waveforms, and controls.
 - `src/renderer/src/library`: local library persistence, file helpers, and audio metadata readers.
@@ -91,6 +91,8 @@ Performance changes should preserve the existing UI. Any optimization that visib
 ## Production Checklist
 
 - Run `npm run check` before handoff.
+- Run `npm run test:coverage` and keep the global floor green.
+- Run `npm run perf:snapshot -- --scenario deck-load --wait-ms 1000` for the default performance smoke.
 - Keep `window.nextdj` backward compatible unless a migration is documented.
 - Keep existing `nextdj.*` storage keys stable unless a migration is added.
 - Validate all IPC inputs in main before touching disk, shell, or external processes.
@@ -101,6 +103,7 @@ Performance changes should preserve the existing UI. Any optimization that visib
 ## Next Refactor Targets
 
 - Add smoke tests around `App` and high-value component flows with WebAudio and `window.nextdj` mocks.
-- Continue carving `Deck` into transport/source scheduling and jog behavior modules.
-- Split `LibraryPanel` and `MixerPanel` when adding new UI behavior; do not grow them in place.
-- Add focused tests for recording state and renderer-side recorder orchestration before changing capture behavior.
+- Continue carving `Deck` only when a new behavior needs it; source scheduling is already separated.
+- Keep `LibraryPanel` and `MixerPanel` split by hooks/subcomponents when adding new UI behavior.
+- Add screen/camera-focused recorder tests before changing capture or compositor behavior.
+- Add GitHub release packaging once signing/notarization decisions are explicit.
