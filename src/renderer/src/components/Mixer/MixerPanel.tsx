@@ -6,9 +6,10 @@ import type { RecorderState } from '../../hooks/useRecorder'
 import { Fader } from '../controls/Fader'
 import { Knob } from '../controls/Knob'
 import { VUMeter } from '../controls/VUMeter'
+import { MixerChannelStrip } from './MixerChannelStrip'
 import { RecordControl } from './RecordControl'
 
-interface ChannelValues {
+export interface ChannelValues {
   trim: number
   eq: Record<EqBand, number>
   volume: number
@@ -38,87 +39,7 @@ interface MixerPanelProps {
   onOpenShortcuts: () => void
 }
 
-const EQ_BANDS: Array<{ band: EqBand; label: string }> = [
-  { band: 'high', label: 'Hi' },
-  { band: 'mid', label: 'Mid' },
-  { band: 'low', label: 'Low' }
-]
 const BEAT_DOTS = [0, 1, 2, 3]
-
-const ChannelStrip = memo(function ChannelStrip({
-  deckId,
-  accent,
-  values,
-  onTrimChange,
-  onEqChange,
-  onChannelVolumeChange,
-  onCueToggle
-}: {
-  deckId: DeckId
-  accent: string
-  values: ChannelValues
-  onTrimChange: MixerPanelProps['onTrimChange']
-  onEqChange: MixerPanelProps['onEqChange']
-  onChannelVolumeChange: MixerPanelProps['onChannelVolumeChange']
-  onCueToggle: MixerPanelProps['onCueToggle']
-}): JSX.Element {
-  return (
-    <div className="channel-strip">
-      <Knob
-        accent={accent}
-        defaultValue={1}
-        label="Trim"
-        max={1.5}
-        min={0}
-        step={0.01}
-        value={values.trim}
-        valueFormatter={(value) => value.toFixed(2)}
-        onChange={(value) => onTrimChange(deckId, value)}
-      />
-
-      {EQ_BANDS.map(({ band, label }) => (
-        <Knob
-          key={band}
-          accent={accent}
-          defaultValue={0}
-          label={label}
-          max={6}
-          min={-26}
-          step={0.5}
-          value={values.eq[band]}
-          valueFormatter={(value) => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`}
-          onChange={(value) => onEqChange(deckId, band, value)}
-        />
-      ))}
-
-      <button
-        aria-pressed={values.cue}
-        className={`cue-button ${values.cue ? 'cue-button-lit' : ''}`}
-        style={{ '--cue-accent': accent } as React.CSSProperties}
-        title="Listen on headphones"
-        type="button"
-        onClick={() => onCueToggle(deckId)}
-      >
-        CUE
-      </button>
-
-      <div className="channel-fader-row">
-        <Fader
-          accent={accent}
-          label={`Channel ${deckId} volume`}
-          hideLabel
-          showFill
-          max={1}
-          min={0}
-          scale={{ count: 17, majorEvery: 2 }}
-          value={values.volume}
-          valueFormatter={(value) => `${Math.round(value * 100)}%`}
-          onChange={(value) => onChannelVolumeChange(deckId, value)}
-        />
-      </div>
-    </div>
-  )
-})
 
 export const MixerPanel = memo(function MixerPanel({
   channelA,
@@ -149,7 +70,7 @@ export const MixerPanel = memo(function MixerPanel({
       </div>
 
       <div className="mixer-body">
-        <ChannelStrip
+        <MixerChannelStrip
           accent="var(--accent-a)"
           deckId="A"
           values={channelA}
@@ -244,7 +165,7 @@ export const MixerPanel = memo(function MixerPanel({
           </div>
         </div>
 
-        <ChannelStrip
+        <MixerChannelStrip
           accent="var(--accent-b)"
           deckId="B"
           values={channelB}

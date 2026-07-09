@@ -5,6 +5,7 @@ import type { LibraryTrack } from '../../hooks/useLibrary'
 import { LibraryTrackTable } from './LibraryTrackTable'
 import { YouTubeImportForm } from './YouTubeImportForm'
 import { createTrackIdIndex, isEditableTarget } from './libraryPanelUtils'
+import { useYouTubeImport } from './useYouTubeImport'
 
 interface LibraryPanelProps {
   tracks: LibraryTrack[]
@@ -30,9 +31,9 @@ export const LibraryPanel = memo(function LibraryPanel({
   const [expanded, setExpanded] = useState(false)
   const [focusedTrackId, setFocusedTrackId] = useState<string | null>(null)
   const [youtubeOpen, setYoutubeOpen] = useState(false)
-  const [youtubeUrl, setYoutubeUrl] = useState('')
-  const [youtubeStatus, setYoutubeStatus] = useState<string | null>(null)
-  const [isImportingYoutube, setIsImportingYoutube] = useState(false)
+  const { handleYoutubeImport, isImportingYoutube, setYoutubeUrl, youtubeStatus, youtubeUrl } = useYouTubeImport({
+    onAddYouTubeTracks
+  })
   const trackIdIndex = useMemo(() => createTrackIdIndex(tracks), [tracks])
   const firstTrackId = tracks[0]?.id ?? null
 
@@ -213,35 +214,6 @@ export const LibraryPanel = memo(function LibraryPanel({
     setExpanded(false)
     setCollapsed((current) => !current)
   }, [])
-
-  const handleYoutubeImport = useCallback(async (): Promise<void> => {
-    const listYouTubeTracks = window.nextdj?.listYouTubeTracks
-
-    if (!listYouTubeTracks) {
-      setYoutubeStatus('YouTube import is not available in this build.')
-      return
-    }
-
-    setIsImportingYoutube(true)
-    setYoutubeStatus('Reading playlist...')
-
-    try {
-      const youtubeTracks = await listYouTubeTracks(youtubeUrl)
-
-      if (youtubeTracks.length === 0) {
-        setYoutubeStatus('No tracks were found in this playlist.')
-        return
-      }
-
-      onAddYouTubeTracks(youtubeTracks)
-      setYoutubeStatus(`Listed ${youtubeTracks.length} track${youtubeTracks.length === 1 ? '' : 's'}. Downloads happen on load.`)
-      setYoutubeUrl('')
-    } catch (error) {
-      setYoutubeStatus(error instanceof Error ? error.message : 'Could not read this playlist.')
-    } finally {
-      setIsImportingYoutube(false)
-    }
-  }, [onAddYouTubeTracks, youtubeUrl])
 
   return (
     <section
