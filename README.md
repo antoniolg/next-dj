@@ -24,7 +24,7 @@ npm run check
 
 Coverage is intentionally modest while the codebase is being carved out of the prototype:
 
-- Global floor: 10% statements, branches, functions, and lines.
+- Global floor: 28% statements, branches, functions, and lines.
 - Raise the floor only after adding meaningful regression tests, not by excluding risky code.
 
 ## Architecture
@@ -39,6 +39,20 @@ Coverage is intentionally modest while the codebase is being carved out of the p
 - `src/renderer/src/components`: presentation components for decks, mixer, library, settings, waveforms, and controls.
 - `src/renderer/src/library`: local library persistence, file helpers, and audio metadata readers.
 - `src/renderer/src/styles`: renderer CSS split by UI domain.
+
+## Performance Profiling
+
+Use real DJ workflows before optimizing. The highest-risk paths are track loading, waveform/BPM analysis, RAF-driven transport updates, VU meters, recording, and library rendering.
+
+To profile track loading in DevTools, enable the opt-in renderer trace and then load a track:
+
+```js
+localStorage.setItem('nextdj.perf', '1')
+```
+
+Reload the app or open it with `?nextdjPerf=1`, record a Chrome Performance session, and inspect `nextdj.deck.loadFile.*` measures. The app currently records read, decode, waveform, and BPM phases. The flag also logs those measures to the console with the `[nextdj:perf]` prefix.
+
+Performance changes should preserve the existing UI. Any optimization that visibly changes waveform fidelity, animation cadence, layout, or interaction timing needs visual validation before shipping.
 
 ## Production Checklist
 
