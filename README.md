@@ -54,6 +54,14 @@ Reload the app or open it with `?nextdjPerf=1`, record a Chrome Performance sess
 
 With the same flag enabled, DevTools also exposes `window.__NEXTDJ_PERF__.snapshot()` and `window.__NEXTDJ_PERF__.reset()` for a compact in-session summary of measured phases, slow waveform frames, and renderer long tasks.
 
+For a quick non-interactive renderer smoke snapshot, run:
+
+```bash
+npm run perf:snapshot -- --wait-ms 5000
+```
+
+That command starts the dev Electron app with `NEXTDJ_PERF=1`, opens a temporary remote debugging port, reads `window.__NEXTDJ_PERF__.snapshot()`, prints JSON, and shuts the app down. It proves the profiling path works, but it does not replace a real session with loaded tracks and recording.
+
 During playback, the same flag reports slow waveform draw frames as `waveform.overview slow frame` and `waveform.zoom slow frame`. Treat repeated slow-frame logs as evidence before changing waveform fidelity or animation cadence.
 
 The flag also starts a renderer long-task observer when the runtime supports it. Repeated `renderer long task` logs indicate main-thread blocking that should be traced before changing UI behavior.
