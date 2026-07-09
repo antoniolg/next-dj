@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { FolderOpen, Pause, Play } from 'lucide-react'
-import { MAX_PITCH_PERCENT, type LoopState } from '../../audio/deck'
+import { MAX_PITCH_PERCENT } from '../../audio/deck'
+import type { LoopState } from '../../audio/deckTypes'
 import { Overview } from '../Waveform/Overview'
 import { ZoomWaveform } from '../Waveform/ZoomWaveform'
 import type { WaveformData } from '../Waveform/waveformData'

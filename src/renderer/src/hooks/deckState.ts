@@ -1,4 +1,5 @@
-import type { Deck, HotCue, LoopState } from '../audio/deck'
+import type { Deck } from '../audio/deck'
+import type { HotCue, LoopState } from '../audio/deckTypes'
 import type { WaveformData } from '../components/Waveform/waveformData'
 
 export interface DeckState {

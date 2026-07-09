@@ -1,32 +1,24 @@
 import { computeWaveformData, type WaveformData } from '../components/Waveform/waveformData'
 import { detectBpm } from './bpm'
+import { clearHotCueState, triggerHotCueState } from './deckHotCues'
+import {
+  createAutoLoopState,
+  createEmptyLoop,
+  createLoopInState,
+  createLoopOutState,
+  deactivateLoop,
+  getLoopRestartPosition
+} from './deckLoops'
 import {
   loadCuePoint,
   loadHotCues,
   saveCuePoint,
   saveHotCues
 } from './deckPersistence'
+import { EMPTY_HOT_CUES, type HotCue, type LoopState, type TrackMetadata } from './deckTypes'
 
 export type EqBand = 'low' | 'mid' | 'high'
 
-export interface TrackMetadata {
-  name: string
-  bpm: number
-  firstBeatOffset: number
-}
-
-export interface HotCue {
-  position: number
-  color: string
-}
-
-export interface LoopState {
-  start: number | null
-  end: number | null
-  active: boolean
-}
-
-export const HOT_CUE_COLORS = ['#22d3ee', '#f97316', '#a78bfa', '#22c55e'] as const
 export const MIN_PITCH_PERCENT = -8
 export const MAX_PITCH_PERCENT = 8
 
@@ -77,8 +69,8 @@ export class Deck {
   duration = 0
   metadata: TrackMetadata = { name: 'No track loaded', bpm: 0, firstBeatOffset: 0 }
   waveform: WaveformData | null = null
-  hotCues: Array<HotCue | null> = [null, null, null, null]
-  loop: LoopState = { start: null, end: null, active: false }
+  hotCues: Array<HotCue | null> = [...EMPTY_HOT_CUES]
+  loop: LoopState = createEmptyLoop()
   cuePoint = 0
 
   constructor(context: AudioContext) {
@@ -136,7 +128,7 @@ export class Deck {
     }
     this.hotCues = loadHotCues(this.metadata.name, (seconds) => this.clampPosition(seconds))
     this.cuePoint = loadCuePoint(this.metadata.name, (seconds) => this.clampPosition(seconds))
-    this.loop = { start: null, end: null, active: false }
+    this.loop = createEmptyLoop()
   }
 
   async play(): Promise<void> {
@@ -257,84 +249,55 @@ export class Deck {
   }
 
   triggerHotCue(index: number): void {
-    if (!this.isValidHotCueIndex(index) || this.duration <= 0) {
+    const result = triggerHotCueState(this.hotCues, index, this.getPosition(), this.duration)
+
+    if (result.seekPosition !== null) {
+      this.seek(result.seekPosition)
       return
     }
 
-    const existing = this.hotCues[index]
+    this.hotCues = result.hotCues
 
-    if (existing) {
-      this.seek(existing.position)
-      return
+    if (result.shouldSave) {
+      saveHotCues(this.metadata.name, this.hotCues)
     }
-
-    this.hotCues = this.hotCues.map((cue, cueIndex) =>
-      cueIndex === index ? { position: this.getPosition(), color: HOT_CUE_COLORS[index] } : cue
-    )
-    saveHotCues(this.metadata.name, this.hotCues)
   }
 
   clearHotCue(index: number): void {
-    if (!this.isValidHotCueIndex(index)) {
-      return
-    }
-
-    this.hotCues = this.hotCues.map((cue, cueIndex) => (cueIndex === index ? null : cue))
+    this.hotCues = clearHotCueState(this.hotCues, index)
     saveHotCues(this.metadata.name, this.hotCues)
   }
 
   setLoopIn(): void {
-    const position = this.getPosition()
-    const end = this.loop.end !== null && this.loop.end > position ? this.loop.end : null
-
-    this.loop = {
-      start: position,
-      end,
-      active: end !== null
-    }
+    this.loop = createLoopInState(this.loop, this.getPosition())
   }
 
   setLoopOut(): void {
-    const position = this.getPosition()
-    const start = this.loop.start !== null && this.loop.start < position ? this.loop.start : null
-
-    this.loop = {
-      start: start ?? this.loop.start,
-      end: position,
-      active: start !== null
-    }
+    this.loop = createLoopOutState(this.loop, this.getPosition())
   }
 
   setAutoLoop(beats: number): void {
-    if (this.metadata.bpm <= 0 || beats <= 0 || this.duration <= 0) {
-      return
-    }
-
     const start = this.getPosition()
-    const seconds = (60 / this.metadata.bpm) * beats
-    const end = this.clampPosition(start + seconds)
+    const loop = createAutoLoopState(this.metadata.bpm, beats, this.duration, start, (seconds) =>
+      this.clampPosition(seconds)
+    )
 
-    if (end > start) {
-      this.loop = { start, end, active: true }
+    if (loop) {
+      this.loop = loop
     }
   }
 
   exitLoop(): void {
-    this.loop = { ...this.loop, active: false }
+    this.loop = deactivateLoop(this.loop)
   }
 
   tickLoop(): void {
-    if (!this.loop.active || this.loop.start === null || this.loop.end === null || this.loop.end <= this.loop.start) {
-      return
-    }
+    const restartPosition = getLoopRestartPosition(this.loop, this.getPosition())
 
-    const position = this.getPosition()
-
-    if (position >= this.loop.end) {
+    if (restartPosition !== null) {
       // Carry the overshoot past the loop end into the restart so the loop
       // stays in phase despite the coarse tick granularity.
-      const loopLength = this.loop.end - this.loop.start
-      this.seek(this.loop.start + ((position - this.loop.end) % loopLength))
+      this.seek(restartPosition)
     }
   }
 
@@ -464,10 +427,6 @@ export class Deck {
 
   private clampPosition(seconds: number): number {
     return clamp(seconds, 0, this.duration)
-  }
-
-  private isValidHotCueIndex(index: number): boolean {
-    return Number.isInteger(index) && index >= 0 && index < this.hotCues.length
   }
 
   private getEqFilter(band: EqBand): BiquadFilterNode {

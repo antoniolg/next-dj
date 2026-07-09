@@ -1,8 +1,7 @@
-import type { HotCue } from './deck'
+import { EMPTY_HOT_CUES, HOT_CUE_COLORS, type HotCue } from './deckTypes'
 
 const HOT_CUE_STORAGE_KEY = 'nextdj.hotCues'
 const CUE_POINT_STORAGE_KEY = 'nextdj.cuePoints'
-const HOT_CUE_COLORS = ['#22d3ee', '#f97316', '#a78bfa', '#22c55e'] as const
 
 export function loadHotCues(trackName: string, clampPosition: (seconds: number) => number): Array<HotCue | null> {
   try {
@@ -13,7 +12,7 @@ export function loadHotCues(trackName: string, clampPosition: (seconds: number) 
     const stored = parsed[trackName]
 
     if (!Array.isArray(stored)) {
-      return [null, null, null, null]
+      return [...EMPTY_HOT_CUES]
     }
 
     return HOT_CUE_COLORS.map((color, index) => {
@@ -29,7 +28,7 @@ export function loadHotCues(trackName: string, clampPosition: (seconds: number) 
       }
     })
   } catch {
-    return [null, null, null, null]
+    return [...EMPTY_HOT_CUES]
   }
 }
 
