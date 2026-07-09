@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { computeWaveformData, getLowPeakAt, getPeakAt } from './waveformData'
 
 function createAudioBuffer(channels: number[][], sampleRate = 1): AudioBuffer {
@@ -49,5 +49,22 @@ describe('waveform data', () => {
 
     expect(low.max).toBeGreaterThan(low.min)
     expect(low.max).toBeLessThan(1)
+  })
+
+  it('mixes channel data once before building overview and zoom buckets', () => {
+    const getChannelData = vi.fn((index: number) => Float32Array.from(index === 0 ? [1, 0] : [0, 1]))
+    const buffer = {
+      duration: 2,
+      length: 2,
+      numberOfChannels: 2,
+      sampleRate: 1,
+      getChannelData
+    } as unknown as AudioBuffer
+
+    computeWaveformData(buffer)
+
+    expect(getChannelData).toHaveBeenCalledTimes(2)
+    expect(getChannelData).toHaveBeenNthCalledWith(1, 0)
+    expect(getChannelData).toHaveBeenNthCalledWith(2, 1)
   })
 })

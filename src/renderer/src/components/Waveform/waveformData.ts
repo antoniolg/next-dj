@@ -19,17 +19,38 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
 }
 
-function buildPeakBuckets(buffer: AudioBuffer, bucketCount: number): PeakBuckets {
-  const channels = Array.from({ length: buffer.numberOfChannels }, (_, index) =>
-    buffer.getChannelData(index)
-  )
+function buildMonoSamples(buffer: AudioBuffer): Float32Array {
   const frameCount = buffer.length
+  const channelCount = Math.max(1, buffer.numberOfChannels)
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, index) => buffer.getChannelData(index))
+  const samples = new Float32Array(frameCount)
+
+  if (channels.length === 1) {
+    samples.set(channels[0])
+    return samples
+  }
+
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    let sample = 0
+
+    for (const channel of channels) {
+      sample += channel[frame] ?? 0
+    }
+
+    samples[frame] = sample / channelCount
+  }
+
+  return samples
+}
+
+function buildPeakBuckets(samples: Float32Array, sampleRate: number, bucketCount: number): PeakBuckets {
+  const frameCount = samples.length
   const peaks = new Float32Array(bucketCount * 2)
   const lows = new Float32Array(bucketCount * 2)
 
   // Two cascaded one-pole low-passes isolate the bass band; buckets cover the
   // buffer contiguously, so the filter state carries across the whole pass.
-  const alpha = 1 - Math.exp((-2 * Math.PI * LOW_BAND_CUTOFF_HZ) / buffer.sampleRate)
+  const alpha = 1 - Math.exp((-2 * Math.PI * LOW_BAND_CUTOFF_HZ) / sampleRate)
   let lp1 = 0
   let lp2 = 0
 
@@ -42,13 +63,7 @@ function buildPeakBuckets(buffer: AudioBuffer, bucketCount: number): PeakBuckets
     let lowMax = -1
 
     for (let frame = start; frame < end; frame += 1) {
-      let sample = 0
-
-      for (const channel of channels) {
-        sample += channel[frame] ?? 0
-      }
-
-      sample /= channels.length || 1
+      const sample = samples[frame] ?? 0
       min = Math.min(min, sample)
       max = Math.max(max, sample)
 
@@ -68,6 +83,7 @@ function buildPeakBuckets(buffer: AudioBuffer, bucketCount: number): PeakBuckets
 }
 
 export function computeWaveformData(buffer: AudioBuffer): WaveformData {
+  const samples = buildMonoSamples(buffer)
   const overviewBucketCount = Math.min(OVERVIEW_BUCKETS, Math.max(1, buffer.length))
   const zoomBucketCount = Math.min(
     Math.max(MIN_ZOOM_BUCKETS, Math.ceil(buffer.duration * ZOOM_BUCKETS_PER_SECOND)),
@@ -75,8 +91,8 @@ export function computeWaveformData(buffer: AudioBuffer): WaveformData {
   )
 
   return {
-    overview: buildPeakBuckets(buffer, overviewBucketCount),
-    zoom: buildPeakBuckets(buffer, zoomBucketCount)
+    overview: buildPeakBuckets(samples, buffer.sampleRate, overviewBucketCount),
+    zoom: buildPeakBuckets(samples, buffer.sampleRate, zoomBucketCount)
   }
 }
 
