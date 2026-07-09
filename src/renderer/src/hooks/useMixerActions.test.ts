@@ -118,4 +118,28 @@ describe('useMixerActions', () => {
       masterVolume: 0.6
     })
   })
+
+  it('skips engine writes and state churn when controls are unchanged', () => {
+    const { result, engine, decks } = renderMixerActions()
+    const channels = result.current.channels
+    const mixer = result.current.mixer
+
+    act(() => {
+      result.current.actions.setTrim('A', initialChannels.A.trim)
+      result.current.actions.setEq('A', 'mid', initialChannels.A.eq.mid)
+      result.current.actions.setChannelVolume('A', initialChannels.A.volume)
+      result.current.actions.setCrossfade(initialMixer.crossfade)
+      result.current.actions.setCueMix(initialMixer.cueMix)
+      result.current.actions.setMasterVolume(initialMixer.masterVolume)
+    })
+
+    expect(decks.A.setTrim).not.toHaveBeenCalled()
+    expect(decks.A.setEq).not.toHaveBeenCalled()
+    expect(decks.A.setChannelFader).not.toHaveBeenCalled()
+    expect(engine.mixer.setCrossfade).not.toHaveBeenCalled()
+    expect(engine.mixer.setCueMix).not.toHaveBeenCalled()
+    expect(engine.mixer.setMasterGain).not.toHaveBeenCalled()
+    expect(result.current.channels).toBe(channels)
+    expect(result.current.mixer).toBe(mixer)
+  })
 })

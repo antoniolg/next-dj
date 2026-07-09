@@ -24,30 +24,48 @@ export function useMixerActions(
 ): MixerActions {
   const setTrim = useCallback(
     (deckId: DeckId, value: number): void => {
-      getDeck(deckId).setTrim(value)
-      setChannels((current) => ({ ...current, [deckId]: { ...current[deckId], trim: value } }))
+      setChannels((current) => {
+        if (current[deckId].trim === value) {
+          return current
+        }
+
+        getDeck(deckId).setTrim(value)
+        return { ...current, [deckId]: { ...current[deckId], trim: value } }
+      })
     },
     [getDeck, setChannels]
   )
 
   const setEq = useCallback(
     (deckId: DeckId, band: EqBand, value: number): void => {
-      getDeck(deckId).setEq(band, value)
-      setChannels((current) => ({
-        ...current,
-        [deckId]: {
-          ...current[deckId],
-          eq: { ...current[deckId].eq, [band]: value }
+      setChannels((current) => {
+        if (current[deckId].eq[band] === value) {
+          return current
         }
-      }))
+
+        getDeck(deckId).setEq(band, value)
+        return {
+          ...current,
+          [deckId]: {
+            ...current[deckId],
+            eq: { ...current[deckId].eq, [band]: value }
+          }
+        }
+      })
     },
     [getDeck, setChannels]
   )
 
   const setChannelVolume = useCallback(
     (deckId: DeckId, value: number): void => {
-      getDeck(deckId).setChannelFader(value)
-      setChannels((current) => ({ ...current, [deckId]: { ...current[deckId], volume: value } }))
+      setChannels((current) => {
+        if (current[deckId].volume === value) {
+          return current
+        }
+
+        getDeck(deckId).setChannelFader(value)
+        return { ...current, [deckId]: { ...current[deckId], volume: value } }
+      })
     },
     [getDeck, setChannels]
   )
@@ -65,24 +83,42 @@ export function useMixerActions(
 
   const setCrossfade = useCallback(
     (value: number): void => {
-      engine.mixer.setCrossfade(value)
-      setMixer((current) => ({ ...current, crossfade: value }))
+      setMixer((current) => {
+        if (current.crossfade === value) {
+          return current
+        }
+
+        engine.mixer.setCrossfade(value)
+        return { ...current, crossfade: value }
+      })
     },
     [engine, setMixer]
   )
 
   const setCueMix = useCallback(
     (value: number): void => {
-      engine.mixer.setCueMix(value)
-      setMixer((current) => ({ ...current, cueMix: value }))
+      setMixer((current) => {
+        if (current.cueMix === value) {
+          return current
+        }
+
+        engine.mixer.setCueMix(value)
+        return { ...current, cueMix: value }
+      })
     },
     [engine, setMixer]
   )
 
   const setMasterVolume = useCallback(
     (value: number): void => {
-      engine.mixer.setMasterGain(value)
-      setMixer((current) => ({ ...current, masterVolume: value }))
+      setMixer((current) => {
+        if (current.masterVolume === value) {
+          return current
+        }
+
+        engine.mixer.setMasterGain(value)
+        return { ...current, masterVolume: value }
+      })
     },
     [engine, setMixer]
   )
