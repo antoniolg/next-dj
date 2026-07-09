@@ -1,3 +1,10 @@
+import {
+  CAMERA_MISSING_WARNING,
+  CAMERA_STOPPED_WARNING,
+  RECORDER_ERROR_WARNING,
+  SCREEN_ENDED_WARNING,
+  createCameraUnavailableWarning
+} from './captureWarnings'
 import { RECORDING_FRAME_RATE, VideoCompositor } from './compositor'
 import { pickAudioMime, pickVideoMime } from './mimeTypes'
 import {
@@ -175,7 +182,7 @@ export class Recorder {
           this.cameraTrack = cameraStream.getVideoTracks()[0] ?? null
 
           if (!this.cameraTrack) {
-            warning = 'Camera gave no video — recording without PiP.'
+            warning = CAMERA_MISSING_WARNING
           } else {
             this.cameraTrack.contentHint = 'motion'
 
@@ -183,17 +190,14 @@ export class Recorder {
               if (this.snapshot.phase === 'recording') {
                 this.update({
                   ...this.snapshot,
-                  warning: 'Camera stopped — recording continues without PiP.'
+                  warning: CAMERA_STOPPED_WARNING
                 })
               }
             })
           }
         } catch (error) {
           console.warn('[recording] camera unavailable:', error)
-          const denied = error instanceof DOMException && error.name === 'NotAllowedError'
-          warning = denied
-            ? 'Camera permission denied (check System Settings → Privacy → Camera) — recording without PiP.'
-            : 'Camera unavailable — recording without PiP.'
+          warning = createCameraUnavailableWarning(error)
         }
       }
 
@@ -215,7 +219,7 @@ export class Recorder {
       // have instead of discarding it.
       this.screenTrack.addEventListener('ended', () => {
         if (this.snapshot.phase === 'recording') {
-          void this.finalize('Screen capture ended — recording saved up to that point.')
+          void this.finalize(SCREEN_ENDED_WARNING)
         }
       })
 
@@ -267,7 +271,7 @@ export class Recorder {
 
     mediaRecorder.onerror = (): void => {
       if (this.snapshot.phase === 'recording') {
-        void this.finalize('Recorder error — recording saved up to that point.')
+        void this.finalize(RECORDER_ERROR_WARNING)
       }
     }
 
