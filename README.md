@@ -66,7 +66,7 @@ During playback, the same flag reports slow waveform draw frames as `waveform.ov
 
 The flag also starts a renderer long-task observer when the runtime supports it. Repeated `renderer long task` logs indicate main-thread blocking that should be traced before changing UI behavior.
 
-Recording paths emit `nextdj.recording.*` measures for session start, chunk conversion, chunk append, pending-write drain, and stop. Use those together with long-task logs when checking whether recording competes with live playback.
+Recording paths emit `nextdj.recording.*` measures for session start, chunk conversion, chunk append, pending-write drain, and stop. The same trace also reports slow compositor frames as `recording.compositor slow frame`. Use those together with long-task logs when checking whether recording competes with live playback.
 
 Performance changes should preserve the existing UI. Any optimization that visibly changes waveform fidelity, animation cadence, layout, or interaction timing needs visual validation before shipping.
 

@@ -1,3 +1,5 @@
+import { createFrameMeter } from '../performance/frameMetrics'
+
 export const RECORDING_FRAME_RATE = 24
 // Fixed 16:9 output: the scene is drawn with contain over a cheap opaque
 // background, so recordings never inherit ultra-wide Electron frame dimensions.
@@ -8,6 +10,7 @@ const PIP_WIDTH_RATIO = 0.24
 const PIP_MARGIN_RATIO = 0.012
 const PIP_CORNER_RADIUS = 14
 const SOURCE_READY_TIMEOUT_MS = 2500
+const RECORDING_SLOW_FRAME_MS = 20
 
 interface Rect {
   x: number
@@ -109,8 +112,11 @@ export class VideoCompositor {
       throw new Error('Could not prepare the recording compositor.')
     }
 
-    this.draw(context)
-    this.intervalId = window.setInterval(() => this.draw(context), 1000 / RECORDING_FRAME_RATE)
+    const frameMeter = createFrameMeter('recording.compositor', RECORDING_SLOW_FRAME_MS)
+    const drawFrame = (): void => frameMeter.measure(() => this.draw(context))
+
+    drawFrame()
+    this.intervalId = window.setInterval(drawFrame, 1000 / RECORDING_FRAME_RATE)
 
     const [track] = this.canvas.captureStream(RECORDING_FRAME_RATE).getVideoTracks()
 
