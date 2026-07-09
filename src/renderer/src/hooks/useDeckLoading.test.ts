@@ -27,7 +27,9 @@ function createOptions(overrides: Partial<Parameters<typeof useDeckLoading>[0]> 
   return {
     libraryReady: true,
     addFiles: vi.fn().mockResolvedValue([localTrack]),
-    resolveTrackFile: vi.fn().mockResolvedValue(localTrack.file ?? null),
+    resolveTrackFile: vi.fn().mockResolvedValue(
+      localTrack.file ? { file: localTrack.file, analysis: { bpm: localTrack.bpm, firstBeatOffset: 0 } } : null
+    ),
     getTrack: vi.fn((trackId: string) => (trackId === localTrack.id ? localTrack : undefined)),
     loadTrack: vi.fn().mockResolvedValue(undefined),
     ...overrides
@@ -57,7 +59,10 @@ describe('useDeckLoading', () => {
   it('loads library tracks through the resolver', async () => {
     const file = new File(['audio'], 'resolved.mp3', { type: 'audio/mpeg' })
     const options = createOptions({
-      resolveTrackFile: vi.fn().mockResolvedValue(file)
+      resolveTrackFile: vi.fn().mockResolvedValue({
+        file,
+        analysis: { bpm: 122, firstBeatOffset: 0.4 }
+      })
     })
     const { result } = renderHook(() => useDeckLoading(options))
 
@@ -66,7 +71,7 @@ describe('useDeckLoading', () => {
     })
 
     expect(options.resolveTrackFile).toHaveBeenCalledWith(remoteTrack)
-    expect(options.loadTrack).toHaveBeenCalledWith('B', file, { bpm: 120, firstBeatOffset: 0 })
+    expect(options.loadTrack).toHaveBeenCalledWith('B', file, { bpm: 122, firstBeatOffset: 0.4 })
     expect(localStorage.getItem('nextdj.deckTracks.v1')).toContain(remoteTrack.id)
     expect(result.current.loadingDecks.B).toBeUndefined()
   })
@@ -75,7 +80,7 @@ describe('useDeckLoading', () => {
     const file = new File(['audio'], 'resolved.mp3', { type: 'audio/mpeg' })
     const unanalysedTrack: LibraryTrack = { ...remoteTrack, bpm: 0 }
     const options = createOptions({
-      resolveTrackFile: vi.fn().mockResolvedValue(file)
+      resolveTrackFile: vi.fn().mockResolvedValue({ file, analysis: { bpm: 0, firstBeatOffset: 0 } })
     })
     const { result } = renderHook(() => useDeckLoading(options))
 

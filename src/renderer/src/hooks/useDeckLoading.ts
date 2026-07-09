@@ -5,7 +5,7 @@ import {
   readDeckTrackSelection
 } from '../app/deckTrackPersistence'
 import type { DeckLoadAnalysis } from '../audio/deck'
-import type { LibraryTrack } from './useLibrary'
+import type { LibraryTrack, ResolvedTrackFile } from './useLibrary'
 import type { DeckId } from './useEngine'
 
 type DeckLoadingState = Partial<Record<DeckId, string>>
@@ -13,20 +13,24 @@ type DeckLoadingState = Partial<Record<DeckId, string>>
 interface UseDeckLoadingOptions {
   libraryReady: boolean
   addFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
-  resolveTrackFile: (track: LibraryTrack) => Promise<File | null>
+  resolveTrackFile: (track: LibraryTrack) => Promise<ResolvedTrackFile | null>
   getTrack: (trackId: string) => LibraryTrack | undefined
   loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis) => Promise<void>
 }
 
-function getTrackAnalysis(track: LibraryTrack | undefined): DeckLoadAnalysis | undefined {
-  if (!track || track.bpm <= 0 || !Number.isFinite(track.bpm) || !Number.isFinite(track.firstBeatOffset)) {
+function getValidAnalysis(analysis: DeckLoadAnalysis | undefined): DeckLoadAnalysis | undefined {
+  if (!analysis || analysis.bpm <= 0 || !Number.isFinite(analysis.bpm) || !Number.isFinite(analysis.firstBeatOffset)) {
     return undefined
   }
 
   return {
-    bpm: track.bpm,
-    firstBeatOffset: track.firstBeatOffset
+    bpm: analysis.bpm,
+    firstBeatOffset: analysis.firstBeatOffset
   }
+}
+
+function getTrackAnalysis(track: LibraryTrack | undefined): DeckLoadAnalysis | undefined {
+  return track ? getValidAnalysis(track) : undefined
 }
 
 export function useDeckLoading({
@@ -82,14 +86,14 @@ export function useDeckLoading({
       setDeckLoading(deckId, track.file ? 'Loading deck...' : 'Downloading audio...')
 
       try {
-        const file = await resolveTrackFile(track)
+        const resolved = await resolveTrackFile(track)
 
-        if (!file) {
+        if (!resolved) {
           return
         }
 
         setDeckLoading(deckId, 'Decoding waveform...')
-        await loadTrack(deckId, file, getTrackAnalysis(track))
+        await loadTrack(deckId, resolved.file, getValidAnalysis(resolved.analysis) ?? getTrackAnalysis(track))
         persistDeckTrack(deckId, track.id)
       } finally {
         setDeckLoading(deckId, null)

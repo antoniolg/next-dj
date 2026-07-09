@@ -10,15 +10,21 @@ import {
   readPersistedTracks
 } from '../library/libraryRepository'
 import type { LibraryTrack } from '../library/libraryTypes'
+import type { DeckLoadAnalysis } from '../audio/deck'
 
 export type { LibraryTrack } from '../library/libraryTypes'
+
+export interface ResolvedTrackFile {
+  file: File
+  analysis?: DeckLoadAnalysis
+}
 
 export function useLibrary(): {
   tracks: LibraryTrack[]
   isReady: boolean
   addFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
   addYouTubeTracks: (youtubeTracks: YouTubeTrackSummary[]) => LibraryTrack[]
-  resolveTrackFile: (track: LibraryTrack) => Promise<File | null>
+  resolveTrackFile: (track: LibraryTrack) => Promise<ResolvedTrackFile | null>
   getTrack: (trackId: string) => LibraryTrack | undefined
 } {
   const [tracks, setTracks] = useState<LibraryTrack[]>([])
@@ -109,9 +115,9 @@ export function useLibrary(): {
     return nextTracks
   }, [])
 
-  const resolveTrackFile = useCallback(async (track: LibraryTrack): Promise<File | null> => {
+  const resolveTrackFile = useCallback(async (track: LibraryTrack): Promise<ResolvedTrackFile | null> => {
     if (track.file) {
-      return track.file
+      return { file: track.file, analysis: { bpm: track.bpm, firstBeatOffset: track.firstBeatOffset } }
     }
 
     if (track.source !== 'youtube' || !track.youtubeUrl) {
@@ -135,7 +141,7 @@ export function useLibrary(): {
       type: 'audio/mpeg'
     })
     const duration = await readDuration(file)
-    const bpm = await readBpm(file)
+    const analysis = await readBpm(file)
 
     await putPersistedFile(track.id, file)
 
@@ -145,7 +151,7 @@ export function useLibrary(): {
           ? {
               ...currentTrack,
               duration,
-              ...bpm,
+              ...analysis,
               file
             }
           : currentTrack
@@ -155,7 +161,7 @@ export function useLibrary(): {
       return updatedTracks
     })
 
-    return file
+    return { file, analysis }
   }, [])
 
   const getTrack = useCallback(
