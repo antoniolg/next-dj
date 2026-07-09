@@ -36,11 +36,17 @@ export function getAudioExtension(fileName: string): string | null {
 }
 
 export function parseDownloadedFilePaths(stdout: string): string[] {
-  return stdout
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .filter((line) => getAudioExtension(line))
+  const paths: string[] = []
+
+  for (const rawLine of stdout.split(/\r?\n/)) {
+    const line = rawLine.trim()
+
+    if (line && getAudioExtension(line)) {
+      paths.push(line)
+    }
+  }
+
+  return paths
 }
 
 function readString(value: unknown): string {
@@ -102,9 +108,17 @@ export async function listYouTubeTracks(rawUrl: string): Promise<YouTubeTrackSum
     const parsed = JSON.parse(result.stdout) as YtDlpInfo
     const entries = Array.isArray(parsed.entries) ? parsed.entries : [parsed]
 
-    return entries
-      .map((entry, index) => mapYouTubeInfo(entry as YtDlpInfo, index))
-      .filter((track): track is YouTubeTrackSummary => track !== null)
+    const tracks: YouTubeTrackSummary[] = []
+
+    for (let index = 0; index < entries.length; index += 1) {
+      const track = mapYouTubeInfo(entries[index] as YtDlpInfo, index)
+
+      if (track) {
+        tracks.push(track)
+      }
+    }
+
+    return tracks
   } catch (error) {
     const message = error instanceof Error ? error.message : 'yt-dlp could not read this playlist.'
     throw new Error(message, { cause: error })
@@ -153,14 +167,20 @@ export async function downloadYouTubeAudio(rawUrl: string): Promise<YouTubeDownl
     downloadedPaths.length > 0
       ? downloadedPaths
       : (await readdir(outputDirectory)).map((entry) => join(outputDirectory, entry))
-  const importedFiles = await Promise.all(
-    candidatePaths
-      .filter((filePath) => getAudioExtension(filePath))
-      .map(async (filePath) => {
-        const fileStat = await stat(filePath)
-        return { filePath, mtimeMs: fileStat.mtimeMs }
-      })
-  )
+  const importFileReads: Array<Promise<{ filePath: string; mtimeMs: number }>> = []
+
+  for (const filePath of candidatePaths) {
+    if (getAudioExtension(filePath)) {
+      importFileReads.push(
+        stat(filePath).then((fileStat) => ({
+          filePath,
+          mtimeMs: fileStat.mtimeMs
+        }))
+      )
+    }
+  }
+
+  const importedFiles = await Promise.all(importFileReads)
   const currentImportFiles =
     downloadedPaths.length > 0
       ? importedFiles
