@@ -1,19 +1,26 @@
-export interface YouTubeAudioFile {
+export interface PlaylistImportFile {
   data: ArrayBuffer
   name: string
   lastModified: number
+  type?: string
 }
 
-export interface YouTubeDownloadResult {
-  file: YouTubeAudioFile | null
+export interface PlaylistImportResolvedFile {
+  file: PlaylistImportFile | null
   outputDirectory: string
 }
 
-export interface YouTubeTrackSummary {
+export interface PlaylistImportProviderSummary {
+  id: string
+  displayName: string
+}
+
+export interface PlaylistImportTrack {
+  providerId: string
   id: string
   title: string
   duration: number
-  url: string
+  externalRef: string
 }
 
 export interface RecordingStartOptions {
@@ -38,8 +45,9 @@ export interface RecordingWriteError {
 
 export interface NextDjBridge {
   appName: string
-  downloadYouTubeAudio: (url: string) => Promise<YouTubeDownloadResult>
-  listYouTubeTracks: (url: string) => Promise<YouTubeTrackSummary[]>
+  listPlaylistImportProviders: () => Promise<PlaylistImportProviderSummary[]>
+  listPlaylistImportTracks: (input: string) => Promise<PlaylistImportTrack[]>
+  resolvePlaylistImportTrack: (providerId: string, externalRef: string) => Promise<PlaylistImportResolvedFile>
   startRecording: (options: RecordingStartOptions) => Promise<RecordingStartResult>
   appendRecordingChunk: (id: string, chunk: ArrayBuffer) => Promise<void>
   stopRecording: (id: string) => Promise<RecordingStopResult>

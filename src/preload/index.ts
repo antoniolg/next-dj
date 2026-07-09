@@ -1,18 +1,23 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type {
   NextDjBridge,
+  PlaylistImportProviderSummary,
+  PlaylistImportResolvedFile,
+  PlaylistImportTrack,
   RecordingStartOptions,
   RecordingStartResult,
   RecordingStopResult,
-  RecordingWriteError,
-  YouTubeDownloadResult,
-  YouTubeTrackSummary
+  RecordingWriteError
 } from '../shared/nextdj.js'
 
 const bridge: NextDjBridge = {
   appName: 'NextDJ',
-  downloadYouTubeAudio: (url: string): Promise<YouTubeDownloadResult> => ipcRenderer.invoke('youtube:download-audio', url),
-  listYouTubeTracks: (url: string): Promise<YouTubeTrackSummary[]> => ipcRenderer.invoke('youtube:list-tracks', url),
+  listPlaylistImportProviders: (): Promise<PlaylistImportProviderSummary[]> =>
+    ipcRenderer.invoke('playlist-import:list-providers'),
+  listPlaylistImportTracks: (input: string): Promise<PlaylistImportTrack[]> =>
+    ipcRenderer.invoke('playlist-import:list-tracks', input),
+  resolvePlaylistImportTrack: (providerId: string, externalRef: string): Promise<PlaylistImportResolvedFile> =>
+    ipcRenderer.invoke('playlist-import:resolve-track', providerId, externalRef),
   startRecording: (options: RecordingStartOptions): Promise<RecordingStartResult> =>
     ipcRenderer.invoke('recording:start', options),
   appendRecordingChunk: (id: string, chunk: ArrayBuffer): Promise<void> =>

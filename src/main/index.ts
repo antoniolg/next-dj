@@ -1,9 +1,9 @@
 import { app, BrowserWindow, Menu, session } from 'electron'
 import { configureSessionSecurity } from './appSecurity.js'
 import { appendRendererPerfFlag, readPerfUserDataDir, readRemoteDebuggingPort } from './performanceFlags.js'
+import { registerPlaylistImportIpc } from './playlistImport.js'
 import { registerRecordingIpc } from './recording.js'
 import { createMainWindow } from './window.js'
-import { registerYouTubeIpc } from './youtube.js'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
 
@@ -27,7 +27,7 @@ app.whenReady().then(() => {
 
   configureSessionSecurity(session.defaultSession)
 
-  registerYouTubeIpc()
+  registerPlaylistImportIpc()
   registerRecordingIpc()
   createMainWindow({
     dirname: __dirname,
