@@ -9,6 +9,8 @@ The public repository is service-neutral. Playlist import support is exposed
 through a local provider plugin API, but NextDJ does not ship with integrations
 for specific external services.
 
+![NextDJ desktop console](docs/media/nextdj-screenshot.jpg)
+
 ## Status
 
 NextDJ is early software. The app is usable for development and testing, but
