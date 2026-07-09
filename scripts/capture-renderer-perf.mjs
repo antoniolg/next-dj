@@ -1,4 +1,4 @@
-/* global WebSocket, fetch, process, setTimeout */
+/* global WebSocket, clearTimeout, fetch, process, setTimeout */
 import { spawn } from 'node:child_process'
 import { Buffer } from 'node:buffer'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
@@ -17,6 +17,25 @@ function readOption(name, fallback) {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function waitForExit(child, timeoutMs) {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return Promise.resolve(true)
+  }
+
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      child.off('exit', onExit)
+      resolve(false)
+    }, timeoutMs)
+    const onExit = () => {
+      clearTimeout(timeout)
+      resolve(true)
+    }
+
+    child.once('exit', onExit)
+  })
 }
 
 async function readJson(url) {
@@ -390,14 +409,27 @@ async function stop(child) {
 
   signalProcessGroup('SIGINT')
 
-  await Promise.race([
-    new Promise((resolve) => child.once('exit', resolve)),
-    delay(2000).then(() => {
-      if (child.exitCode === null && child.signalCode === null) {
-        signalProcessGroup('SIGTERM')
-      }
-    })
-  ])
+  if (await waitForExit(child, 2000)) {
+    return
+  }
+
+  signalProcessGroup('SIGTERM')
+
+  if (await waitForExit(child, 2000)) {
+    return
+  }
+
+  signalProcessGroup('SIGKILL')
+  await waitForExit(child, 1000)
+}
+
+async function removeTemporaryDirectory(directory) {
+  await rm(directory, {
+    force: true,
+    maxRetries: 5,
+    recursive: true,
+    retryDelay: 200
+  })
 }
 
 const requestedPort = readOption('--port', '')
@@ -456,9 +488,9 @@ try {
   client?.close()
   await stop(child)
   if (userDataDirectory) {
-    await rm(userDataDirectory, { force: true, recursive: true })
+    await removeTemporaryDirectory(userDataDirectory)
   }
   if (recordingsDirectory) {
-    await rm(recordingsDirectory, { force: true, recursive: true })
+    await removeTemporaryDirectory(recordingsDirectory)
   }
 }

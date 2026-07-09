@@ -127,6 +127,10 @@ function drawCanvas(
 
   if (waveform && duration > 0) {
     context.lineWidth = Math.max(1, dpr)
+    const highPlayedPath = new Path2D()
+    const highPendingPath = new Path2D()
+    const lowPlayedPath = new Path2D()
+    const lowPendingPath = new Path2D()
 
     for (let x = 0; x < width; x += dpr) {
       const time = windowStart + (x / width) * windowSeconds
@@ -137,24 +141,29 @@ function drawCanvas(
 
       const bucketIndex = (time / duration) * waveform.zoom.bucketCount
       const played = x <= playheadX
+      const highPath = played ? highPlayedPath : highPendingPath
+      const lowPath = played ? lowPlayedPath : lowPendingPath
 
       const { min, max } = getPeakAt(waveform.zoom, bucketIndex)
-      context.globalAlpha = played ? 0.16 : 0.32
-      context.strokeStyle = accent
-      context.beginPath()
-      context.moveTo(x, centerY + min * centerY * 0.9)
-      context.lineTo(x, centerY + max * centerY * 0.9)
-      context.stroke()
+      highPath.moveTo(x, centerY + min * centerY * 0.9)
+      highPath.lineTo(x, centerY + max * centerY * 0.9)
 
       const low = getLowPeakAt(waveform.zoom, bucketIndex)
       const lowMin = clamp(low.min * LOW_BAND_GAIN, -1, 1)
       const lowMax = clamp(low.max * LOW_BAND_GAIN, -1, 1)
-      context.globalAlpha = played ? 0.5 : 0.95
-      context.beginPath()
-      context.moveTo(x, centerY + lowMin * centerY * 0.9)
-      context.lineTo(x, centerY + lowMax * centerY * 0.9)
-      context.stroke()
+      lowPath.moveTo(x, centerY + lowMin * centerY * 0.9)
+      lowPath.lineTo(x, centerY + lowMax * centerY * 0.9)
     }
+
+    context.strokeStyle = accent
+    context.globalAlpha = 0.16
+    context.stroke(highPlayedPath)
+    context.globalAlpha = 0.32
+    context.stroke(highPendingPath)
+    context.globalAlpha = 0.5
+    context.stroke(lowPlayedPath)
+    context.globalAlpha = 0.95
+    context.stroke(lowPendingPath)
   }
 
   drawBeatGrid(context, width, height, dpr, bpm, firstBeatOffset, windowStart, windowSeconds)
