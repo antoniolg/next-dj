@@ -5,7 +5,7 @@ All notable changes to NextDJ will be documented in this file.
 The format is based on Keep a Changelog, and this project uses Semantic
 Versioning once public releases begin.
 
-## [0.1.0-alpha.1] - Unreleased
+## [0.1.0-alpha.1] - 2026-07-09
 
 This first public build is intended as an unsigned pre-release. macOS and
 Windows may show operating-system security warnings. Build from source if you
