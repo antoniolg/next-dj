@@ -13,6 +13,14 @@ export function getPeakSegment(peak: number, segments: number): number {
   return peak > 0.01 ? Math.min(segments - 1, Math.floor(peak * segments)) : -1
 }
 
+export function getLitSegmentCount(level: number, segments: number): number {
+  if (level <= 0 || segments <= 0) {
+    return 0
+  }
+
+  return Math.min(segments, Math.floor(level * segments))
+}
+
 export function getVuSegmentColor(segment: number, segments: number): 'green' | 'yellow' | 'red' {
   return segment > segments * 0.82 ? 'red' : segment > segments * 0.62 ? 'yellow' : 'green'
 }

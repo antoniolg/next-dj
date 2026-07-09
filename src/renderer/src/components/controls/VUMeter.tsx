@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { calculateMeterLevel, getPeakSegment, getVuSegmentColor } from './vuMeterMath'
+import { calculateMeterLevel, getLitSegmentCount, getPeakSegment, getVuSegmentColor } from './vuMeterMath'
 
 interface VUMeterProps {
   analyser: AnalyserNode | null
@@ -9,12 +9,22 @@ interface VUMeterProps {
 
 const PEAK_HOLD_MS = 800
 
+interface MeterViewState {
+  litSegments: number
+  peakSegment: number
+}
+
+const EMPTY_METER: MeterViewState = {
+  litSegments: 0,
+  peakSegment: -1
+}
+
 export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.Element {
-  const [level, setLevel] = useState(0)
-  const [peak, setPeak] = useState(0)
+  const [meter, setMeter] = useState<MeterViewState>(EMPTY_METER)
   const dataRef = useRef<Uint8Array<ArrayBuffer> | null>(null)
   const levelRef = useRef(0)
   const peakRef = useRef({ value: 0, at: 0 })
+  const meterRef = useRef<MeterViewState>(EMPTY_METER)
   const segmentItems = useMemo(
     () => Array.from({ length: segments }, (_, index) => index),
     [segments]
@@ -24,8 +34,8 @@ export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.E
     if (!analyser) {
       levelRef.current = 0
       peakRef.current = { value: 0, at: 0 }
-      setLevel(0)
-      setPeak(0)
+      meterRef.current = EMPTY_METER
+      setMeter(EMPTY_METER)
       return
     }
 
@@ -51,8 +61,18 @@ export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.E
           peakRef.current = { value: levelRef.current, at: now }
         }
 
-        setLevel(levelRef.current)
-        setPeak(peakRef.current.value)
+        const nextMeter = {
+          litSegments: getLitSegmentCount(levelRef.current, segments),
+          peakSegment: getPeakSegment(peakRef.current.value, segments)
+        }
+
+        if (
+          nextMeter.litSegments !== meterRef.current.litSegments ||
+          nextMeter.peakSegment !== meterRef.current.peakSegment
+        ) {
+          meterRef.current = nextMeter
+          setMeter(nextMeter)
+        }
       }
 
       frameId = window.requestAnimationFrame(tick)
@@ -60,16 +80,13 @@ export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.E
 
     frameId = window.requestAnimationFrame(tick)
     return () => window.cancelAnimationFrame(frameId)
-  }, [analyser])
-
-  const peakSegment = getPeakSegment(peak, segments)
+  }, [analyser, segments])
 
   return (
     <div className="vu">
       <div aria-label={label ?? 'VU meter'} className="vu-meter">
         {segmentItems.map((segment) => {
-          const threshold = (segment + 1) / segments
-          const lit = level >= threshold || segment === peakSegment
+          const lit = segment < meter.litSegments || segment === meter.peakSegment
           const color = getVuSegmentColor(segment, segments)
 
           return <span key={segment} className={`vu-segment vu-${color} ${lit ? 'vu-lit' : ''}`} />
