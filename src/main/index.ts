@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Menu, session } from 'electron'
+import { configureSessionSecurity } from './appSecurity.js'
 import { registerRecordingIpc } from './recording.js'
 import { createMainWindow } from './window.js'
 import { registerYouTubeIpc } from './youtube.js'
@@ -13,20 +14,7 @@ app.whenReady().then(() => {
     Menu.setApplicationMenu(null)
   }
 
-  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-    callback(permission === 'media' || permission === 'display-capture')
-  })
-
-  // Recording captures the app's own window content (WebFrameMain), which
-  // needs no macOS Screen Recording permission and never picks up
-  // overlapping windows.
-  session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-    if (request.frame) {
-      callback({ video: request.frame })
-    } else {
-      callback({})
-    }
-  })
+  configureSessionSecurity(session.defaultSession)
 
   registerYouTubeIpc()
   registerRecordingIpc()

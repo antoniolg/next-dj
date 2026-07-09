@@ -19,7 +19,7 @@ export function createMainWindow({ dirname, isDev, rendererUrl }: CreateMainWind
       preload: join(dirname, '../preload/index.mjs'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     }
   })
 
