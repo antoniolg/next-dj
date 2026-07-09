@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, Cloud, Info, Link, Maximize2, Minimize2, Music, Plus } from 'lucide-react'
+import { ChevronDown, ChevronUp, Info, Link, Maximize2, Minimize2, Music, Plus } from 'lucide-react'
 import type { DeckId } from '../../hooks/useEngine'
 import type { LibraryTrack } from '../../hooks/useLibrary'
+import { LibraryTrackTable } from './LibraryTrackTable'
 import { YouTubeImportForm } from './YouTubeImportForm'
-import { formatBpm, formatTime, isEditableTarget } from './libraryPanelUtils'
+import { isEditableTarget } from './libraryPanelUtils'
 
 interface LibraryPanelProps {
   tracks: LibraryTrack[]
@@ -325,69 +326,16 @@ export function LibraryPanel({
                 <p>Drop audio here or add tracks to build your crate.</p>
               </div>
             ) : (
-              <table className="library-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th className="library-col-time">Time</th>
-                  <th className="library-col-bpm">BPM</th>
-                  <th className="library-col-load" aria-label="Load controls" />
-                </tr>
-              </thead>
-              <tbody>
-                {tracks.map((track) => (
-                  <tr
-                    ref={(element) => {
-                      rowRefs.current[track.id] = element
-                    }}
-                    key={track.id}
-                    aria-label={`${track.title}. Press Enter to load into deck ${keyboardLoadDeckId}`}
-                    draggable
-                    tabIndex={focusedTrackId === track.id ? 0 : -1}
-                    onDragStart={(event) => handleDragStart(event, track.id)}
-                    onFocus={() => setFocusedTrackId(track.id)}
-                    onKeyDown={(event) => handleRowKeyDown(event, track)}
-                  >
-                    <td>
-                      <span className="library-track-title" title={track.title}>
-                        <span className="library-track-title-text">{track.title}</span>
-                        {track.source === 'youtube' && !track.file ? (
-                          <span
-                            aria-label="Not stored locally"
-                            className="library-track-remote"
-                            title="Not stored locally"
-                          >
-                            <Cloud aria-hidden="true" size={13} strokeWidth={2.3} />
-                          </span>
-                        ) : null}
-                      </span>
-                    </td>
-                    <td className="library-col-time">{formatTime(track.duration)}</td>
-                    <td className="library-col-bpm">{formatBpm(track.bpm)}</td>
-                    <td className="library-col-load">
-                      <div className="library-load-chips">
-                        <button
-                          className="load-chip load-chip-a"
-                          title="Load into deck A"
-                          type="button"
-                          onClick={() => void onLoadTrack('A', track)}
-                        >
-                          A
-                        </button>
-                        <button
-                          className="load-chip load-chip-b"
-                          title="Load into deck B"
-                          type="button"
-                          onClick={() => void onLoadTrack('B', track)}
-                        >
-                          B
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              </table>
+              <LibraryTrackTable
+                focusedTrackId={focusedTrackId}
+                keyboardLoadDeckId={keyboardLoadDeckId}
+                rowRefs={rowRefs}
+                tracks={tracks}
+                onDragStart={handleDragStart}
+                onFocusTrack={setFocusedTrackId}
+                onLoadTrack={(deckId, track) => void onLoadTrack(deckId, track)}
+                onRowKeyDown={handleRowKeyDown}
+              />
             )}
           </div>
         </>
