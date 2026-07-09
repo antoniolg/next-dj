@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { buildMonoSamples } from './monoSamples'
+import { buildMonoSamples, writeMonoSamples } from './monoSamples'
 
 function createAudioBuffer(channels: number[][]): AudioBuffer {
   const length = Math.max(0, ...channels.map((channel) => channel.length))
@@ -50,5 +50,20 @@ describe('mono samples', () => {
     expect(getChannelData).toHaveBeenCalledTimes(2)
     expect(getChannelData).toHaveBeenNthCalledWith(1, 0)
     expect(getChannelData).toHaveBeenNthCalledWith(2, 1)
+  })
+
+  it('writes mono samples into an existing target without resizing it', () => {
+    const target = new Float32Array([9, 9, 9, 9])
+
+    writeMonoSamples(
+      createAudioBuffer([
+        [1, -1, 0.5],
+        [0, 1, 0.5]
+      ]),
+      target,
+      2
+    )
+
+    expect(Array.from(target)).toEqual([0.5, 0, 9, 9])
   })
 })

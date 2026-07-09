@@ -1,4 +1,4 @@
-import { buildMonoSamples } from './monoSamples'
+import { writeMonoSamples } from './monoSamples'
 
 export interface BpmDetectionResult {
   bpm: number
@@ -45,7 +45,7 @@ async function renderLowpassed(buffer: AudioBuffer): Promise<AudioBuffer> {
   const sourceBuffer = offline.createBuffer(1, frameCount, buffer.sampleRate)
   const channelData = sourceBuffer.getChannelData(0)
 
-  channelData.set(buildMonoSamples(buffer, frameCount))
+  writeMonoSamples(buffer, channelData, frameCount)
 
   const source = offline.createBufferSource()
   const filter = offline.createBiquadFilter()

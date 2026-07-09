@@ -1,15 +1,15 @@
-export function buildMonoSamples(buffer: AudioBuffer, frameCount = buffer.length): Float32Array {
-  const sampleCount = Math.max(0, Math.min(frameCount, buffer.length))
-  const samples = new Float32Array(sampleCount)
+export function writeMonoSamples(buffer: AudioBuffer, target: Float32Array, frameCount = target.length): void {
+  const sampleCount = Math.max(0, Math.min(frameCount, buffer.length, target.length))
   const channels = Array.from({ length: buffer.numberOfChannels }, (_, index) => buffer.getChannelData(index))
 
   if (channels.length === 0) {
-    return samples
+    target.fill(0, 0, sampleCount)
+    return
   }
 
   if (channels.length === 1) {
-    samples.set(channels[0].subarray(0, sampleCount))
-    return samples
+    target.set(channels[0].subarray(0, sampleCount), 0)
+    return
   }
 
   for (let frame = 0; frame < sampleCount; frame += 1) {
@@ -19,8 +19,14 @@ export function buildMonoSamples(buffer: AudioBuffer, frameCount = buffer.length
       sample += channel[frame] ?? 0
     }
 
-    samples[frame] = sample / channels.length
+    target[frame] = sample / channels.length
   }
+}
 
+export function buildMonoSamples(buffer: AudioBuffer, frameCount = buffer.length): Float32Array {
+  const sampleCount = Math.max(0, Math.min(frameCount, buffer.length))
+  const samples = new Float32Array(sampleCount)
+
+  writeMonoSamples(buffer, samples, sampleCount)
   return samples
 }
