@@ -1,0 +1,87 @@
+/* ---------- Settings & shortcuts ---------- */
+
+.settings-panel {
+  border-left: 1px solid var(--panel-edge);
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, #1e222a, #0d0f13);
+}
+
+.settings-field {
+  display: block;
+}
+
+.settings-field-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.device-select {
+  width: 100%;
+  margin-top: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 7px;
+  background: #080a0f;
+  color: #e5e7eb;
+  padding: 0.65rem 0.8rem;
+}
+
+.shortcut-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(3, 5, 10, 0.72);
+  padding: 1.5rem;
+}
+
+.shortcut-card {
+  width: min(100%, 460px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, #1e222a, #0d0f13);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 24px 60px rgba(0, 0, 0, 0.6);
+  padding: 1.25rem;
+}
+
+.shortcut-section {
+  margin-top: 1.15rem;
+  margin-bottom: 0.5rem;
+}
+
+.shortcut-grid {
+  display: grid;
+  grid-template-columns: minmax(112px, auto) 1fr;
+  gap: 0.6rem 1rem;
+  align-items: baseline;
+}
+
+.shortcut-grid dt {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #d7feff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  text-align: center;
+}
+
+.shortcut-grid dd {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
