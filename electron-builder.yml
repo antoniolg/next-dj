@@ -29,7 +29,7 @@ portable:
 linux:
   icon: build/icon.png
   category: Audio
-  maintainer: Antonio Leiva <antonio@devexperto.com>
+  maintainer: NextDJ <contact@devexpert.io>
   syncDesktopName: true
   target:
     - AppImage

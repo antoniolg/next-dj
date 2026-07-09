@@ -4,10 +4,7 @@
   "description": "NextDJ desktop app",
   "desktopName": "nextdj",
   "license": "MIT",
-  "author": {
-    "name": "Antonio Leiva",
-    "email": "antonio@devexperto.com"
-  },
+  "author": "Antonio Leiva",
   "homepage": "https://github.com/antoniolg/next-dj",
   "main": "./out/main/index.js",
   "repository": {

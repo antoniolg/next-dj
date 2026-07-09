@@ -31,8 +31,8 @@ Examples of unacceptable behavior:
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the project maintainer at antonio@devexperto.com. All complaints
-will be reviewed and investigated promptly and fairly.
+reported through the repository's moderation or security contact channels. All
+complaints will be reviewed and investigated promptly and fairly.
 
 ## Attribution
 
