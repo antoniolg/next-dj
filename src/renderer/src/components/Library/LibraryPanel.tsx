@@ -1,10 +1,10 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp, Info, Link, Maximize2, Minimize2, Music, Plus } from 'lucide-react'
 import type { DeckId } from '../../hooks/useEngine'
 import type { LibraryTrack } from '../../hooks/useLibrary'
 import { LibraryTrackTable } from './LibraryTrackTable'
 import { YouTubeImportForm } from './YouTubeImportForm'
-import { isEditableTarget } from './libraryPanelUtils'
+import { createTrackIdIndex, isEditableTarget } from './libraryPanelUtils'
 
 interface LibraryPanelProps {
   tracks: LibraryTrack[]
@@ -33,6 +33,8 @@ export const LibraryPanel = memo(function LibraryPanel({
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [youtubeStatus, setYoutubeStatus] = useState<string | null>(null)
   const [isImportingYoutube, setIsImportingYoutube] = useState(false)
+  const trackIdIndex = useMemo(() => createTrackIdIndex(tracks), [tracks])
+  const firstTrackId = tracks[0]?.id ?? null
 
   useEffect(() => {
     localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0')
@@ -52,23 +54,20 @@ export const LibraryPanel = memo(function LibraryPanel({
 
   useEffect(() => {
     setFocusedTrackId((current) => {
-      if (tracks.length === 0) {
-        return null
-      }
-
-      return current && tracks.some((track) => track.id === current) ? current : tracks[0].id
+      return current && trackIdIndex.has(current) ? current : firstTrackId
     })
-  }, [tracks])
+  }, [firstTrackId, trackIdIndex])
 
   useEffect(() => {
     if (!expanded || tracks.length === 0) {
       return
     }
 
-    const nextFocusedTrackId =
-      focusedTrackId && tracks.some((track) => track.id === focusedTrackId)
-        ? focusedTrackId
-        : tracks[0].id
+    const nextFocusedTrackId = focusedTrackId && trackIdIndex.has(focusedTrackId) ? focusedTrackId : firstTrackId
+
+    if (!nextFocusedTrackId) {
+      return
+    }
 
     if (nextFocusedTrackId !== focusedTrackId) {
       setFocusedTrackId(nextFocusedTrackId)
@@ -77,7 +76,7 @@ export const LibraryPanel = memo(function LibraryPanel({
     window.requestAnimationFrame(() => {
       rowRefs.current[nextFocusedTrackId]?.focus()
     })
-  }, [expanded, focusedTrackId, tracks])
+  }, [expanded, firstTrackId, focusedTrackId, trackIdIndex, tracks.length])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
@@ -145,7 +144,7 @@ export const LibraryPanel = memo(function LibraryPanel({
         return
       }
 
-      const currentIndex = tracks.findIndex((item) => item.id === track.id)
+      const currentIndex = trackIdIndex.get(track.id) ?? -1
 
       if (currentIndex < 0) {
         return
@@ -180,7 +179,7 @@ export const LibraryPanel = memo(function LibraryPanel({
         focusTrackAtIndex(tracks.length - 1)
       }
     },
-    [focusTrackAtIndex, loadTrackFromKeyboard, tracks]
+    [focusTrackAtIndex, loadTrackFromKeyboard, trackIdIndex, tracks.length]
   )
 
   const handleDragStart = useCallback(

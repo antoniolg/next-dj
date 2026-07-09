@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { formatBpm, formatTime, isEditableTarget } from './libraryPanelUtils'
+import { createTrackIdIndex, formatBpm, formatTime, isEditableTarget } from './libraryPanelUtils'
 
 describe('library panel utils', () => {
+  it('indexes tracks by id for constant-time keyboard navigation', () => {
+    const index = createTrackIdIndex([{ id: 'first' }, { id: 'second' }, { id: 'third' }])
+
+    expect(index.get('first')).toBe(0)
+    expect(index.get('second')).toBe(1)
+    expect(index.get('missing')).toBeUndefined()
+  })
+
   it('formats durations for crate rows', () => {
     expect(formatTime(0)).toBe('0:00')
     expect(formatTime(Number.NaN)).toBe('0:00')

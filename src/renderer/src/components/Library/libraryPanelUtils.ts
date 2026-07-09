@@ -1,3 +1,11 @@
+interface IndexedTrack {
+  id: string
+}
+
+export function createTrackIdIndex(tracks: IndexedTrack[]): Map<string, number> {
+  return new Map(tracks.map((track, index) => [track.id, index]))
+}
+
 export function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false

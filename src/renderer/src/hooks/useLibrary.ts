@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { YouTubeTrackSummary } from '../../../shared/nextdj'
 import { readAudioMetadata } from '../library/audioMetadata'
 import { createPlaylistFileName, createTrackId, isAudioFile } from '../library/libraryFiles'
@@ -29,6 +29,7 @@ export function useLibrary(): {
 } {
   const [tracks, setTracks] = useState<LibraryTrack[]>([])
   const [isReady, setIsReady] = useState(false)
+  const tracksById = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks])
 
   useEffect(() => {
     let cancelled = false
@@ -162,10 +163,7 @@ export function useLibrary(): {
     return { file, analysis }
   }, [])
 
-  const getTrack = useCallback(
-    (trackId: string): LibraryTrack | undefined => tracks.find((track) => track.id === trackId),
-    [tracks]
-  )
+  const getTrack = useCallback((trackId: string): LibraryTrack | undefined => tracksById.get(trackId), [tracksById])
 
   return { tracks, isReady, addFiles, addYouTubeTracks, resolveTrackFile, getTrack }
 }
