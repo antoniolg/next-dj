@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 
 const DEFAULT_WAIT_MS = 5000
-const SCENARIOS = new Set(['', 'deck-load'])
+const SCENARIOS = new Set(['', 'deck-load', 'deck-play'])
 
 function readOption(name, fallback) {
   const index = process.argv.indexOf(name)
@@ -184,6 +184,34 @@ async function waitForSelectorNode(client, selector, timeoutMs) {
   throw new Error(`Could not find selector: ${selector}`)
 }
 
+async function clickNode(client, nodeId) {
+  const { model } = await client.send('DOM.getBoxModel', { nodeId })
+
+  if (!model?.content?.length) {
+    throw new Error('Could not read element bounds for click.')
+  }
+
+  const x = (model.content[0] + model.content[2] + model.content[4] + model.content[6]) / 4
+  const y = (model.content[1] + model.content[3] + model.content[5] + model.content[7]) / 4
+
+  await client.send('Input.dispatchMouseEvent', {
+    button: 'left',
+    buttons: 1,
+    clickCount: 1,
+    type: 'mousePressed',
+    x,
+    y
+  })
+  await client.send('Input.dispatchMouseEvent', {
+    button: 'left',
+    buttons: 0,
+    clickCount: 1,
+    type: 'mouseReleased',
+    x,
+    y
+  })
+}
+
 function createSyntheticWavBuffer({ durationSeconds = 2, frequencyHz = 440, sampleRate = 44100 } = {}) {
   const channelCount = 1
   const bitsPerSample = 16
@@ -251,9 +279,17 @@ async function loadSyntheticDeckTrack(client) {
   }
 }
 
+async function playSyntheticDeckTrack(client) {
+  await loadSyntheticDeckTrack(client)
+
+  const playNodeId = await waitForSelectorNode(client, '.deck-panel button[aria-label="Play"]:not(:disabled)', 10000)
+  await clickNode(client, playNodeId)
+  await waitForSelectorNode(client, '.deck-panel button[aria-label="Pause"]', 10000)
+}
+
 async function runScenario(client, scenario) {
-  if (scenario === 'deck-load') {
-    return loadSyntheticDeckTrack(client)
+  if (scenario === 'deck-load' || scenario === 'deck-play') {
+    return scenario === 'deck-play' ? playSyntheticDeckTrack(client) : loadSyntheticDeckTrack(client)
   }
 
   return null

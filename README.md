@@ -68,6 +68,12 @@ To exercise the real deck file input with a generated WAV fixture and capture li
 npm run perf:snapshot -- --scenario deck-load --wait-ms 1000
 ```
 
+To also start playback through the real transport control and observe playback-time slow frames:
+
+```bash
+npm run perf:snapshot -- --scenario deck-play --wait-ms 3000
+```
+
 During playback, the same flag reports slow waveform draw frames as `waveform.overview slow frame` and `waveform.zoom slow frame`, plus analyser-heavy meter frames as `vu.meter slow frame`. Treat repeated slow-frame logs as evidence before changing waveform fidelity, animation cadence, or meter behavior.
 
 The flag also starts a renderer long-task observer when the runtime supports it. Repeated `renderer long task` logs indicate main-thread blocking that should be traced before changing UI behavior.
