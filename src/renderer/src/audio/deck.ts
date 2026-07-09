@@ -15,30 +15,27 @@ import {
   saveCuePoint,
   saveHotCues
 } from './deckPersistence'
+import {
+  calculateJogPlaybackRate,
+  clamp,
+  clampEqDb,
+  clampPitchPercent,
+  clampPositiveValue,
+  clampUnitValue,
+  pitchPercentToRate
+} from './deckMath'
 import { EMPTY_HOT_CUES, type HotCue, type LoopState, type TrackMetadata } from './deckTypes'
 
 export type EqBand = 'low' | 'mid' | 'high'
 
-export const MIN_PITCH_PERCENT = -8
-export const MAX_PITCH_PERCENT = 8
-
-const MIN_EQ_DB = -26
-const MAX_EQ_DB = 6
 // Sources are scheduled this far ahead so playback starts exactly when the
 // position accounting says it does, instead of "whenever the render thread
 // picks it up"; the buffer offset is advanced to match, keeping restarts
 // (seek, nudge, loop) gap-free relative to the other deck.
 const START_SCHEDULE_DELAY = 0.01
-// Jog turns while playing accumulate a pending position shift that a rate
-// bend chases smoothly (no source restarts, so no clicks).
-const JOG_CHASE_SECONDS = 0.15
-const JOG_MAX_RATE_BEND = 0.35
 const JOG_TICK_MS = 40
-const MIN_JOG_RATE = 0.05
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
-}
+export { MAX_PITCH_PERCENT, MIN_PITCH_PERCENT } from './deckMath'
 
 export class Deck {
   readonly output: GainNode
@@ -171,14 +168,14 @@ export class Deck {
   }
 
   setPitch(percent: number): number {
-    const clamped = clamp(percent, MIN_PITCH_PERCENT, MAX_PITCH_PERCENT)
+    const clamped = clampPitchPercent(percent)
 
     if (this.started) {
       this.offsetSeconds = this.getPosition()
       this.startContextTime = this.context.currentTime
     }
 
-    this.playbackRate = 1 + clamped / 100
+    this.playbackRate = pitchPercentToRate(clamped)
     this.basePlaybackRate = this.playbackRate
 
     if (this.source) {
@@ -302,17 +299,17 @@ export class Deck {
   }
 
   setEq(band: EqBand, dB: number): void {
-    const gain = clamp(dB, MIN_EQ_DB, MAX_EQ_DB)
+    const gain = clampEqDb(dB)
     const filter = this.getEqFilter(band)
     filter.gain.setValueAtTime(gain, this.context.currentTime)
   }
 
   setTrim(value: number): void {
-    this.trimGain.gain.setValueAtTime(Math.max(0, value), this.context.currentTime)
+    this.trimGain.gain.setValueAtTime(clampPositiveValue(value), this.context.currentTime)
   }
 
   setChannelFader(value: number): void {
-    this.channelFader.gain.setValueAtTime(clamp(value, 0, 1), this.context.currentTime)
+    this.channelFader.gain.setValueAtTime(clampUnitValue(value), this.context.currentTime)
   }
 
   getPosition(): number {
@@ -364,12 +361,7 @@ export class Deck {
     this.startContextTime = this.context.currentTime
     this.jogLastFoldTime = this.context.currentTime
 
-    const bend = clamp(
-      this.jogPendingSeconds / JOG_CHASE_SECONDS,
-      -JOG_MAX_RATE_BEND,
-      JOG_MAX_RATE_BEND
-    )
-    this.playbackRate = Math.max(MIN_JOG_RATE, this.basePlaybackRate + bend)
+    this.playbackRate = calculateJogPlaybackRate(this.basePlaybackRate, this.jogPendingSeconds)
     this.source?.playbackRate.setValueAtTime(this.playbackRate, this.context.currentTime)
   }
 
