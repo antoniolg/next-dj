@@ -32,6 +32,26 @@
   padding: 0.65rem 0.8rem;
 }
 
+.device-select:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.settings-route-status,
+.settings-route-error {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+}
+
+.settings-route-status {
+  color: #7f8ea3;
+}
+
+.settings-route-error {
+  color: #fecdd3;
+}
+
 .shortcut-overlay {
   position: fixed;
   inset: 0;
@@ -84,4 +104,3 @@
   color: #cbd5e1;
   font-size: 0.8rem;
 }
-

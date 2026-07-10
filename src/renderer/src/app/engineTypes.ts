@@ -16,9 +16,16 @@ export interface MixerState {
   masterVolume: number
 }
 
+export interface OutputRouteState {
+  activeDeviceId: string
+  requestedDeviceId: string
+  pending: boolean
+  error: string | null
+}
+
 export interface OutputState {
   devices: OutputDeviceInfo[]
-  masterDeviceId: string
-  cueDeviceId: string
-  error: string | null
+  master: OutputRouteState
+  cue: OutputRouteState
+  deviceListError: string | null
 }

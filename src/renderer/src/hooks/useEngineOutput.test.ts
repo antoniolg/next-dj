@@ -26,9 +26,9 @@ describe('useEngineOutput', () => {
 
     const { result } = renderHook(() => useEngineOutput(engine))
 
-    await waitFor(() => expect(result.current.output.devices).toHaveLength(1))
-    expect(result.current.output.masterDeviceId).toBe('speakers')
-    expect(result.current.output.cueDeviceId).toBe('headphones')
+    await waitFor(() => expect(result.current.output.master.activeDeviceId).toBe('speakers'))
+    expect(result.current.output.devices).toHaveLength(1)
+    expect(result.current.output.cue.activeDeviceId).toBe('headphones')
     expect(engine.outputRouter.setMasterDevice).toHaveBeenCalledWith('speakers')
     expect(engine.outputRouter.setCueDevice).toHaveBeenCalledWith('headphones')
   })
@@ -57,7 +57,7 @@ describe('useEngineOutput', () => {
 
     const { result } = renderHook(() => useEngineOutput(engine))
 
-    await waitFor(() => expect(result.current.output.error).toBe('No permission'))
+    await waitFor(() => expect(result.current.output.deviceListError).toBe('No permission'))
   })
 
   it('surfaces device routing errors', async () => {
@@ -70,6 +70,39 @@ describe('useEngineOutput', () => {
       result.current.setMasterDevice('broken')
     })
 
-    await waitFor(() => expect(result.current.output.error).toBe('Bad master'))
+    await waitFor(() => expect(result.current.output.master.error).toBe('Bad master'))
+    expect(result.current.output.master).toMatchObject({
+      activeDeviceId: 'default',
+      requestedDeviceId: 'default',
+      pending: false
+    })
+    expect(localStorage.getItem(MASTER_OUTPUT_STORAGE_KEY)).toBe('default')
+  })
+
+  it('ignores stale routing completions and persists only the latest active device', async () => {
+    let resolveFirst = (): void => undefined
+    const firstChange = new Promise<void>((resolve) => {
+      resolveFirst = resolve
+    })
+    const setMasterDevice = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockImplementationOnce(() => firstChange)
+      .mockResolvedValueOnce(undefined)
+    const engine = createEngine({ setMasterDevice })
+    const { result } = renderHook(() => useEngineOutput(engine))
+    await waitFor(() => expect(result.current.output.master.activeDeviceId).toBe('default'))
+
+    act(() => {
+      result.current.setMasterDevice('slow-speakers')
+      result.current.setMasterDevice('latest-speakers')
+    })
+
+    await waitFor(() => expect(result.current.output.master.activeDeviceId).toBe('latest-speakers'))
+    resolveFirst()
+    await Promise.resolve()
+
+    expect(result.current.output.master.activeDeviceId).toBe('latest-speakers')
+    expect(localStorage.getItem(MASTER_OUTPUT_STORAGE_KEY)).toBe('latest-speakers')
   })
 })

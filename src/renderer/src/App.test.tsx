@@ -72,7 +72,12 @@ vi.mock('./hooks/useEngine', () => ({
       B: { trim: 1, eq: { high: 0, mid: 0, low: 0 }, volume: 1, cue: false }
     },
     mixer: { crossfade: 0, cueMix: 0, masterVolume: 0.9 },
-    output: { devices: [], masterDeviceId: '', cueDeviceId: '', error: null },
+    output: {
+      devices: [],
+      master: { activeDeviceId: 'default', requestedDeviceId: 'default', pending: false, error: null },
+      cue: { activeDeviceId: 'default', requestedDeviceId: 'default', pending: false, error: null },
+      deviceListError: null
+    },
     loadTrack: vi.fn(),
     togglePlayback,
     seek: vi.fn(),

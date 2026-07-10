@@ -1,13 +1,14 @@
 import { memo } from 'react'
 import { Headphones, RefreshCw, Volume2, X } from 'lucide-react'
 import type { OutputDeviceInfo } from '../../audio/output'
+import type { OutputRouteState } from '../../app/engineTypes'
 
 interface SettingsPanelProps {
   open: boolean
   devices: OutputDeviceInfo[]
-  masterDeviceId: string
-  cueDeviceId: string
-  error: string | null
+  master: OutputRouteState
+  cue: OutputRouteState
+  deviceListError: string | null
   onClose: () => void
   onMasterDeviceChange: (deviceId: string) => void
   onCueDeviceChange: (deviceId: string) => void
@@ -17,9 +18,9 @@ interface SettingsPanelProps {
 export const SettingsPanel = memo(function SettingsPanel({
   open,
   devices,
-  masterDeviceId,
-  cueDeviceId,
-  error,
+  master,
+  cue,
+  deviceListError,
   onClose,
   onMasterDeviceChange,
   onCueDeviceChange,
@@ -53,7 +54,8 @@ export const SettingsPanel = memo(function SettingsPanel({
             </span>
             <select
               className="device-select"
-              value={masterDeviceId}
+              disabled={master.pending}
+              value={master.requestedDeviceId}
               onChange={(event) => onMasterDeviceChange(event.currentTarget.value)}
             >
               {devices.length === 0 ? <option value="default">System default</option> : null}
@@ -63,6 +65,10 @@ export const SettingsPanel = memo(function SettingsPanel({
                 </option>
               ))}
             </select>
+            <span className="settings-route-status">
+              {master.pending ? 'Applying…' : `Active: ${master.activeDeviceId}`}
+            </span>
+            {master.error ? <span className="settings-route-error">{master.error}</span> : null}
           </label>
 
           <label className="settings-field">
@@ -72,7 +78,8 @@ export const SettingsPanel = memo(function SettingsPanel({
             </span>
             <select
               className="device-select"
-              value={cueDeviceId}
+              disabled={cue.pending}
+              value={cue.requestedDeviceId}
               onChange={(event) => onCueDeviceChange(event.currentTarget.value)}
             >
               {devices.length === 0 ? <option value="default">System default</option> : null}
@@ -82,6 +89,8 @@ export const SettingsPanel = memo(function SettingsPanel({
                 </option>
               ))}
             </select>
+            <span className="settings-route-status">{cue.pending ? 'Applying…' : `Active: ${cue.activeDeviceId}`}</span>
+            {cue.error ? <span className="settings-route-error">{cue.error}</span> : null}
           </label>
 
           <button
@@ -96,8 +105,10 @@ export const SettingsPanel = memo(function SettingsPanel({
           </button>
         </div>
 
-        {error ? (
-          <p className="mt-6 rounded border border-amber-300/30 bg-amber-300/10 p-3 text-sm text-amber-100">{error}</p>
+        {deviceListError ? (
+          <p className="mt-6 rounded border border-amber-300/30 bg-amber-300/10 p-3 text-sm text-amber-100">
+            {deviceListError}
+          </p>
         ) : null}
       </aside>
     </div>

@@ -241,10 +241,10 @@ export function App(): JSX.Element {
       </div>
 
       <SettingsPanel
-        cueDeviceId={output.cueDeviceId}
+        cue={output.cue}
         devices={output.devices}
-        error={output.error}
-        masterDeviceId={output.masterDeviceId}
+        deviceListError={output.deviceListError}
+        master={output.master}
         open={settingsOpen}
         onClose={closeSettings}
         onCueDeviceChange={setCueDevice}

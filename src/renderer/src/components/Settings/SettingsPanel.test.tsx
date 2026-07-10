@@ -6,10 +6,10 @@ describe('SettingsPanel', () => {
   it('renders output errors when open', () => {
     render(
       <SettingsPanel
-        cueDeviceId="default"
+        cue={{ activeDeviceId: 'default', requestedDeviceId: 'default', pending: false, error: null }}
         devices={[]}
-        error="Could not set headphones output."
-        masterDeviceId="default"
+        deviceListError="Could not list outputs."
+        master={{ activeDeviceId: 'default', requestedDeviceId: 'default', pending: false, error: null }}
         open
         onClose={vi.fn()}
         onCueDeviceChange={vi.fn()}
@@ -18,16 +18,16 @@ describe('SettingsPanel', () => {
       />
     )
 
-    expect(screen.getByText('Could not set headphones output.')).toBeInTheDocument()
+    expect(screen.getByText('Could not list outputs.')).toBeInTheDocument()
   })
 
   it('renders nothing when closed', () => {
     render(
       <SettingsPanel
-        cueDeviceId="default"
+        cue={{ activeDeviceId: 'default', requestedDeviceId: 'default', pending: false, error: null }}
         devices={[]}
-        error={null}
-        masterDeviceId="default"
+        deviceListError={null}
+        master={{ activeDeviceId: 'default', requestedDeviceId: 'default', pending: false, error: null }}
         open={false}
         onClose={vi.fn()}
         onCueDeviceChange={vi.fn()}
