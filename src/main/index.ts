@@ -1,6 +1,11 @@
 import { app, BrowserWindow, Menu, session } from 'electron'
 import { configureSessionSecurity } from './appSecurity.js'
-import { appendRendererPerfFlag, readPerfUserDataDir, readRemoteDebuggingPort } from './performanceFlags.js'
+import {
+  appendRendererPerfFlag,
+  isRendererPerfEnabled,
+  readPerfUserDataDir,
+  readRemoteDebuggingPort
+} from './performanceFlags.js'
 import { registerPlaylistImportIpc } from './playlistImport.js'
 import { registerRecordingIpc } from './recording.js'
 import { createMainWindow } from './window.js'
@@ -11,6 +16,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL)
 const remoteDebuggingPort = readRemoteDebuggingPort()
 const perfUserDataDir = readPerfUserDataDir()
+const rendererPerformanceEnabled = isRendererPerfEnabled()
 
 if (perfUserDataDir) {
   app.setPath('userData', perfUserDataDir)
@@ -31,6 +37,7 @@ app.whenReady().then(() => {
   registerRecordingIpc()
   createMainWindow({
     dirname: __dirname,
+    enablePerformanceTracing: rendererPerformanceEnabled,
     isDev,
     rendererUrl: appendRendererPerfFlag(process.env.ELECTRON_RENDERER_URL)
   })
@@ -39,6 +46,7 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMainWindow({
         dirname: __dirname,
+        enablePerformanceTracing: rendererPerformanceEnabled,
         isDev,
         rendererUrl: appendRendererPerfFlag(process.env.ELECTRON_RENDERER_URL)
       })

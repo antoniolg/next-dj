@@ -3,11 +3,17 @@ import { join } from 'node:path'
 
 interface CreateMainWindowOptions {
   dirname: string
+  enablePerformanceTracing?: boolean
   isDev: boolean
   rendererUrl?: string
 }
 
-export function createMainWindow({ dirname, isDev, rendererUrl }: CreateMainWindowOptions): void {
+export function createMainWindow({
+  dirname,
+  enablePerformanceTracing = false,
+  isDev,
+  rendererUrl
+}: CreateMainWindowOptions): void {
   const mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -36,6 +42,8 @@ export function createMainWindow({ dirname, isDev, rendererUrl }: CreateMainWind
   if (rendererUrl) {
     mainWindow.loadURL(rendererUrl)
   } else {
-    mainWindow.loadFile(join(dirname, '../renderer/index.html'))
+    mainWindow.loadFile(join(dirname, '../renderer/index.html'), {
+      query: enablePerformanceTracing ? { nextdjPerf: '1' } : undefined
+    })
   }
 }
