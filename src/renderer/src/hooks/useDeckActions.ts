@@ -12,7 +12,7 @@ type GetDeck = (deckId: DeckId) => Deck
 type SetDecks = Dispatch<SetStateAction<Record<DeckId, DeckState>>>
 
 export interface DeckActions {
-  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis) => Promise<void>
+  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis) => Promise<boolean>
   togglePlayback: (deckId: DeckId) => Promise<void>
   seek: (deckId: DeckId, seconds: number) => void
   cueToStart: (deckId: DeckId) => void
@@ -36,9 +36,14 @@ export function useDeckActions(
   deckPitchRef: MutableRefObject<Record<DeckId, number>>
 ): DeckActions {
   const loadTrack = useCallback(
-    async (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis): Promise<void> => {
+    async (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis): Promise<boolean> => {
       const deck = getDeck(deckId)
-      await deck.loadFile(file, analysis)
+      const committed = await deck.loadFile(file, analysis)
+
+      if (!committed) {
+        return false
+      }
+
       const pitch = deck.setPitch(deckPitchRef.current[deckId])
 
       deckPitchRef.current[deckId] = pitch
@@ -60,6 +65,7 @@ export function useDeckActions(
           waveform: deck.waveform
         }
       }))
+      return true
     },
     [deckPitchRef, getDeck, setDecks]
   )

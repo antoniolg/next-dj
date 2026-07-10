@@ -15,7 +15,7 @@ interface UseDeckLoadingOptions {
   addFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
   resolveTrackFile: (track: LibraryTrack) => Promise<ResolvedTrackFile | null>
   getTrack: (trackId: string) => LibraryTrack | undefined
-  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis) => Promise<void>
+  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis) => Promise<boolean>
 }
 
 function getValidAnalysis(analysis: DeckLoadAnalysis | undefined): DeckLoadAnalysis | undefined {
@@ -47,6 +47,17 @@ export function useDeckLoading({
 } {
   const [loadingDecks, setLoadingDecks] = useState<DeckLoadingState>({})
   const restoredDecksRef = useRef(false)
+  const operationIdsRef = useRef<Record<DeckId, number>>({ A: 0, B: 0 })
+
+  const beginOperation = useCallback((deckId: DeckId): number => {
+    operationIdsRef.current[deckId] += 1
+    return operationIdsRef.current[deckId]
+  }, [])
+
+  const isCurrentOperation = useCallback(
+    (deckId: DeckId, operationId: number): boolean => operationIdsRef.current[deckId] === operationId,
+    []
+  )
 
   const setDeckLoading = useCallback((deckId: DeckId, message: string | null): void => {
     setLoadingDecks((current) => {
@@ -64,42 +75,60 @@ export function useDeckLoading({
 
   const loadFileToDeck = useCallback(
     async (deckId: DeckId, file: File): Promise<void> => {
+      const operationId = beginOperation(deckId)
       setDeckLoading(deckId, 'Analyzing audio...')
 
       try {
         const [track] = await addFiles([file])
-        setDeckLoading(deckId, 'Loading deck...')
-        await loadTrack(deckId, file, getTrackAnalysis(track))
 
-        if (track) {
+        if (!isCurrentOperation(deckId, operationId)) {
+          return
+        }
+
+        setDeckLoading(deckId, 'Loading deck...')
+        const committed = await loadTrack(deckId, file, getTrackAnalysis(track))
+
+        if (committed && track && isCurrentOperation(deckId, operationId)) {
           persistDeckTrack(deckId, track.id)
         }
       } finally {
-        setDeckLoading(deckId, null)
+        if (isCurrentOperation(deckId, operationId)) {
+          setDeckLoading(deckId, null)
+        }
       }
     },
-    [addFiles, loadTrack, setDeckLoading]
+    [addFiles, beginOperation, isCurrentOperation, loadTrack, setDeckLoading]
   )
 
   const loadLibraryTrack = useCallback(
     async (deckId: DeckId, track: LibraryTrack): Promise<void> => {
+      const operationId = beginOperation(deckId)
       setDeckLoading(deckId, track.file ? 'Loading deck...' : 'Downloading audio...')
 
       try {
         const resolved = await resolveTrackFile(track)
 
-        if (!resolved) {
+        if (!resolved || !isCurrentOperation(deckId, operationId)) {
           return
         }
 
         setDeckLoading(deckId, 'Decoding waveform...')
-        await loadTrack(deckId, resolved.file, getValidAnalysis(resolved.analysis) ?? getTrackAnalysis(track))
-        persistDeckTrack(deckId, track.id)
+        const committed = await loadTrack(
+          deckId,
+          resolved.file,
+          getValidAnalysis(resolved.analysis) ?? getTrackAnalysis(track)
+        )
+
+        if (committed && isCurrentOperation(deckId, operationId)) {
+          persistDeckTrack(deckId, track.id)
+        }
       } finally {
-        setDeckLoading(deckId, null)
+        if (isCurrentOperation(deckId, operationId)) {
+          setDeckLoading(deckId, null)
+        }
       }
     },
-    [loadTrack, resolveTrackFile, setDeckLoading]
+    [beginOperation, isCurrentOperation, loadTrack, resolveTrackFile, setDeckLoading]
   )
 
   const loadLibraryTrackById = useCallback(

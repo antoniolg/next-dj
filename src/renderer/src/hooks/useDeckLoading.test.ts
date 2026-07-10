@@ -32,9 +32,18 @@ function createOptions(overrides: Partial<Parameters<typeof useDeckLoading>[0]> 
       localTrack.file ? { file: localTrack.file, analysis: { bpm: localTrack.bpm, firstBeatOffset: 0 } } : null
     ),
     getTrack: vi.fn((trackId: string) => (trackId === localTrack.id ? localTrack : undefined)),
-    loadTrack: vi.fn().mockResolvedValue(undefined),
+    loadTrack: vi.fn().mockResolvedValue(true),
     ...overrides
   }
+}
+
+function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolvePromise = (_value: T): void => undefined
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve
+  })
+
+  return { promise, resolve: resolvePromise }
 }
 
 describe('useDeckLoading', () => {
@@ -116,6 +125,32 @@ describe('useDeckLoading', () => {
     })
 
     expect(options.loadTrack).toHaveBeenCalledTimes(1)
+  })
+
+  it('lets the latest overlapping load own deck state and persistence', async () => {
+    const firstResolution = createDeferred<Awaited<ReturnType<Parameters<typeof useDeckLoading>[0]['resolveTrackFile']>>>()
+    const secondFile = new File(['second'], 'second.mp3', { type: 'audio/mpeg' })
+    const secondTrack: LibraryTrack = { ...remoteTrack, id: 'track-latest', externalRef: 'track-latest' }
+    const resolveTrackFile = vi
+      .fn()
+      .mockImplementationOnce(() => firstResolution.promise)
+      .mockResolvedValueOnce({ file: secondFile, analysis: { bpm: 128, firstBeatOffset: 0.1 } })
+    const options = createOptions({ resolveTrackFile })
+    const { result } = renderHook(() => useDeckLoading(options))
+
+    await act(async () => {
+      const firstLoad = result.current.loadLibraryTrack('A', remoteTrack)
+      const secondLoad = result.current.loadLibraryTrack('A', secondTrack)
+
+      await secondLoad
+      firstResolution.resolve({ file: localTrack.file as File, analysis: { bpm: 120, firstBeatOffset: 0 } })
+      await firstLoad
+    })
+
+    expect(options.loadTrack).toHaveBeenCalledTimes(1)
+    expect(options.loadTrack).toHaveBeenCalledWith('A', secondFile, { bpm: 128, firstBeatOffset: 0.1 })
+    expect(localStorage.getItem('nextdj.deckTracks.v1')).toContain(secondTrack.id)
+    expect(localStorage.getItem('nextdj.deckTracks.v1')).not.toContain(remoteTrack.id)
   })
 
   it('restores persisted deck selections once the library is ready', async () => {

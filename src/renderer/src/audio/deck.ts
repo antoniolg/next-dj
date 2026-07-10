@@ -68,6 +68,7 @@ export class Deck {
   private jogIntervalId: number | null = null
   private jogLastFoldTime = 0
   private transportIntent = 0
+  private loadIntent = 0
 
   duration = 0
   metadata: TrackMetadata = { name: 'No track loaded', bpm: 0, firstBeatOffset: 0 }
@@ -115,21 +116,32 @@ export class Deck {
     return this.started
   }
 
-  async loadFile(file: File | ArrayBuffer, analysis?: DeckLoadAnalysis): Promise<void> {
+  async loadFile(file: File | ArrayBuffer, analysis?: DeckLoadAnalysis): Promise<boolean> {
+    const intent = ++this.loadIntent
     const arrayBuffer =
       file instanceof File ? await measureAsync('deck.loadFile.readFile', () => file.arrayBuffer()) : file
     const decoded = await measureAsync('deck.loadFile.decodeAudioData', () =>
       this.context.decodeAudioData(arrayBuffer.slice(0))
     )
 
-    this.stop()
-    this.buffer = decoded
-    this.duration = decoded.duration
-    this.waveform = measureSync('deck.loadFile.computeWaveform', () => computeWaveformData(decoded))
+    if (intent !== this.loadIntent) {
+      return false
+    }
+
+    const waveform = measureSync('deck.loadFile.computeWaveform', () => computeWaveformData(decoded))
     const { bpm, firstBeatOffset } =
       analysis && analysis.bpm > 0 && Number.isFinite(analysis.bpm) && Number.isFinite(analysis.firstBeatOffset)
         ? analysis
         : await measureAsync('deck.loadFile.detectBpm', () => detectBpm(decoded))
+
+    if (intent !== this.loadIntent) {
+      return false
+    }
+
+    this.stop()
+    this.buffer = decoded
+    this.duration = decoded.duration
+    this.waveform = waveform
     this.metadata = {
       name: file instanceof File ? file.name : 'Loaded audio',
       bpm,
@@ -138,6 +150,7 @@ export class Deck {
     this.hotCues = loadHotCues(this.metadata.name, (seconds) => this.clampPosition(seconds))
     this.cuePoint = loadCuePoint(this.metadata.name, (seconds) => this.clampPosition(seconds))
     this.loop = createEmptyLoop()
+    return true
   }
 
   async play(): Promise<void> {

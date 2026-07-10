@@ -120,9 +120,9 @@ function createDeck(): { context: FakeAudioContext; deck: Deck } {
   return { context, deck: new Deck(context as unknown as AudioContext) }
 }
 
-function createDeferred(): { promise: Promise<void>; resolve: () => void } {
-  let resolvePromise = (): void => undefined
-  const promise = new Promise<void>((resolve) => {
+function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolvePromise = (_value: T): void => undefined
+  const promise = new Promise<T>((resolve) => {
     resolvePromise = resolve
   })
 
@@ -223,13 +223,13 @@ describe('Deck', () => {
     const { context, deck } = createDeck()
     await loadDeck(deck, context)
     context.state = 'suspended'
-    const resume = createDeferred()
+    const resume = createDeferred<void>()
     context.resume.mockImplementation(() => resume.promise)
 
     const firstPlay = deck.play()
     const secondPlay = deck.play()
     context.state = 'running'
-    resume.resolve()
+    resume.resolve(undefined)
     await Promise.all([firstPlay, secondPlay])
 
     expect(context.sources).toHaveLength(1)
@@ -242,13 +242,13 @@ describe('Deck', () => {
     deck.setCuePoint(1.5)
     deck.seek(1.5)
     context.state = 'suspended'
-    const resume = createDeferred()
+    const resume = createDeferred<void>()
     context.resume.mockImplementation(() => resume.promise)
 
     const cuePress = deck.cuePress()
     deck.cueRelease()
     context.state = 'running'
-    resume.resolve()
+    resume.resolve(undefined)
     await cuePress
 
     expect(context.sources).toHaveLength(0)
@@ -268,5 +268,26 @@ describe('Deck', () => {
     expect(deck.isPlaying).toBe(false)
     expect(deck.getPosition()).toBe(10)
     expect(onEnded).toHaveBeenCalledTimes(1)
+  })
+
+  it('commits only the latest overlapping deck load', async () => {
+    const { context, deck } = createDeck()
+    const firstDecode = createDeferred<AudioBuffer>()
+    const secondDecode = createDeferred<AudioBuffer>()
+    context.decodeAudioData = vi
+      .fn()
+      .mockImplementationOnce(() => firstDecode.promise)
+      .mockImplementationOnce(() => secondDecode.promise)
+
+    const firstLoad = deck.loadFile(new ArrayBuffer(8), { bpm: 100, firstBeatOffset: 0 })
+    const secondLoad = deck.loadFile(new ArrayBuffer(16), { bpm: 130, firstBeatOffset: 0.2 })
+
+    secondDecode.resolve(createBuffer(20))
+    await expect(secondLoad).resolves.toBe(true)
+    firstDecode.resolve(createBuffer(10))
+    await expect(firstLoad).resolves.toBe(false)
+
+    expect(deck.duration).toBe(20)
+    expect(deck.metadata).toMatchObject({ bpm: 130, firstBeatOffset: 0.2 })
   })
 })
