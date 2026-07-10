@@ -39,7 +39,9 @@ export interface ShortcutState {
 export interface ShortcutKeyInput {
   altKey: boolean
   code: string
+  ctrlKey: boolean
   key: string
+  metaKey: boolean
   repeat: boolean
   shiftKey: boolean
 }
@@ -47,6 +49,11 @@ export interface ShortcutKeyInput {
 export function getShortcutCommand(input: ShortcutKeyInput, state: ShortcutState): ShortcutCommand | null {
   const deckALoading = Boolean(state.loadingDecks.A)
   const deckBLoading = Boolean(state.loadingDecks.B)
+  const isPitchArrow = input.code === 'ArrowUp' || input.code === 'ArrowDown'
+
+  if (input.metaKey || input.ctrlKey || (input.altKey && (!isPitchArrow || input.shiftKey))) {
+    return null
+  }
 
   if (input.repeat && isRepeatSensitiveCode(input.code)) {
     return null
@@ -104,7 +111,7 @@ export function getShortcutCommand(input: ShortcutKeyInput, state: ShortcutState
     return { type: 'crossfade', value: 0 }
   }
 
-  if (input.code === 'ArrowUp' || input.code === 'ArrowDown') {
+  if (isPitchArrow) {
     const direction = input.code === 'ArrowUp' ? 1 : -1
 
     if (input.shiftKey) {

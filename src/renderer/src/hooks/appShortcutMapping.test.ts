@@ -12,7 +12,9 @@ function key(overrides: Partial<Parameters<typeof getShortcutCommand>[0]>) {
   return {
     altKey: false,
     code: '',
+    ctrlKey: false,
     key: '',
+    metaKey: false,
     repeat: false,
     shiftKey: false,
     ...overrides
@@ -23,6 +25,13 @@ describe('app shortcut mapping', () => {
   it('blocks repeat-sensitive commands', () => {
     expect(isRepeatSensitiveCode('KeyQ')).toBe(true)
     expect(getShortcutCommand(key({ code: 'KeyQ', repeat: true }), baseState)).toBeNull()
+  })
+
+  it('leaves operating-system shortcut modifiers unhandled', () => {
+    expect(getShortcutCommand(key({ code: 'KeyQ', key: 'q', metaKey: true }), baseState)).toBeNull()
+    expect(getShortcutCommand(key({ code: 'KeyQ', key: 'q', ctrlKey: true }), baseState)).toBeNull()
+    expect(getShortcutCommand(key({ code: 'KeyF', key: 'f', altKey: true }), baseState)).toBeNull()
+    expect(getShortcutCommand(key({ code: 'ArrowUp', altKey: true, shiftKey: true }), baseState)).toBeNull()
   })
 
   it('maps deck transport commands while respecting loading decks', () => {
