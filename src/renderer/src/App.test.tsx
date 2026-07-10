@@ -101,6 +101,8 @@ vi.mock('./hooks/useLibrary', () => ({
   useLibrary: () => ({
     tracks: [],
     isReady: true,
+    error: null,
+    clearError: vi.fn(),
     addFiles: vi.fn(),
     addPlaylistImportTracks: vi.fn(),
     resolveTrackFile: vi.fn(),

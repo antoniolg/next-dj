@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PlaylistImportTrack } from '../../../shared/nextdj'
 import { readAudioMetadata } from '../library/audioMetadata'
 import { mapWithConcurrency } from '../library/concurrentTasks'
@@ -8,9 +8,9 @@ import {
   getPersistedFile,
   persistTrackMetadata,
   putPersistedFile,
-  readPersistedTracks
+  readPersistedLibrary
 } from '../library/libraryRepository'
-import { mergeUniqueTracks } from '../library/libraryTracks'
+import { LibraryTransactionQueue, prepareLibraryUpdate } from '../library/libraryTransactions'
 import type { LibraryTrack } from '../library/libraryTypes'
 import type { DeckLoadAnalysis } from '../audio/deck'
 
@@ -29,7 +29,7 @@ const HYDRATION_CONCURRENCY = 4
 const METADATA_CONCURRENCY = 2
 const FILE_PERSISTENCE_CONCURRENCY = 2
 
-function migratePersistedTrack(track: ReturnType<typeof readPersistedTracks>[number]): LibraryTrack {
+function migratePersistedTrack(track: ReturnType<typeof readPersistedLibrary>['tracks'][number]): LibraryTrack {
   if (track.source === LEGACY_EXTERNAL_SOURCE) {
     const legacyRef = typeof track[LEGACY_EXTERNAL_REF_KEY] === 'string' ? track[LEGACY_EXTERNAL_REF_KEY] : undefined
     const legacyId = track.id.startsWith(LEGACY_TRACK_ID_PREFIX)
@@ -60,25 +60,35 @@ function migratePersistedTrack(track: ReturnType<typeof readPersistedTracks>[num
   }
 }
 
+function describeLibraryError(error: unknown): string {
+  return error instanceof Error ? error.message : 'The library operation could not be completed.'
+}
+
 export function useLibrary(): {
   tracks: LibraryTrack[]
   isReady: boolean
+  error: string | null
+  clearError: () => void
   addFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
-  addPlaylistImportTracks: (importTracks: PlaylistImportTrack[]) => LibraryTrack[]
+  addPlaylistImportTracks: (importTracks: PlaylistImportTrack[]) => Promise<LibraryTrack[]>
   resolveTrackFile: (track: LibraryTrack) => Promise<ResolvedTrackFile | null>
   getTrack: (trackId: string) => LibraryTrack | undefined
 } {
   const [tracks, setTracks] = useState<LibraryTrack[]>([])
   const [isReady, setIsReady] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const tracksRef = useRef<LibraryTrack[]>([])
+  const transactionQueueRef = useRef(new LibraryTransactionQueue())
   const tracksById = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks])
+  const clearError = useCallback((): void => setError(null), [])
 
   useEffect(() => {
     let cancelled = false
 
     const hydrate = async (): Promise<void> => {
-      const persistedTracks = readPersistedTracks()
+      const persistedLibrary = readPersistedLibrary()
       const hydratedTracks = await mapWithConcurrency(
-        persistedTracks,
+        persistedLibrary.tracks,
         HYDRATION_CONCURRENCY,
         async (track): Promise<LibraryTrack> => {
           const blob = track.hasFile ? await getPersistedFile(track.id).catch(() => null) : null
@@ -97,7 +107,13 @@ export function useLibrary(): {
       )
 
       if (!cancelled) {
+        tracksRef.current = hydratedTracks
         setTracks(hydratedTracks)
+        setError(
+          persistedLibrary.issues.length > 0
+            ? `Recovered the library and quarantined ${persistedLibrary.issues.length} invalid record${persistedLibrary.issues.length === 1 ? '' : 's'}.`
+            : null
+        )
         setIsReady(true)
       }
     }
@@ -110,8 +126,9 @@ export function useLibrary(): {
   }, [])
 
   const addFiles = useCallback(async (files: File[] | FileList): Promise<LibraryTrack[]> => {
-    const audioFiles = Array.from(files).filter(isAudioFile)
-    const nextTracks = await mapWithConcurrency(audioFiles, METADATA_CONCURRENCY, async (file) => ({
+    try {
+      const audioFiles = Array.from(files).filter(isAudioFile)
+      const nextTracks = await mapWithConcurrency(audioFiles, METADATA_CONCURRENCY, async (file) => ({
         id: createTrackId(file),
         title: file.name,
         ...(await readAudioMetadata(file)),
@@ -119,21 +136,25 @@ export function useLibrary(): {
         source: 'local' as const
       }))
 
-    await mapWithConcurrency(nextTracks, FILE_PERSISTENCE_CONCURRENCY, (track) =>
-      track.file ? putPersistedFile(track.id, track.file) : Promise.resolve()
-    )
+      return await transactionQueueRef.current.run(async () => {
+        const updatedTracks = prepareLibraryUpdate(tracksRef.current, nextTracks)
 
-    setTracks((current) => {
-      const updatedTracks = mergeUniqueTracks(current, nextTracks)
-
-      persistTrackMetadata(updatedTracks)
-      return updatedTracks
-    })
-
-    return nextTracks
+        await mapWithConcurrency(nextTracks, FILE_PERSISTENCE_CONCURRENCY, (track) =>
+          track.file ? putPersistedFile(track.id, track.file) : Promise.resolve()
+        )
+        persistTrackMetadata(updatedTracks)
+        tracksRef.current = updatedTracks
+        setTracks(updatedTracks)
+        setError(null)
+        return nextTracks
+      })
+    } catch (operationError) {
+      setError(describeLibraryError(operationError))
+      throw operationError
+    }
   }, [])
 
-  const addPlaylistImportTracks = useCallback((importTracks: PlaylistImportTrack[]): LibraryTrack[] => {
+  const addPlaylistImportTracks = useCallback(async (importTracks: PlaylistImportTrack[]): Promise<LibraryTrack[]> => {
     const nextTracks = importTracks.map((track) => ({
       id: `external-${track.providerId}-${track.id}`,
       title: track.title,
@@ -145,14 +166,20 @@ export function useLibrary(): {
       externalRef: track.externalRef
     }))
 
-    setTracks((current) => {
-      const updatedTracks = mergeUniqueTracks(current, nextTracks)
+    try {
+      return await transactionQueueRef.current.run(async () => {
+        const updatedTracks = prepareLibraryUpdate(tracksRef.current, nextTracks)
 
-      persistTrackMetadata(updatedTracks)
-      return updatedTracks
-    })
-
-    return nextTracks
+        persistTrackMetadata(updatedTracks)
+        tracksRef.current = updatedTracks
+        setTracks(updatedTracks)
+        setError(null)
+        return nextTracks
+      })
+    } catch (operationError) {
+      setError(describeLibraryError(operationError))
+      throw operationError
+    }
   }, [])
 
   const resolveTrackFile = useCallback(async (track: LibraryTrack): Promise<ResolvedTrackFile | null> => {
@@ -170,40 +197,46 @@ export function useLibrary(): {
       return null
     }
 
-    const result = await resolver(track.providerId, track.externalRef)
+    try {
+      const result = await resolver(track.providerId, track.externalRef)
 
-    if (!result.file) {
-      return null
+      if (!result.file) {
+        return null
+      }
+
+      const file = new File([result.file.data], createPlaylistFileName(track.title, result.file.name), {
+        lastModified: result.file.lastModified,
+        type: result.file.type ?? 'audio/mpeg'
+      })
+      const { duration, ...analysis } = await readAudioMetadata(file)
+
+      await transactionQueueRef.current.run(async () => {
+        const updatedTracks = tracksRef.current.map((currentTrack) =>
+          currentTrack.id === track.id
+            ? {
+                ...currentTrack,
+                duration,
+                ...analysis,
+                file
+              }
+            : currentTrack
+        )
+
+        await putPersistedFile(track.id, file)
+        persistTrackMetadata(updatedTracks)
+        tracksRef.current = updatedTracks
+        setTracks(updatedTracks)
+        setError(null)
+      })
+
+      return { file, analysis }
+    } catch (operationError) {
+      setError(describeLibraryError(operationError))
+      throw operationError
     }
-
-    const file = new File([result.file.data], createPlaylistFileName(track.title, result.file.name), {
-      lastModified: result.file.lastModified,
-      type: result.file.type ?? 'audio/mpeg'
-    })
-    const { duration, ...analysis } = await readAudioMetadata(file)
-
-    await putPersistedFile(track.id, file)
-
-    setTracks((current) => {
-      const updatedTracks = current.map((currentTrack) =>
-        currentTrack.id === track.id
-          ? {
-              ...currentTrack,
-              duration,
-              ...analysis,
-              file
-            }
-          : currentTrack
-      )
-
-      persistTrackMetadata(updatedTracks)
-      return updatedTracks
-    })
-
-    return { file, analysis }
   }, [])
 
   const getTrack = useCallback((trackId: string): LibraryTrack | undefined => tracksById.get(trackId), [tracksById])
 
-  return { tracks, isReady, addFiles, addPlaylistImportTracks, resolveTrackFile, getTrack }
+  return { tracks, isReady, error, clearError, addFiles, addPlaylistImportTracks, resolveTrackFile, getTrack }
 }

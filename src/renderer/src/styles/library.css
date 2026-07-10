@@ -133,6 +133,36 @@
   white-space: nowrap;
 }
 
+.library-error {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+  border: 1px solid rgba(251, 113, 133, 0.28);
+  border-radius: 7px;
+  background: rgba(127, 29, 29, 0.22);
+  color: #fecdd3;
+  font-size: 0.72rem;
+  padding: 0.38rem 0.5rem;
+}
+
+.library-error span {
+  min-width: 0;
+  flex: 1;
+}
+
+.library-error button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
 .library-table-wrap {
   flex: 1;
   min-height: 0;

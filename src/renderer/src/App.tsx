@@ -46,7 +46,16 @@ export function App(): JSX.Element {
     setCueDevice,
     refreshOutputDevices
   } = useEngine()
-  const { tracks, isReady: libraryReady, addFiles, addPlaylistImportTracks, resolveTrackFile, getTrack } = useLibrary()
+  const {
+    tracks,
+    isReady: libraryReady,
+    error: libraryError,
+    clearError: clearLibraryError,
+    addFiles,
+    addPlaylistImportTracks,
+    resolveTrackFile,
+    getTrack
+  } = useLibrary()
   const recorder = useRecorder(engine)
   const { loadingDecks, loadFileToDeck, loadLibraryTrack, loadLibraryTrackById } = useDeckLoading({
     libraryReady,
@@ -220,9 +229,11 @@ export function App(): JSX.Element {
           <div className="library-dock">
             <LibraryPanel
               tracks={tracks}
+              error={libraryError}
               keyboardLoadDeckId={masterDeckId === 'A' ? 'B' : 'A'}
               onAddFiles={addFiles}
               onAddPlaylistImportTracks={addPlaylistImportTracks}
+              onDismissError={clearLibraryError}
               onLoadTrack={loadLibraryTrack}
             />
           </div>

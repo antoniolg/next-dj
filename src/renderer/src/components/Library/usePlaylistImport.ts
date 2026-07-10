@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { LibraryTrack } from '../../hooks/useLibrary'
 
 interface UsePlaylistImportOptions {
-  onAddPlaylistImportTracks: (importTracks: PlaylistImportTrack[]) => LibraryTrack[]
+  onAddPlaylistImportTracks: (importTracks: PlaylistImportTrack[]) => Promise<LibraryTrack[]>
 }
 
 interface PlaylistImportState {
@@ -60,7 +60,7 @@ export function usePlaylistImport({ onAddPlaylistImportTracks }: UsePlaylistImpo
         return
       }
 
-      onAddPlaylistImportTracks(importTracks)
+      await onAddPlaylistImportTracks(importTracks)
       setPlaylistStatus(`Listed ${importTracks.length} track${importTracks.length === 1 ? '' : 's'}. Downloads happen on load.`)
       setPlaylistInput('')
     } catch (error) {

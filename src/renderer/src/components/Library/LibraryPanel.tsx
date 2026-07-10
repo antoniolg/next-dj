@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, Info, Link, Maximize2, Minimize2, Music, Plus } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronUp, Info, Link, Maximize2, Minimize2, Music, Plus, X } from 'lucide-react'
 import type { DeckId } from '../../hooks/useEngine'
 import type { LibraryTrack } from '../../hooks/useLibrary'
 import { LibraryTrackTable } from './LibraryTrackTable'
@@ -9,9 +9,11 @@ import { usePlaylistImport } from './usePlaylistImport'
 
 interface LibraryPanelProps {
   tracks: LibraryTrack[]
+  error: string | null
   keyboardLoadDeckId: DeckId
   onAddFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
-  onAddPlaylistImportTracks: (importTracks: PlaylistImportTrack[]) => LibraryTrack[]
+  onAddPlaylistImportTracks: (importTracks: PlaylistImportTrack[]) => Promise<LibraryTrack[]>
+  onDismissError: () => void
   onLoadTrack: (deckId: DeckId, track: LibraryTrack) => Promise<void>
 }
 
@@ -19,9 +21,11 @@ const COLLAPSED_KEY = 'nextdj.library.collapsed'
 
 export const LibraryPanel = memo(function LibraryPanel({
   tracks,
+  error,
   keyboardLoadDeckId,
   onAddFiles,
   onAddPlaylistImportTracks,
+  onDismissError,
   onLoadTrack
 }: LibraryPanelProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -116,7 +120,7 @@ export const LibraryPanel = memo(function LibraryPanel({
       const files = event.currentTarget.files
 
       if (files) {
-        void onAddFiles(files)
+        void onAddFiles(files).catch(() => undefined)
       }
 
       event.currentTarget.value = ''
@@ -211,7 +215,7 @@ export const LibraryPanel = memo(function LibraryPanel({
       setIsDropTarget(false)
 
       if (event.dataTransfer.files.length > 0) {
-        void onAddFiles(event.dataTransfer.files)
+        void onAddFiles(event.dataTransfer.files).catch(() => undefined)
       }
     },
     [onAddFiles]
@@ -297,6 +301,16 @@ export const LibraryPanel = memo(function LibraryPanel({
               onInputChange={setPlaylistInput}
               onSubmit={() => void handlePlaylistImport()}
             />
+          ) : null}
+
+          {error ? (
+            <div className="library-error" role="alert">
+              <AlertTriangle aria-hidden="true" size={14} />
+              <span>{error}</span>
+              <button aria-label="Dismiss library error" type="button" onClick={onDismissError}>
+                <X aria-hidden="true" size={13} />
+              </button>
+            </div>
           ) : null}
 
           <div className="library-table-wrap">

@@ -27,8 +27,10 @@ function renderPanel(overrides: Partial<Parameters<typeof LibraryPanel>[0]> = {}
     <LibraryPanel
       keyboardLoadDeckId="A"
       tracks={tracks}
+      error={null}
       onAddFiles={vi.fn().mockResolvedValue([])}
-      onAddPlaylistImportTracks={vi.fn()}
+      onAddPlaylistImportTracks={vi.fn().mockResolvedValue([])}
+      onDismissError={vi.fn()}
       onLoadTrack={vi.fn().mockResolvedValue(undefined)}
       {...overrides}
     />
@@ -78,7 +80,7 @@ describe('LibraryPanel', () => {
   })
 
   it('imports external playlists through the desktop bridge', async () => {
-    const onAddPlaylistImportTracks = vi.fn()
+    const onAddPlaylistImportTracks = vi.fn().mockResolvedValue([])
     const importTracks = [
       { providerId: 'demo-local', id: 'abc', title: 'Playlist Track', duration: 180, externalRef: 'abc' }
     ]
@@ -107,6 +109,15 @@ describe('LibraryPanel', () => {
     await waitFor(() => expect(window.nextdj?.listPlaylistImportTracks).toHaveBeenCalledWith('demo:playlist'))
     expect(onAddPlaylistImportTracks).toHaveBeenCalledWith(importTracks)
     expect(await screen.findByText('Listed 1 track. Downloads happen on load.')).toBeInTheDocument()
+  })
+
+  it('shows and dismisses recoverable library errors', () => {
+    const onDismissError = vi.fn()
+    renderPanel({ error: 'Recovered one invalid track.', onDismissError })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Recovered one invalid track.')
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss library error' }))
+    expect(onDismissError).toHaveBeenCalledTimes(1)
   })
 
   it('persists collapsed state without hiding controls permanently', () => {
