@@ -80,8 +80,8 @@ describe('MixerPanel', () => {
     })
 
     fireEvent.click(screen.getAllByRole('button', { name: 'CUE' })[0])
-    fireEvent.doubleClick(screen.getByRole('button', { name: 'Trim 0.80' }))
-    fireEvent.doubleClick(screen.getByRole('button', { name: 'Hi +1.0 dB' }))
+    fireEvent.doubleClick(screen.getAllByRole('slider', { name: 'Trim' })[0])
+    fireEvent.doubleClick(screen.getAllByRole('slider', { name: 'Hi' })[0])
     fireEvent.keyDown(screen.getByRole('slider', { name: 'Channel A volume' }), { key: 'ArrowDown' })
     fireEvent.keyDown(screen.getByRole('slider', { name: 'Crossfader' }), { key: 'ArrowRight' })
 

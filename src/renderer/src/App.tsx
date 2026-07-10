@@ -282,7 +282,7 @@ export function App(): JSX.Element {
               <div>
                 <p className="micro-label">Keyboard</p>
                 <h2 className="text-xl font-bold text-white" id="shortcuts-title">
-                  Shortcuts
+                  Keyboard shortcuts
                 </h2>
               </div>
               <button
