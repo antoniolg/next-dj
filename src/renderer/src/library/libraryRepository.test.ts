@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fileFromBlob, persistTrackMetadata, readPersistedTracks } from './libraryRepository'
+import { fileFromBlob, persistTrackMetadata, readPersistedLibrary, readPersistedTracks } from './libraryRepository'
 import type { LibraryTrack, PersistedTrack } from './libraryTypes'
 
 describe('library repository', () => {
@@ -23,6 +23,8 @@ describe('library repository', () => {
 
     persistTrackMetadata(tracks)
 
+    expect(JSON.parse(localStorage.getItem('nextdj.library.v2') ?? '{}')).toMatchObject({ version: 2 })
+
     expect(readPersistedTracks()).toEqual([
       {
         id: 'track-1',
@@ -40,9 +42,49 @@ describe('library repository', () => {
   })
 
   it('returns an empty list when metadata storage is corrupt', () => {
-    localStorage.setItem('nextdj.library.v1', '{')
+    localStorage.setItem('nextdj.library.v2', '{')
 
     expect(readPersistedTracks()).toEqual([])
+  })
+
+  it('migrates legacy arrays and quarantines invalid rows independently', () => {
+    localStorage.setItem(
+      'nextdj.library.v1',
+      JSON.stringify([
+        {
+          id: 'valid',
+          title: 'Valid',
+          duration: 120,
+          bpm: 124,
+          firstBeatOffset: 0.1,
+          source: 'local',
+          hasFile: false
+        },
+        {
+          id: 'invalid',
+          title: { poisoned: true },
+          duration: 120,
+          bpm: 124,
+          firstBeatOffset: 0.1,
+          source: 'local',
+          hasFile: false
+        }
+      ])
+    )
+
+    const result = readPersistedLibrary()
+
+    expect(result.migrated).toBe(true)
+    expect(result.tracks.map((track) => track.id)).toEqual(['valid'])
+    expect(result.issues).toEqual([{ index: 1, reason: 'title is invalid' }])
+    expect(localStorage.getItem('nextdj.library.quarantine.v1')).toContain('title is invalid')
+  })
+
+  it('rejects unsupported envelopes without throwing during startup', () => {
+    localStorage.setItem('nextdj.library.v2', JSON.stringify({ version: 999, tracks: [] }))
+
+    expect(readPersistedLibrary()).toMatchObject({ tracks: [], migrated: false })
+    expect(readPersistedLibrary().issues[0].reason).toContain('unsupported')
   })
 
   it('recreates local files from persisted metadata', () => {
