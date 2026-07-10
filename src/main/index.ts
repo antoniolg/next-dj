@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, session } from 'electron'
 import { configureSessionSecurity } from './appSecurity.js'
+import { registerAppUpdateIpc } from './appUpdate.js'
 import {
   appendRendererPerfFlag,
   isRendererPerfEnabled,
@@ -33,6 +34,7 @@ app.whenReady().then(() => {
 
   configureSessionSecurity(session.defaultSession)
 
+  registerAppUpdateIpc()
   registerPlaylistImportIpc()
   registerRecordingIpc()
   createMainWindow({

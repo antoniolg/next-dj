@@ -43,8 +43,17 @@ export interface RecordingWriteError {
   message: string
 }
 
+export interface AppUpdateInfo {
+  available: boolean
+  currentVersion: string
+  latestVersion: string
+  downloadUrl: string
+}
+
 export interface NextDjBridge {
   appName: string
+  checkForUpdate: () => Promise<AppUpdateInfo>
+  openUpdateDownload: () => Promise<void>
   listPlaylistImportProviders: () => Promise<PlaylistImportProviderSummary[]>
   listPlaylistImportTracks: (input: string) => Promise<PlaylistImportTrack[]>
   resolvePlaylistImportTrack: (providerId: string, externalRef: string) => Promise<PlaylistImportResolvedFile>

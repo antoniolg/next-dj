@@ -61,6 +61,8 @@ function createSnapshot(overrides: Partial<RecorderSnapshot>): RecorderSnapshot 
 function installBridge() {
   const bridge = {
     appName: 'NextDJ',
+    checkForUpdate: vi.fn(),
+    openUpdateDownload: vi.fn(),
     listPlaylistImportProviders: vi.fn(),
     listPlaylistImportTracks: vi.fn(),
     resolvePlaylistImportTrack: vi.fn(),

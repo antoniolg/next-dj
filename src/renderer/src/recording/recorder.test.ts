@@ -77,6 +77,8 @@ function installBridge() {
   const unsubscribe = vi.fn()
   const bridge = {
     appName: 'NextDJ',
+    checkForUpdate: vi.fn(),
+    openUpdateDownload: vi.fn(),
     listPlaylistImportProviders: vi.fn(),
     listPlaylistImportTracks: vi.fn(),
     resolvePlaylistImportTrack: vi.fn(),

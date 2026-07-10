@@ -134,6 +134,16 @@ vi.mock('./hooks/useAppShortcuts', () => ({
   useAppShortcuts: vi.fn()
 }))
 
+vi.mock('./hooks/useAppUpdate', () => ({
+  useAppUpdate: () => ({
+    update: null,
+    openingDownload: false,
+    error: null,
+    dismiss: vi.fn(),
+    openDownload: vi.fn()
+  })
+}))
+
 describe('App', () => {
   afterEach(() => {
     vi.clearAllMocks()

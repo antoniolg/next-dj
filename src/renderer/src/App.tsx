@@ -5,6 +5,8 @@ import { DeckPanel } from './components/Deck/DeckPanel'
 import { LibraryPanel } from './components/Library/LibraryPanel'
 import { MixerPanel } from './components/Mixer/MixerPanel'
 import { SettingsPanel } from './components/Settings/SettingsPanel'
+import { UpdateNotice } from './components/Update/UpdateNotice'
+import { useAppUpdate } from './hooks/useAppUpdate'
 import { useAppShortcuts } from './hooks/useAppShortcuts'
 import { useDeckLoading } from './hooks/useDeckLoading'
 import { useDialogFocus } from './hooks/useDialogFocus'
@@ -58,6 +60,7 @@ export function App(): JSX.Element {
     getTrack
   } = useLibrary()
   const recorder = useRecorder(engine)
+  const appUpdate = useAppUpdate()
   const { loadingDecks, deckErrors, clearDeckError, loadFileToDeck, loadLibraryTrack, loadLibraryTrackById } =
     useDeckLoading({
       libraryReady,
@@ -144,6 +147,17 @@ export function App(): JSX.Element {
 
   return (
     <main className="flex h-screen flex-col overflow-hidden text-slate-100">
+      {appUpdate.update ? (
+        <UpdateNotice
+          error={appUpdate.error}
+          openingDownload={appUpdate.openingDownload}
+          update={appUpdate.update}
+          onDismiss={appUpdate.dismiss}
+          onDownload={() => {
+            void appUpdate.openDownload()
+          }}
+        />
+      ) : null}
       <div className="console-shell flex min-h-0 flex-1 flex-col">
         <div className="console-stage">
           <div className="console-grid">

@@ -14,6 +14,7 @@ import './styles/vu.css'
 import './styles/mixer.css'
 import './styles/library.css'
 import './styles/overlays.css'
+import './styles/update.css'
 import './styles/animations.css'
 import './styles/responsive.css'
 

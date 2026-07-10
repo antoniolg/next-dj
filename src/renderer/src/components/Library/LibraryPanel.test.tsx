@@ -87,6 +87,8 @@ describe('LibraryPanel', () => {
 
     window.nextdj = {
       appName: 'NextDJ',
+      checkForUpdate: vi.fn(),
+      openUpdateDownload: vi.fn(),
       listPlaylistImportProviders: vi.fn().mockResolvedValue([{ id: 'demo-local', displayName: 'Demo Local' }]),
       listPlaylistImportTracks: vi.fn().mockResolvedValue(importTracks),
       resolvePlaylistImportTrack: vi.fn(),

@@ -35,6 +35,12 @@ export default defineConfig({
           functions: 90,
           lines: 80
         },
+        'src/main/appUpdate.ts': {
+          statements: 80,
+          branches: 75,
+          functions: 70,
+          lines: 80
+        },
         'src/main/recordingPaths.ts': {
           statements: 90,
           branches: 85,

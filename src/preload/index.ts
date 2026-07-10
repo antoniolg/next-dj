@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type {
   NextDjBridge,
+  AppUpdateInfo,
   PlaylistImportProviderSummary,
   PlaylistImportResolvedFile,
   PlaylistImportTrack,
@@ -12,6 +13,8 @@ import type {
 
 const bridge: NextDjBridge = {
   appName: 'NextDJ',
+  checkForUpdate: (): Promise<AppUpdateInfo> => ipcRenderer.invoke('app-update:check'),
+  openUpdateDownload: (): Promise<void> => ipcRenderer.invoke('app-update:open-download'),
   listPlaylistImportProviders: (): Promise<PlaylistImportProviderSummary[]> =>
     ipcRenderer.invoke('playlist-import:list-providers'),
   listPlaylistImportTracks: (input: string): Promise<PlaylistImportTrack[]> =>
