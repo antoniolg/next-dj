@@ -2,7 +2,7 @@ import { type Dispatch, type SetStateAction, useCallback } from 'react'
 import type { EqBand } from '../audio/deck'
 import type { DJEngine } from '../audio/engine'
 import type { Deck } from '../audio/deck'
-import type { ChannelState, DeckId, MixerState } from './engineTypes'
+import type { ChannelState, DeckId, MixerState } from '../app/engineTypes'
 
 type GetDeck = (deckId: DeckId) => Deck
 

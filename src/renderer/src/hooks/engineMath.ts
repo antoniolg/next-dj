@@ -1,5 +1,5 @@
 import { MAX_PITCH_PERCENT, MIN_PITCH_PERCENT } from '../audio/deck'
-import type { DeckState } from './deckState'
+import type { DeckState } from '../app/deckState'
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)

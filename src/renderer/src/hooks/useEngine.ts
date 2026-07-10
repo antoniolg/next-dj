@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DeckLoadAnalysis, EqBand } from '../audio/deck'
 import { getEngine, type DJEngine } from '../audio/engine'
-import { createDeckState, type DeckState } from './deckState'
+import { createDeckState, type DeckState } from '../app/deckState'
 import { getPhaseOffsetSeconds } from './engineMath'
 import {
   createChannelState,
@@ -10,13 +10,13 @@ import {
   readPersistedControls,
   type PersistedControls
 } from './enginePersistence'
-import type { ChannelState, DeckId, MixerState, OutputState } from './engineTypes'
+import type { ChannelState, DeckId, MixerState, OutputState } from '../app/engineTypes'
 import { useDeckActions } from './useDeckActions'
 import { useEngineOutput } from './useEngineOutput'
 import { useMixerActions } from './useMixerActions'
 import { useTransportTicker } from './useTransportTicker'
 
-export type { DeckId } from './engineTypes'
+export type { DeckId } from '../app/engineTypes'
 
 export function useEngine(): {
   engine: DJEngine

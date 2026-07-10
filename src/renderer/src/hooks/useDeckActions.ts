@@ -1,9 +1,9 @@
 import { type Dispatch, type MutableRefObject, type SetStateAction, useCallback } from 'react'
 import type { Deck, DeckLoadAnalysis } from '../audio/deck'
-import type { DeckState } from './deckState'
-import { getDeckSnapshot } from './deckState'
+import type { DeckState } from '../app/deckState'
+import { getDeckSnapshot } from '../app/deckState'
 import { calculatePhaseNudgeSeconds, calculateSyncPitch } from './engineMath'
-import type { DeckId } from './engineTypes'
+import type { DeckId } from '../app/engineTypes'
 
 const NUDGE_SECONDS = 0.035
 const JOG_SECONDS_PER_DEGREE = 0.001

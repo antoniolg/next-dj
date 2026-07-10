@@ -1,4 +1,4 @@
-import { computeWaveformData, type WaveformData } from '../components/Waveform/waveformData'
+import { computeWaveformData, type WaveformData } from './waveformData'
 import { measureAsync, measureSync } from '../performance/perfMarks'
 import { readCachedFileBuffer } from './audioFileCache'
 import { detectBpm } from './bpm'

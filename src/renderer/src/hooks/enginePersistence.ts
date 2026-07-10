@@ -1,6 +1,6 @@
 import { MAX_PITCH_PERCENT, MIN_PITCH_PERCENT } from '../audio/deck'
 import { clamp } from './engineMath'
-import type { ChannelState, DeckId, MixerState } from './engineTypes'
+import type { ChannelState, DeckId, MixerState } from '../app/engineTypes'
 
 export const CONTROLS_STORAGE_KEY = 'nextdj.controls.v1'
 

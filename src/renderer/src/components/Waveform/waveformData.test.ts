@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { computeWaveformData, getLowPeakAt, getPeakAt } from './waveformData'
+import { computeWaveformData, getLowPeakAt, getPeakAt } from '../../audio/waveformData'
 
 function createAudioBuffer(channels: number[][], sampleRate = 1): AudioBuffer {
   const length = Math.max(...channels.map((channel) => channel.length))

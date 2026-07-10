@@ -4,7 +4,7 @@ import { MAX_PITCH_PERCENT } from '../../audio/deck'
 import type { LoopState } from '../../audio/deckTypes'
 import { Overview } from '../Waveform/Overview'
 import { ZoomWaveform } from '../Waveform/ZoomWaveform'
-import type { WaveformData } from '../Waveform/waveformData'
+import type { WaveformData } from '../../audio/waveformData'
 import { Fader } from '../controls/Fader'
 import { JogWheel } from '../controls/JogWheel'
 

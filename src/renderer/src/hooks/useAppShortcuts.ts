@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { isEditableTarget } from '../keyboard'
-import type { DeckId } from './useEngine'
+import type { DeckId } from '../app/engineTypes'
 import {
   getShortcutCommand,
   getShortcutReleaseCommand,

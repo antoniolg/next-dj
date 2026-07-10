@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { createFrameMeter } from '../../performance/frameMetrics'
 import { hasCanvasFrameChanged, type CanvasFrameState } from './canvasFrameState'
-import type { WaveformData } from './waveformData'
-import { getLowPeakAt, getPeakAt } from './waveformData'
+import type { WaveformData } from '../../audio/waveformData'
+import { getLowPeakAt, getPeakAt } from '../../audio/waveformData'
 
 interface ZoomWaveformProps {
   accent: string

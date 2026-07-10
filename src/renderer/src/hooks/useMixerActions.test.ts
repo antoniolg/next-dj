@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Deck } from '../audio/deck'
 import type { DJEngine } from '../audio/engine'
-import type { ChannelState, DeckId, MixerState } from './engineTypes'
+import type { ChannelState, DeckId, MixerState } from '../app/engineTypes'
 import { useMixerActions } from './useMixerActions'
 
 const initialChannels: Record<DeckId, ChannelState> = {

@@ -6,7 +6,7 @@ import {
 } from '../app/deckTrackPersistence'
 import type { DeckLoadAnalysis } from '../audio/deck'
 import type { LibraryTrack, ResolvedTrackFile } from './useLibrary'
-import type { DeckId } from './useEngine'
+import type { DeckId } from '../app/engineTypes'
 
 type DeckLoadingState = Partial<Record<DeckId, string>>
 

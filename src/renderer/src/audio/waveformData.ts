@@ -1,4 +1,4 @@
-import { buildMonoSamples } from '../../audio/monoSamples'
+import { buildMonoSamples } from './monoSamples'
 
 export interface PeakBuckets {
   bucketCount: number
@@ -25,9 +25,6 @@ function buildPeakBuckets(samples: Float32Array, sampleRate: number, bucketCount
   const frameCount = samples.length
   const peaks = new Float32Array(bucketCount * 2)
   const lows = new Float32Array(bucketCount * 2)
-
-  // Two cascaded one-pole low-passes isolate the bass band; buckets cover the
-  // buffer contiguously, so the filter state carries across the whole pass.
   const alpha = 1 - Math.exp((-2 * Math.PI * LOW_BAND_CUTOFF_HZ) / sampleRate)
   let lp1 = 0
   let lp2 = 0
@@ -44,7 +41,6 @@ function buildPeakBuckets(samples: Float32Array, sampleRate: number, bucketCount
       const sample = samples[frame] ?? 0
       min = Math.min(min, sample)
       max = Math.max(max, sample)
-
       lp1 += alpha * (sample - lp1)
       lp2 += alpha * (lp1 - lp2)
       lowMin = Math.min(lowMin, lp2)

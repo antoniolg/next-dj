@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
-import { createDeckState } from './hooks/deckState'
+import { createDeckState } from './app/deckState'
 
 vi.mock('./components/Deck/DeckPanel', () => ({
   DeckPanel: ({ deckId, onTogglePlayback }: { deckId: string; onTogglePlayback: () => void }) => (

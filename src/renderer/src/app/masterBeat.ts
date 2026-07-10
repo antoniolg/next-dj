@@ -1,5 +1,5 @@
-import type { DeckId } from '../hooks/useEngine'
-import type { DeckState } from '../hooks/deckState'
+import type { DeckState } from './deckState'
+import type { DeckId } from './engineTypes'
 
 export function getMasterBeatIndex(masterDeckId: DeckId | null, decks: Record<DeckId, DeckState>): number {
   if (!masterDeckId) {

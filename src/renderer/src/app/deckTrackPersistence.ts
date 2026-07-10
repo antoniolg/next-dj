@@ -1,4 +1,4 @@
-import type { DeckId } from '../hooks/useEngine'
+import type { DeckId } from './engineTypes'
 
 export const DECK_TRACK_STORAGE_KEY = 'nextdj.deckTracks.v1'
 

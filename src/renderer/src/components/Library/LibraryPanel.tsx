@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, ChevronDown, ChevronUp, Info, Link, Maximize2, Minimize2, Music, Plus, X } from 'lucide-react'
-import type { DeckId } from '../../hooks/useEngine'
+import type { DeckId } from '../../app/engineTypes'
 import type { LibraryTrack } from '../../hooks/useLibrary'
 import { LibraryTrackTable } from './LibraryTrackTable'
 import { PlaylistImportForm } from './PlaylistImportForm'

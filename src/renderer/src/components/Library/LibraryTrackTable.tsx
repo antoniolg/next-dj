@@ -1,6 +1,6 @@
 import { useMemo, useState, type MutableRefObject } from 'react'
 import { Cloud } from 'lucide-react'
-import type { DeckId } from '../../hooks/useEngine'
+import type { DeckId } from '../../app/engineTypes'
 import type { LibraryTrack } from '../../hooks/useLibrary'
 import { formatBpm, formatTime } from './libraryPanelUtils'
 

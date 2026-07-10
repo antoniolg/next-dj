@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { createDeckState } from '../hooks/deckState'
-import type { DeckId } from '../hooks/useEngine'
+import { createDeckState } from './deckState'
+import type { DeckId } from './engineTypes'
 import { getMasterBeatIndex } from './masterBeat'
 
 function createDecks(overrides: Partial<ReturnType<typeof createDeckState>> = {}) {

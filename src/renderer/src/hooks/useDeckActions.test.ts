@@ -2,8 +2,8 @@ import { act, renderHook } from '@testing-library/react'
 import { useRef, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Deck } from '../audio/deck'
-import { createDeckState } from './deckState'
-import type { DeckId } from './engineTypes'
+import { createDeckState } from '../app/deckState'
+import type { DeckId } from '../app/engineTypes'
 import { useDeckActions } from './useDeckActions'
 
 function createDeck(): Deck {

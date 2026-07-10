@@ -1,4 +1,4 @@
-import type { DeckId } from './engineTypes'
+import type { DeckId } from '../app/engineTypes'
 
 export const CROSSFADER_NUDGE = 0.08
 export const PITCH_NUDGE = 0.1

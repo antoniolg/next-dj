@@ -2,8 +2,8 @@ import { act, renderHook } from '@testing-library/react'
 import { useRef, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DJEngine } from '../audio/engine'
-import { createDeckState } from './deckState'
-import type { DeckId } from './engineTypes'
+import { createDeckState } from '../app/deckState'
+import type { DeckId } from '../app/engineTypes'
 import { useTransportTicker } from './useTransportTicker'
 
 function installAnimationFrameMock() {

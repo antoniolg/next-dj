@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
 import type { DJEngine } from '../audio/engine'
-import type { DeckState } from './deckState'
-import type { DeckId } from './engineTypes'
+import type { DeckState } from '../app/deckState'
+import type { DeckId } from '../app/engineTypes'
 
 type TransportDeckSnapshot = Pick<DeckState, 'position' | 'isPlaying' | 'effectiveBpm' | 'hotCues' | 'loop'>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createDeckState } from './deckState'
+import { createDeckState } from '../app/deckState'
 import {
   calculatePhaseNudgeSeconds,
   calculateSyncPitch,

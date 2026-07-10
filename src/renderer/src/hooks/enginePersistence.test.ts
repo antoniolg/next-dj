@@ -5,7 +5,7 @@ import {
   persistControls,
   readPersistedControls
 } from './enginePersistence'
-import type { ChannelState, DeckId } from './engineTypes'
+import type { ChannelState, DeckId } from '../app/engineTypes'
 
 const channels: Record<DeckId, ChannelState> = {
   A: { trim: 1.2, eq: { high: 1, mid: 2, low: 3 }, volume: 0.8, cue: true },

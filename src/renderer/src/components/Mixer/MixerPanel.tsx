@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Activity, Settings } from 'lucide-react'
 import type { EqBand } from '../../audio/deck'
-import type { DeckId } from '../../hooks/useEngine'
+import type { DeckId } from '../../app/engineTypes'
 import type { RecorderState } from '../../hooks/useRecorder'
 import { Fader } from '../controls/Fader'
 import { Knob } from '../controls/Knob'
