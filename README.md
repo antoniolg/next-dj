@@ -6,6 +6,12 @@ devices, and record sessions from one focused desktop app.
 
 ![NextDJ desktop console](docs/media/nextdj-screenshot.jpg)
 
+## Landing Page
+
+The public landing page lives at [docs/index.html](docs/index.html). It is ready
+to publish from the repository `docs/` directory with GitHub Pages and links to
+the current alpha release downloads.
+
 ## What You Can Do
 
 - Mix with two local audio decks.
