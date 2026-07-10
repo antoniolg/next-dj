@@ -52,6 +52,9 @@ class FakeBiquadFilterNode extends FakeAudioNode {
 
 class FakeAudioBufferSourceNode extends FakeAudioNode {
   buffer: AudioBuffer | null = null
+  loop = false
+  loopStart = 0
+  loopEnd = 0
   onended: (() => void) | null = null
   playbackRate = new FakeAudioParam(1)
   starts: Array<{ offset: number; when: number }> = []
@@ -115,6 +118,15 @@ async function loadDeck(deck: Deck, context: FakeAudioContext, analysis = { bpm:
 function createDeck(): { context: FakeAudioContext; deck: Deck } {
   const context = new FakeAudioContext()
   return { context, deck: new Deck(context as unknown as AudioContext) }
+}
+
+function createDeferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolvePromise = (): void => undefined
+  const promise = new Promise<void>((resolve) => {
+    resolvePromise = resolve
+  })
+
+  return { promise, resolve: resolvePromise }
 }
 
 describe('Deck', () => {
@@ -186,7 +198,7 @@ describe('Deck', () => {
     expect(deck.getPosition()).toBe(1.5)
   })
 
-  it('creates, exits and restarts active loops without changing the public Deck API', async () => {
+  it('configures sample-accurate native loops without recreating the source', async () => {
     const { context, deck } = createDeck()
     await loadDeck(deck, context)
 
@@ -196,13 +208,52 @@ describe('Deck', () => {
     expect(deck.loop).toEqual({ start: 2, end: 4, active: true })
 
     await deck.play()
+    expect(context.sources[0]).toMatchObject({ loop: true, loopStart: 2, loopEnd: 4 })
     context.currentTime = 2.3
-    deck.tickLoop()
 
-    expect(deck.getPosition()).toBeCloseTo(2.31, 2)
+    expect(deck.getPosition()).toBeCloseTo(2.3, 2)
+    expect(context.sources).toHaveLength(1)
 
     deck.exitLoop()
     expect(deck.loop.active).toBe(false)
+    expect(context.sources[0].loop).toBe(false)
+  })
+
+  it('serializes concurrent play intents while the audio context resumes', async () => {
+    const { context, deck } = createDeck()
+    await loadDeck(deck, context)
+    context.state = 'suspended'
+    const resume = createDeferred()
+    context.resume.mockImplementation(() => resume.promise)
+
+    const firstPlay = deck.play()
+    const secondPlay = deck.play()
+    context.state = 'running'
+    resume.resolve()
+    await Promise.all([firstPlay, secondPlay])
+
+    expect(context.sources).toHaveLength(1)
+    expect(deck.isPlaying).toBe(true)
+  })
+
+  it('does not start cue preview after release wins a pending context resume', async () => {
+    const { context, deck } = createDeck()
+    await loadDeck(deck, context)
+    deck.setCuePoint(1.5)
+    deck.seek(1.5)
+    context.state = 'suspended'
+    const resume = createDeferred()
+    context.resume.mockImplementation(() => resume.promise)
+
+    const cuePress = deck.cuePress()
+    deck.cueRelease()
+    context.state = 'running'
+    resume.resolve()
+    await cuePress
+
+    expect(context.sources).toHaveLength(0)
+    expect(deck.isPlaying).toBe(false)
+    expect(deck.getPosition()).toBe(1.5)
   })
 
   it('marks the track ended and notifies listeners when the source finishes naturally', async () => {

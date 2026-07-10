@@ -30,6 +30,18 @@ export function getPlaybackPosition(
   return clampPosition(offsetSeconds + elapsed, duration)
 }
 
+export function getLoopedPosition(
+  position: number,
+  loop: { active: boolean; start: number | null; end: number | null }
+): number {
+  if (!loop.active || loop.start === null || loop.end === null || loop.end <= loop.start || position < loop.end) {
+    return position
+  }
+
+  const loopLength = loop.end - loop.start
+  return loop.start + ((position - loop.start) % loopLength)
+}
+
 export function getJogConsumedSeconds(playbackRate: number, basePlaybackRate: number, currentTime: number, lastFoldTime: number): number {
   return (playbackRate - basePlaybackRate) * (currentTime - lastFoldTime)
 }

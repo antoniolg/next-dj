@@ -3,6 +3,7 @@ import {
   START_SCHEDULE_DELAY,
   clampPosition,
   getJogConsumedSeconds,
+  getLoopedPosition,
   getPlaybackPosition,
   getScheduledOffset,
   getScheduledStart
@@ -29,5 +30,14 @@ describe('deck transport helpers', () => {
 
   it('calculates consumed jog bend seconds', () => {
     expect(getJogConsumedSeconds(1.2, 1, 10.5, 10)).toBeCloseTo(0.1)
+  })
+
+  it('wraps positions through an active loop without a renderer clock', () => {
+    const loop = { start: 8, end: 12, active: true }
+
+    expect(getLoopedPosition(11.5, loop)).toBe(11.5)
+    expect(getLoopedPosition(12.25, loop)).toBe(8.25)
+    expect(getLoopedPosition(20.25, loop)).toBe(8.25)
+    expect(getLoopedPosition(12.25, { ...loop, active: false })).toBe(12.25)
   })
 })

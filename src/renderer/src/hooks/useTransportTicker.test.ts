@@ -42,7 +42,6 @@ function createEngine(options: {
 }): DJEngine {
   return {
     deckA: {
-      tickLoop: vi.fn(),
       getPosition: vi.fn(() => options.deckAPosition ?? 12),
       getEffectiveBpm: vi.fn(() => 124),
       get isPlaying() {
@@ -52,7 +51,6 @@ function createEngine(options: {
       loop: { start: 8, end: 16, active: true }
     },
     deckB: {
-      tickLoop: vi.fn(),
       getPosition: vi.fn(() => options.deckBPosition ?? 24),
       getEffectiveBpm: vi.fn(() => 118),
       get isPlaying() {
@@ -99,8 +97,6 @@ describe('useTransportTicker', () => {
       raf.runFrame(1)
     })
 
-    expect(engine.deckA.tickLoop).toHaveBeenCalledTimes(1)
-    expect(engine.deckB.tickLoop).toHaveBeenCalledTimes(1)
     expect(updateMasterDeck).toHaveBeenCalledWith('A')
     expect(result.current.A).toMatchObject({
       position: 12,
@@ -156,8 +152,6 @@ describe('useTransportTicker', () => {
       raf.runFrame(1)
     })
 
-    expect(engine.deckA.tickLoop).toHaveBeenCalledTimes(1)
-    expect(engine.deckB.tickLoop).toHaveBeenCalledTimes(1)
     expect(updateMasterDeck).toHaveBeenCalledWith(null)
     expect(result.current).toBe(initialDecks)
     expect(renderCount).toBe(1)

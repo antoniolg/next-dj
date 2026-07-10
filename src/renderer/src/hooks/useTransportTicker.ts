@@ -26,8 +26,6 @@ export function useTransportTicker(
     let frameId = 0
 
     const tick = (): void => {
-      engine.deckA.tickLoop()
-      engine.deckB.tickLoop()
       const deckAPlaying = engine.deckA.isPlaying
       const deckBPlaying = engine.deckB.isPlaying
       const currentMaster = masterDeckIdRef.current

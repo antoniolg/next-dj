@@ -7,8 +7,7 @@ import {
   createEmptyLoop,
   createLoopInState,
   createLoopOutState,
-  deactivateLoop,
-  getLoopRestartPosition
+  deactivateLoop
 } from './deckLoops'
 import {
   loadCuePoint,
@@ -26,11 +25,12 @@ import {
 } from './deckMath'
 import {
   getJogConsumedSeconds,
+  getLoopedPosition,
   getPlaybackPosition,
   clampPosition as clampDeckPosition
 } from './deckTransport'
 import { EMPTY_HOT_CUES, type HotCue, type LoopState, type TrackMetadata } from './deckTypes'
-import { startDeckSource } from './deckSource'
+import { configureDeckSourceLoop, startDeckSource } from './deckSource'
 
 export type EqBand = 'low' | 'mid' | 'high'
 export interface DeckLoadAnalysis {
@@ -67,6 +67,7 @@ export class Deck {
   private jogPendingSeconds = 0
   private jogIntervalId: number | null = null
   private jogLastFoldTime = 0
+  private transportIntent = 0
 
   duration = 0
   metadata: TrackMetadata = { name: 'No track loaded', bpm: 0, firstBeatOffset: 0 }
@@ -140,6 +141,8 @@ export class Deck {
   }
 
   async play(): Promise<void> {
+    const intent = ++this.transportIntent
+
     if (!this.buffer || this.started) {
       return
     }
@@ -148,10 +151,16 @@ export class Deck {
       await this.context.resume()
     }
 
+    if (intent !== this.transportIntent || !this.buffer || this.started) {
+      return
+    }
+
     this.startSourceAt(this.offsetSeconds)
   }
 
   pause(): void {
+    this.transportIntent += 1
+
     if (!this.started) {
       return
     }
@@ -161,13 +170,15 @@ export class Deck {
   }
 
   stop(): void {
+    this.transportIntent += 1
     this.stopSource(true)
     this.offsetSeconds = 0
     this.startContextTime = 0
   }
 
   seek(seconds: number): void {
-    const nextOffset = this.clampPosition(seconds)
+    this.transportIntent += 1
+    const nextOffset = getLoopedPosition(this.clampPosition(seconds), this.loop)
     const shouldRestart = this.started
 
     this.stopSource(true)
@@ -278,10 +289,12 @@ export class Deck {
 
   setLoopIn(): void {
     this.loop = createLoopInState(this.loop, this.getPosition())
+    this.applySourceLoop()
   }
 
   setLoopOut(): void {
     this.loop = createLoopOutState(this.loop, this.getPosition())
+    this.applySourceLoop()
   }
 
   setAutoLoop(beats: number): void {
@@ -292,21 +305,18 @@ export class Deck {
 
     if (loop) {
       this.loop = loop
+      this.applySourceLoop()
     }
   }
 
   exitLoop(): void {
-    this.loop = deactivateLoop(this.loop)
-  }
-
-  tickLoop(): void {
-    const restartPosition = getLoopRestartPosition(this.loop, this.getPosition())
-
-    if (restartPosition !== null) {
-      // Carry the overshoot past the loop end into the restart so the loop
-      // stays in phase despite the coarse tick granularity.
-      this.seek(restartPosition)
+    if (this.started) {
+      this.offsetSeconds = this.getPosition()
+      this.startContextTime = this.context.currentTime
     }
+
+    this.loop = deactivateLoop(this.loop)
+    this.applySourceLoop()
   }
 
   setEq(band: EqBand, dB: number): void {
@@ -328,13 +338,16 @@ export class Deck {
       return this.clampPosition(this.offsetSeconds)
     }
 
-    return getPlaybackPosition(
-      this.started,
-      this.offsetSeconds,
-      this.context.currentTime,
-      this.startContextTime,
-      this.playbackRate,
-      this.duration
+    return getLoopedPosition(
+      getPlaybackPosition(
+        this.started,
+        this.offsetSeconds,
+        this.context.currentTime,
+        this.startContextTime,
+        this.playbackRate,
+        this.duration
+      ),
+      this.loop
     )
   }
 
@@ -350,6 +363,7 @@ export class Deck {
       duration: this.duration,
       offsetSeconds,
       playbackRate: this.playbackRate,
+      loop: this.loop,
       onEnded: () => {
         if (this.suppressEnded) {
           this.suppressEnded = false
@@ -369,6 +383,12 @@ export class Deck {
     this.offsetSeconds = scheduledOffset
     this.startContextTime = startContextTime
     this.suppressEnded = false
+  }
+
+  private applySourceLoop(): void {
+    if (this.source) {
+      configureDeckSourceLoop(this.source, this.loop)
+    }
   }
 
   // Fold elapsed time at the current rate into the offset, then bend the
