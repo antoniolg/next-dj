@@ -56,6 +56,11 @@ resolved files may not exceed 512 MiB. Provider operations receive an abort
 signal and are subject to timeouts. Providers should stop network and file work
 promptly when that signal is aborted.
 
+If a provider depends on a local executable that is unavailable, it can throw
+an error with `code` set to `NEXTDJ_PLAYLIST_DEPENDENCY_NOT_FOUND` and a
+`dependency` value matching `^[a-z0-9][a-z0-9._-]{0,63}$`. NextDJ surfaces a
+bounded dependency message while keeping all other provider errors isolated.
+
 ## Demo Provider
 
 ```js

@@ -130,6 +130,40 @@ describe('playlist import registry', () => {
     expect(onError).toHaveBeenCalledWith('listTracks', 'failing', expect.any(Error))
   })
 
+  it('surfaces a validated missing provider dependency after fallbacks fail', async () => {
+    const missingDependency = Object.assign(new Error('internal executable lookup failed'), {
+      code: 'NEXTDJ_PLAYLIST_DEPENDENCY_NOT_FOUND',
+      dependency: 'yt-dlp'
+    })
+    const provider = {
+      ...createDemoPlaylistProvider(),
+      listTracks: vi.fn(async () => {
+        throw missingDependency
+      })
+    }
+    const registry = createPlaylistImportRegistry([provider])
+
+    await expect(registry.listTracks('demo:playlist')).rejects.toThrow(
+      'Playlist provider dependency "yt-dlp" was not found. Install it or configure the provider.'
+    )
+  })
+
+  it('does not expose unvalidated dependency details', async () => {
+    const unsafeDependency = Object.assign(new Error('private path failed'), {
+      code: 'NEXTDJ_PLAYLIST_DEPENDENCY_NOT_FOUND',
+      dependency: '../../private-file'
+    })
+    const provider = {
+      ...createDemoPlaylistProvider(),
+      listTracks: vi.fn(async () => {
+        throw unsafeDependency
+      })
+    }
+    const registry = createPlaylistImportRegistry([provider])
+
+    await expect(registry.listTracks('demo:playlist')).rejects.toThrow('Playlist providers could not list tracks')
+  })
+
   it('rejects malformed provider metadata before IPC', async () => {
     const onError = vi.fn()
     const provider = {

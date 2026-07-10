@@ -14,6 +14,17 @@ interface PlaylistImportState {
   handlePlaylistImport: () => Promise<void>
 }
 
+const PROVIDER_DEPENDENCY_ERROR_PATTERN =
+  /Playlist provider dependency "[a-z0-9][a-z0-9._-]{0,63}" was not found\. Install it or configure the provider\./i
+
+export function describePlaylistImportError(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return 'Could not read this playlist.'
+  }
+
+  return PROVIDER_DEPENDENCY_ERROR_PATTERN.exec(error.message)?.[0] ?? error.message
+}
+
 export function usePlaylistImport({ onAddPlaylistImportTracks }: UsePlaylistImportOptions): PlaylistImportState {
   const [playlistInput, setPlaylistInput] = useState('')
   const [playlistStatus, setPlaylistStatus] = useState<string | null>(null)
@@ -64,7 +75,7 @@ export function usePlaylistImport({ onAddPlaylistImportTracks }: UsePlaylistImpo
       setPlaylistStatus(`Listed ${importTracks.length} track${importTracks.length === 1 ? '' : 's'}. Downloads happen on load.`)
       setPlaylistInput('')
     } catch (error) {
-      setPlaylistStatus(error instanceof Error ? error.message : 'Could not read this playlist.')
+      setPlaylistStatus(describePlaylistImportError(error))
     } finally {
       setIsImportingPlaylist(false)
     }

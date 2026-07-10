@@ -113,6 +113,42 @@ describe('LibraryPanel', () => {
     expect(await screen.findByText('Listed 1 track. Downloads happen on load.')).toBeInTheDocument()
   })
 
+  it('shows a clean missing playlist dependency error', async () => {
+    window.nextdj = {
+      appName: 'NextDJ',
+      checkForUpdate: vi.fn(),
+      openUpdateDownload: vi.fn(),
+      listPlaylistImportProviders: vi.fn().mockResolvedValue([{ id: 'youtube', displayName: 'YouTube' }]),
+      listPlaylistImportTracks: vi.fn().mockRejectedValue(
+        new Error(
+          "Error invoking remote method 'playlist-import:list-tracks': Error: Playlist provider dependency \"yt-dlp\" was not found. Install it or configure the provider."
+        )
+      ),
+      resolvePlaylistImportTrack: vi.fn(),
+      startRecording: vi.fn(),
+      appendRecordingChunk: vi.fn(),
+      stopRecording: vi.fn(),
+      cancelRecording: vi.fn(),
+      revealRecording: vi.fn(),
+      onRecordingWriteError: vi.fn()
+    }
+
+    renderPanel()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Import playlist' }))
+    fireEvent.change(screen.getByLabelText('Playlist URL'), {
+      target: { value: 'https://www.youtube.com/playlist?list=fixture' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }))
+
+    expect(
+      await screen.findByText(
+        'Playlist provider dependency "yt-dlp" was not found. Install it or configure the provider.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Error invoking remote method/)).not.toBeInTheDocument()
+  })
+
   it('shows and dismisses recoverable library errors', () => {
     const onDismissError = vi.fn()
     renderPanel({ error: 'Recovered one invalid track.', onDismissError })

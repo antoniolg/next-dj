@@ -21,6 +21,8 @@ const PLUGIN_LOAD_TIMEOUT_MS = 10_000
 const CAN_HANDLE_TIMEOUT_MS = 3_000
 const LIST_TRACKS_TIMEOUT_MS = 30_000
 const RESOLVE_TRACK_TIMEOUT_MS = 120_000
+const MISSING_DEPENDENCY_ERROR_CODE = 'NEXTDJ_PLAYLIST_DEPENDENCY_NOT_FOUND'
+const DEPENDENCY_NAME_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/i
 
 type ProviderErrorReporter = (scope: string, providerId: string, error: unknown) => void
 
@@ -34,6 +36,21 @@ interface PlaylistPluginConfig {
 
 function readString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
+}
+
+function readMissingProviderDependency(error: unknown): string | null {
+  if (!error || typeof error !== 'object') {
+    return null
+  }
+
+  const record = error as Record<string, unknown>
+  const dependency = readString(record.dependency)
+
+  if (record.code !== MISSING_DEPENDENCY_ERROR_CODE || !DEPENDENCY_NAME_PATTERN.test(dependency)) {
+    return null
+  }
+
+  return dependency
 }
 
 function validateProvider(provider: PlaylistImportProvider): void {
@@ -186,6 +203,7 @@ export function createPlaylistImportRegistry(
     async listTracks(input: string): Promise<PlaylistImportTrack[]> {
       const trimmedInput = parsePlaylistInput(input)
       let matchedProvider = false
+      let missingDependency: string | null = null
 
       for (const provider of orderedProviders) {
         let canHandle: boolean
@@ -212,10 +230,17 @@ export function createPlaylistImportRegistry(
           return normalizePlaylistTracks(tracks, provider.id)
         } catch (error) {
           onError('listTracks', provider.id, error)
+          missingDependency ??= readMissingProviderDependency(error)
         }
       }
 
       if (matchedProvider) {
+        if (missingDependency) {
+          throw new Error(
+            `Playlist provider dependency "${missingDependency}" was not found. Install it or configure the provider.`
+          )
+        }
+
         throw new Error('Playlist providers could not list tracks for this input.')
       }
 
