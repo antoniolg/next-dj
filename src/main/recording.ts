@@ -3,6 +3,7 @@ import { createWriteStream, type WriteStream } from 'node:fs'
 import { mkdir, rm, statfs } from 'node:fs/promises'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { once } from 'node:events'
 import {
   isPathInsideDirectory,
   MIN_RECORDING_FREE_BYTES,
@@ -16,16 +17,11 @@ import {
   parseRecordingStartOptions
 } from './recordingValidation.js'
 import { readPerfRecordingsDir } from './performanceFlags.js'
+import { RecordingSessionRegistry, type RecordingSession } from './recordingSessionRegistry.js'
 
-interface RecordingSession {
-  stream: WriteStream
-  filePath: string
-  webContentsId: number
-  video: boolean
-  bytes: number
-}
-
-const sessions = new Map<string, RecordingSession>()
+const sessions = new RecordingSessionRegistry<WriteStream>()
+let allowQuit = false
+let quitFinalizing = false
 
 function getRecordingsDirectory(): string {
   return readPerfRecordingsDir() ?? join(app.getPath('music'), 'NextDJ Recordings')
@@ -45,101 +41,133 @@ function writeChunk(stream: WriteStream, chunk: Buffer): Promise<void> {
   })
 }
 
-function endStream(stream: WriteStream): Promise<void> {
-  return new Promise((resolvePromise) => {
-    if (stream.destroyed || stream.closed) {
-      resolvePromise()
-      return
-    }
+async function openStream(filePath: string): Promise<WriteStream> {
+  const stream = createWriteStream(filePath, { flags: 'wx' })
 
-    stream.end(() => resolvePromise())
-  })
+  await once(stream, 'open')
+  return stream
 }
 
-async function finalizeSession(id: string): Promise<RecordingSession | null> {
-  const session = sessions.get(id)
+async function endStream(stream: WriteStream): Promise<void> {
+  if (stream.destroyed || stream.closed) {
+    return
+  }
+
+  stream.end()
+  await once(stream, 'close')
+}
+
+async function closeSession(session: RecordingSession<WriteStream>): Promise<void> {
+  if (session.video) {
+    setThrottling(session.webContentsId, true)
+  }
+
+  if (session.stream) {
+    await endStream(session.stream)
+  }
+}
+
+async function finalizeSession(id: string, webContentsId?: number): Promise<RecordingSession<WriteStream> | null> {
+  const session =
+    webContentsId === undefined ? sessions.take(id) : sessions.takeOwned(id, webContentsId)
 
   if (!session) {
     return null
   }
 
-  sessions.delete(id)
-
-  if (session.video) {
-    setThrottling(session.webContentsId, true)
-  }
-
-  await endStream(session.stream)
+  await closeSession(session)
   return session
 }
 
-function finalizeSessionsFor(webContentsId: number): void {
-  for (const [id, session] of sessions) {
-    if (session.webContentsId === webContentsId) {
-      void finalizeSession(id)
-    }
+async function finalizeSessionsFor(webContentsId: number): Promise<void> {
+  const ownedSessions = sessions.takeForWebContents(webContentsId)
+  await Promise.allSettled(ownedSessions.map(closeSession))
+}
+
+async function finalizeAllSessions(): Promise<void> {
+  await Promise.allSettled(sessions.takeAll().map(closeSession))
+}
+
+async function failSession(id: string, error: unknown): Promise<void> {
+  const session = sessions.take(id)
+
+  if (!session) {
+    return
+  }
+
+  await closeSession(session).catch(() => undefined)
+  const contents = webContents.fromId(session.webContentsId)
+
+  if (contents && !contents.isDestroyed()) {
+    contents.send('recording:write-error', {
+      id,
+      message: error instanceof Error ? error.message : 'Could not write the recording.'
+    })
   }
 }
 
 export function registerRecordingIpc(): void {
   ipcMain.handle('recording:start', async (event, rawOptions: unknown) => {
     const options = parseRecordingStartOptions(rawOptions)
-
     const directory = getRecordingsDirectory()
-    await mkdir(directory, { recursive: true })
-
-    const stats = await statfs(directory)
-    const freeBytes = stats.bavail * stats.bsize
-
-    if (freeBytes < MIN_RECORDING_FREE_BYTES) {
-      throw new Error('Not enough free disk space to record (less than 500 MB available).')
-    }
-
     const id = randomUUID()
     const filePath = join(directory, timestampedRecordingFileName(options.extension, new Date(), id))
+    const webContentsId = event.sender.id
 
-    sessions.set(id, {
-      stream: createWriteStream(filePath),
-      filePath,
-      webContentsId: event.sender.id,
-      video: Boolean(options.video),
-      bytes: 0
-    })
+    sessions.reserve(id, filePath, webContentsId, options.video)
 
-    if (options.video) {
-      // The compositor draws on a timer in the renderer; without this the
-      // frame rate collapses when the window is occluded or minimized.
-      event.sender.setBackgroundThrottling(false)
+    try {
+      await mkdir(directory, { recursive: true })
+
+      const stats = await statfs(directory)
+      const freeBytes = stats.bavail * stats.bsize
+
+      if (freeBytes < MIN_RECORDING_FREE_BYTES) {
+        throw new Error('Not enough free disk space to record (less than 500 MB available).')
+      }
+
+      const stream = await openStream(filePath)
+      sessions.activate(id, stream)
+      stream.on('error', (error) => {
+        void failSession(id, error)
+      })
+
+      if (options.video) {
+        // The compositor draws on a timer in the renderer; without this the
+        // frame rate collapses when the window is occluded or minimized.
+        event.sender.setBackgroundThrottling(false)
+      }
+
+      return { id, filePath }
+    } catch (error) {
+      const session = sessions.take(id)
+
+      if (session) {
+        await closeSession(session).catch(() => undefined)
+      }
+
+      await rm(filePath, { force: true }).catch(() => undefined)
+      throw error
     }
-
-    return { id, filePath }
   })
 
   ipcMain.handle('recording:append-chunk', async (event, rawId: unknown, rawChunk: unknown) => {
     const id = parseRecordingSessionId(rawId)
     const chunk = parseRecordingChunk(rawChunk)
-    const session = sessions.get(id)
-
-    if (!session) {
-      throw new Error('Recording session not found.')
-    }
+    const session = sessions.getOwnedActive(id, event.sender.id)
 
     try {
+      sessions.reserveBytes(id, event.sender.id, chunk.byteLength)
       const buffer = Buffer.from(chunk)
-      await writeChunk(session.stream, buffer)
-      session.bytes += buffer.byteLength
+      await writeChunk(session.stream as WriteStream, buffer)
     } catch (error) {
-      await finalizeSession(id)
-      event.sender.send('recording:write-error', {
-        id,
-        message: error instanceof Error ? error.message : 'Could not write the recording.'
-      })
+      await failSession(id, error)
     }
   })
 
-  ipcMain.handle('recording:stop', async (_event, rawId: unknown) => {
+  ipcMain.handle('recording:stop', async (event, rawId: unknown) => {
     const id = parseRecordingSessionId(rawId)
-    const session = await finalizeSession(id)
+    const session = await finalizeSession(id, event.sender.id)
 
     if (!session) {
       throw new Error('Recording session not found.')
@@ -148,10 +176,10 @@ export function registerRecordingIpc(): void {
     return { filePath: session.filePath, bytes: session.bytes }
   })
 
-  ipcMain.handle('recording:cancel', async (_event, rawId: unknown, rawDeleteFile: unknown) => {
+  ipcMain.handle('recording:cancel', async (event, rawId: unknown, rawDeleteFile: unknown) => {
     const id = parseRecordingSessionId(rawId)
     const deleteFile = parseDeleteFileFlag(rawDeleteFile)
-    const session = await finalizeSession(id)
+    const session = await finalizeSession(id, event.sender.id)
 
     if (session && deleteFile) {
       await rm(session.filePath, { force: true })
@@ -170,13 +198,25 @@ export function registerRecordingIpc(): void {
   })
 
   app.on('web-contents-created', (_event, contents) => {
-    contents.on('destroyed', () => finalizeSessionsFor(contents.id))
-    contents.on('render-process-gone', () => finalizeSessionsFor(contents.id))
+    contents.on('destroyed', () => void finalizeSessionsFor(contents.id))
+    contents.on('render-process-gone', () => void finalizeSessionsFor(contents.id))
   })
 
-  app.on('before-quit', () => {
-    for (const id of [...sessions.keys()]) {
-      void finalizeSession(id)
+  app.on('before-quit', (event) => {
+    if (allowQuit) {
+      return
     }
+
+    event.preventDefault()
+
+    if (quitFinalizing) {
+      return
+    }
+
+    quitFinalizing = true
+    void finalizeAllSessions().finally(() => {
+      allowQuit = true
+      app.quit()
+    })
   })
 }

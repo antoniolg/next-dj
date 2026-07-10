@@ -39,7 +39,7 @@ export function useRecorder(engine: DJEngine): RecorderState {
     recorder.onChange = setSnapshot
     return () => {
       recorder.onChange = null
-      recorder.dispose()
+      void recorder.dispose()
     }
   }, [])
 

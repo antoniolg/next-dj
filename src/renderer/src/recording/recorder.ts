@@ -110,11 +110,26 @@ export class Recorder {
     }
   }
 
-  dispose(): void {
+  async dispose(): Promise<void> {
     this.cancelCountdown(false)
     this.unsubscribeWriteError?.()
     this.unsubscribeWriteError = null
-    void this.releaseMediaResources()
+    const mediaRecorder = this.mediaRecorder
+    const sessionId = this.sessionId
+
+    this.mediaRecorder = null
+    this.sessionId = null
+
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop()
+    }
+
+    await this.pendingWrites.catch(() => undefined)
+    await this.releaseMediaResources()
+
+    if (sessionId) {
+      await getBridge().cancelRecording(sessionId, true).catch(() => undefined)
+    }
   }
 
   private runCountdown(mode: RecordingMode): Promise<boolean> {

@@ -195,4 +195,19 @@ describe('Recorder', () => {
     expect(bridge.stopRecording).not.toHaveBeenCalled()
     expect(lastChange(changes)).toMatchObject({ phase: 'error', error: 'disk full' })
   })
+
+  it('cancels an active main-process session when disposed', async () => {
+    const { bridge } = installBridge()
+    const { recorder } = createRecorder()
+
+    const startPromise = recorder.start('audio')
+    await finishCountdown(startPromise)
+    const mediaRecorder = FakeMediaRecorder.instances[0]
+
+    await recorder.dispose()
+
+    expect(mediaRecorder.stopCalls).toBe(1)
+    expect(bridge.cancelRecording).toHaveBeenCalledWith('recording-1', true)
+    expect(bridge.stopRecording).not.toHaveBeenCalled()
+  })
 })
