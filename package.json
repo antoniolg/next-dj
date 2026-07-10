@@ -21,9 +21,9 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "dist": "npm run dist:mac",
-    "dist:all": "electron-vite build && electron-builder --mac --x64 --arm64 --publish never && electron-builder --win --x64 --publish never && electron-builder --linux --x64 --publish never",
+    "dist:all": "npm run dist:mac && electron-builder --win --x64 --publish never && electron-builder --linux --x64 --publish never",
     "dist:linux": "electron-vite build && electron-builder --linux --x64 --publish never",
-    "dist:mac": "electron-vite build && electron-builder --mac --x64 --arm64 --publish never",
+    "dist:mac": "electron-vite build && electron-builder --mac --x64 --arm64 --publish never && npm run verify:mac-signature",
     "dist:win": "electron-vite build && electron-builder --win --x64 --publish never",
     "icons:generate": "node scripts/generate-icons.mjs",
     "lint": "eslint .",
@@ -35,7 +35,8 @@
     "test:e2e": "npm run build && npm run test:e2e:run",
     "test:e2e:run": "node scripts/run-electron-smoke.mjs",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
-    "typecheck": "tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json"
+    "typecheck": "tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
+    "verify:mac-signature": "node scripts/verify-macos-signature.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",

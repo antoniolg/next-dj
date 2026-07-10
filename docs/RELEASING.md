@@ -6,8 +6,9 @@ Use this checklist before cutting a public build.
 
 NextDJ versions below `1.0.0` may be published as regular GitHub Releases so
 the latest downloads remain visible from the repository home page. They are
-still early, unsigned builds and must not be presented as fully
-production-ready installers until signing and notarization are configured.
+still early builds. macOS artifacts use a consistent ad-hoc signature so
+Gatekeeper can verify bundle integrity, but they are not Developer ID-signed
+or notarized and must not be presented as fully production-ready installers.
 
 Release notes for unsigned builds must say:
 
@@ -95,9 +96,13 @@ App icons are generated from `build/icon-source.png`:
 npm run icons:generate
 ```
 
-Do not remove `mac.identity: null` until Developer ID signing and notarization
-are configured. Unsigned builds below `1.0.0` may be regular releases, but the
-release notes must describe the expected operating-system warnings.
+Keep `mac.identity: '-'`, Hardened Runtime, and the macOS entitlements in place
+until Developer ID signing and notarization are configured. Ad-hoc-signed builds
+below `1.0.0` may be regular releases, but the release notes must describe the
+expected operating-system warnings.
+
+`npm run dist:mac` verifies every packaged app with strict deep `codesign`
+validation and confirms the required runtime, camera, and audio entitlements.
 
 ## Public Release Checklist
 
@@ -105,6 +110,7 @@ release notes must describe the expected operating-system warnings.
 - Confirm the changelog entry matches the tag being released.
 - Confirm `package.json` version and the Git tag are compatible, for example `0.1.1` and `v0.1.1`.
 - Confirm release artifacts include app icons on macOS, Windows, and Linux.
+- Confirm the macOS build passes `npm run verify:mac-signature`.
 - Confirm `SHA256SUMS.txt` is attached to the GitHub Release.
 - Confirm tags without a hyphen publish as regular releases and tags with a hyphen publish as pre-releases.
 - Confirm the release notes mention that binaries are unsigned and may trigger operating-system warnings.

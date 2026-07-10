@@ -13,7 +13,10 @@ mac:
     - dmg
     - zip
   category: public.app-category.music
-  identity: null
+  identity: '-'
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     NSCameraUsageDescription: NextDJ uses the camera for the picture-in-picture overlay in session recordings.
     NSMicrophoneUsageDescription: NextDJ requests audio access to list and route your audio output devices.
