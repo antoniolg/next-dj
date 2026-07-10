@@ -1,5 +1,6 @@
 import { computeWaveformData, type WaveformData } from '../components/Waveform/waveformData'
 import { measureAsync, measureSync } from '../performance/perfMarks'
+import { readCachedFileBuffer } from './audioFileCache'
 import { detectBpm } from './bpm'
 import { clearHotCueState, triggerHotCueState } from './deckHotCues'
 import {
@@ -121,7 +122,7 @@ export class Deck {
   async loadFile(file: File | ArrayBuffer, analysis?: DeckLoadAnalysis, persistenceKey?: string): Promise<boolean> {
     const intent = ++this.loadIntent
     const arrayBuffer =
-      file instanceof File ? await measureAsync('deck.loadFile.readFile', () => file.arrayBuffer()) : file
+      file instanceof File ? await measureAsync('deck.loadFile.readFile', () => readCachedFileBuffer(file)) : file
     const decoded = await measureAsync('deck.loadFile.decodeAudioData', () =>
       this.context.decodeAudioData(arrayBuffer.slice(0))
     )

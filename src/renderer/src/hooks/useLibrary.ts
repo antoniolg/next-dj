@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { PlaylistImportTrack } from '../../../shared/nextdj'
 import { readAudioMetadata } from '../library/audioMetadata'
+import { mapWithConcurrency } from '../library/concurrentTasks'
 import { createPlaylistFileName, createTrackId, isAudioFile } from '../library/libraryFiles'
 import {
   fileFromBlob,
@@ -24,6 +25,9 @@ const LEGACY_EXTERNAL_SOURCE = 'you' + 'tube'
 const LEGACY_EXTERNAL_REF_KEY = 'you' + 'tubeUrl'
 const LEGACY_TRACK_ID_PREFIX = 'you' + 'tube-'
 const LEGACY_PROVIDER_ID = 'legacy-external'
+const HYDRATION_CONCURRENCY = 4
+const METADATA_CONCURRENCY = 2
+const FILE_PERSISTENCE_CONCURRENCY = 2
 
 function migratePersistedTrack(track: ReturnType<typeof readPersistedTracks>[number]): LibraryTrack {
   if (track.source === LEGACY_EXTERNAL_SOURCE) {
@@ -73,8 +77,10 @@ export function useLibrary(): {
 
     const hydrate = async (): Promise<void> => {
       const persistedTracks = readPersistedTracks()
-      const hydratedTracks = await Promise.all(
-        persistedTracks.map(async (track): Promise<LibraryTrack> => {
+      const hydratedTracks = await mapWithConcurrency(
+        persistedTracks,
+        HYDRATION_CONCURRENCY,
+        async (track): Promise<LibraryTrack> => {
           const blob = track.hasFile ? await getPersistedFile(track.id).catch(() => null) : null
           const migratedTrack = migratePersistedTrack(track)
           const file = blob ? fileFromBlob(blob, track) : undefined
@@ -87,7 +93,7 @@ export function useLibrary(): {
             ...migratedTrack,
             file
           }
-        })
+        }
       )
 
       if (!cancelled) {
@@ -105,17 +111,17 @@ export function useLibrary(): {
 
   const addFiles = useCallback(async (files: File[] | FileList): Promise<LibraryTrack[]> => {
     const audioFiles = Array.from(files).filter(isAudioFile)
-    const nextTracks = await Promise.all(
-      audioFiles.map(async (file) => ({
+    const nextTracks = await mapWithConcurrency(audioFiles, METADATA_CONCURRENCY, async (file) => ({
         id: createTrackId(file),
         title: file.name,
         ...(await readAudioMetadata(file)),
         file,
         source: 'local' as const
       }))
-    )
 
-    await Promise.all(nextTracks.map((track) => (track.file ? putPersistedFile(track.id, track.file) : Promise.resolve())))
+    await mapWithConcurrency(nextTracks, FILE_PERSISTENCE_CONCURRENCY, (track) =>
+      track.file ? putPersistedFile(track.id, track.file) : Promise.resolve()
+    )
 
     setTracks((current) => {
       const updatedTracks = mergeUniqueTracks(current, nextTracks)

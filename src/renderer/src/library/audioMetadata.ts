@@ -1,4 +1,5 @@
 import { detectBpm } from '../audio/bpm'
+import { readCachedFileBuffer } from '../audio/audioFileCache'
 import { measureAsync } from '../performance/perfMarks'
 
 export interface AudioMetadata {
@@ -7,56 +8,73 @@ export interface AudioMetadata {
   firstBeatOffset: number
 }
 
-export function readDuration(file: File): Promise<number> {
-  return new Promise((resolve) => {
-    const audio = new Audio()
-    const objectUrl = URL.createObjectURL(file)
+export class AudioMetadataError extends Error {
+  readonly cause: unknown
 
-    const cleanup = (): void => {
-      URL.revokeObjectURL(objectUrl)
-      audio.removeAttribute('src')
-      audio.load()
-    }
-
-    audio.preload = 'metadata'
-    audio.onloadedmetadata = (): void => {
-      const duration = Number.isFinite(audio.duration) ? audio.duration : 0
-      cleanup()
-      resolve(duration)
-    }
-    audio.onerror = (): void => {
-      cleanup()
-      resolve(0)
-    }
-    audio.src = objectUrl
-  })
-}
-
-export async function readBpm(file: File): Promise<{ bpm: number; firstBeatOffset: number }> {
-  const context = new AudioContext()
-
-  try {
-    const arrayBuffer = await measureAsync('library.audioMetadata.readFile', () => file.arrayBuffer())
-    const buffer = await measureAsync('library.audioMetadata.decodeAudioData', () =>
-      context.decodeAudioData(arrayBuffer.slice(0))
-    )
-
-    return measureAsync('library.audioMetadata.detectBpm', () => detectBpm(buffer))
-  } catch {
-    return { bpm: 0, firstBeatOffset: 0 }
-  } finally {
-    void context.close()
+  constructor(fileName: string, cause?: unknown) {
+    super(`Could not analyze "${fileName}".`)
+    this.name = 'AudioMetadataError'
+    this.cause = cause
   }
 }
 
-export async function readAudioMetadata(file: File): Promise<AudioMetadata> {
-  const [duration, bpm] = await Promise.all([
-    measureAsync('library.audioMetadata.readDuration', () => readDuration(file)),
-    readBpm(file)
-  ])
+let analysisContext: AudioContext | null = null
+let metadataCache = new WeakMap<File, Promise<AudioMetadata>>()
 
-  return {
-    duration,
-    ...bpm
+function getAnalysisContext(): AudioContext {
+  if (!analysisContext || analysisContext.state === 'closed') {
+    analysisContext = new AudioContext()
+  }
+
+  return analysisContext
+}
+
+async function analyzeAudioFile(file: File): Promise<AudioMetadata> {
+  const context = getAnalysisContext()
+
+  try {
+    const arrayBuffer = await measureAsync('library.audioMetadata.readFile', () => readCachedFileBuffer(file))
+    const buffer = await measureAsync('library.audioMetadata.decodeAudioData', () =>
+      context.decodeAudioData(arrayBuffer.slice(0))
+    )
+    const bpm = await measureAsync('library.audioMetadata.detectBpm', () => detectBpm(buffer))
+
+    return {
+      duration: Number.isFinite(buffer.duration) ? buffer.duration : 0,
+      ...bpm
+    }
+  } catch (error) {
+    throw new AudioMetadataError(file.name, error)
+  }
+}
+
+export function readAudioMetadata(file: File): Promise<AudioMetadata> {
+  const cached = metadataCache.get(file)
+
+  if (cached) {
+    return cached
+  }
+
+  const analysis = analyzeAudioFile(file).catch((error) => {
+    metadataCache.delete(file)
+    throw error
+  })
+
+  metadataCache.set(file, analysis)
+  return analysis
+}
+
+export async function readBpm(file: File): Promise<{ bpm: number; firstBeatOffset: number }> {
+  const { bpm, firstBeatOffset } = await readAudioMetadata(file)
+  return { bpm, firstBeatOffset }
+}
+
+export async function closeAudioMetadataContext(): Promise<void> {
+  const context = analysisContext
+  analysisContext = null
+  metadataCache = new WeakMap<File, Promise<AudioMetadata>>()
+
+  if (context && context.state !== 'closed') {
+    await context.close()
   }
 }
