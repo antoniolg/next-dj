@@ -12,7 +12,7 @@ type GetDeck = (deckId: DeckId) => Deck
 type SetDecks = Dispatch<SetStateAction<Record<DeckId, DeckState>>>
 
 export interface DeckActions {
-  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis) => Promise<boolean>
+  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis, trackId?: string) => Promise<boolean>
   togglePlayback: (deckId: DeckId) => Promise<void>
   seek: (deckId: DeckId, seconds: number) => void
   cueToStart: (deckId: DeckId) => void
@@ -36,9 +36,9 @@ export function useDeckActions(
   deckPitchRef: MutableRefObject<Record<DeckId, number>>
 ): DeckActions {
   const loadTrack = useCallback(
-    async (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis): Promise<boolean> => {
+    async (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis, trackId?: string): Promise<boolean> => {
       const deck = getDeck(deckId)
-      const committed = await deck.loadFile(file, analysis)
+      const committed = await deck.loadFile(file, analysis, trackId)
 
       if (!committed) {
         return false

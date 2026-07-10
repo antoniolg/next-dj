@@ -61,7 +61,7 @@ describe('useDeckLoading', () => {
     })
 
     expect(options.addFiles).toHaveBeenCalledWith([file])
-    expect(options.loadTrack).toHaveBeenCalledWith('A', file, { bpm: 120, firstBeatOffset: 0 })
+    expect(options.loadTrack).toHaveBeenCalledWith('A', file, { bpm: 120, firstBeatOffset: 0 }, localTrack.id)
     expect(localStorage.getItem('nextdj.deckTracks.v1')).toContain(localTrack.id)
     expect(result.current.loadingDecks.A).toBeUndefined()
   })
@@ -81,7 +81,7 @@ describe('useDeckLoading', () => {
     })
 
     expect(options.resolveTrackFile).toHaveBeenCalledWith(remoteTrack)
-    expect(options.loadTrack).toHaveBeenCalledWith('B', file, { bpm: 122, firstBeatOffset: 0.4 })
+    expect(options.loadTrack).toHaveBeenCalledWith('B', file, { bpm: 122, firstBeatOffset: 0.4 }, remoteTrack.id)
     expect(localStorage.getItem('nextdj.deckTracks.v1')).toContain(remoteTrack.id)
     expect(result.current.loadingDecks.B).toBeUndefined()
   })
@@ -98,7 +98,7 @@ describe('useDeckLoading', () => {
       await result.current.loadLibraryTrack('A', unanalysedTrack)
     })
 
-    expect(options.loadTrack).toHaveBeenCalledWith('A', file, undefined)
+    expect(options.loadTrack).toHaveBeenCalledWith('A', file, undefined, unanalysedTrack.id)
   })
 
   it('skips deck loading when a library track cannot be resolved', async () => {
@@ -148,7 +148,12 @@ describe('useDeckLoading', () => {
     })
 
     expect(options.loadTrack).toHaveBeenCalledTimes(1)
-    expect(options.loadTrack).toHaveBeenCalledWith('A', secondFile, { bpm: 128, firstBeatOffset: 0.1 })
+    expect(options.loadTrack).toHaveBeenCalledWith(
+      'A',
+      secondFile,
+      { bpm: 128, firstBeatOffset: 0.1 },
+      secondTrack.id
+    )
     expect(localStorage.getItem('nextdj.deckTracks.v1')).toContain(secondTrack.id)
     expect(localStorage.getItem('nextdj.deckTracks.v1')).not.toContain(remoteTrack.id)
   })
@@ -160,7 +165,12 @@ describe('useDeckLoading', () => {
     renderHook(() => useDeckLoading(options))
 
     await waitFor(() =>
-      expect(options.loadTrack).toHaveBeenCalledWith('A', localTrack.file, { bpm: 120, firstBeatOffset: 0 })
+      expect(options.loadTrack).toHaveBeenCalledWith(
+        'A',
+        localTrack.file,
+        { bpm: 120, firstBeatOffset: 0 },
+        localTrack.id
+      )
     )
   })
 

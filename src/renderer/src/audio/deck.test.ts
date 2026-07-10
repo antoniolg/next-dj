@@ -290,4 +290,19 @@ describe('Deck', () => {
     expect(deck.duration).toBe(20)
     expect(deck.metadata).toMatchObject({ bpm: 130, firstBeatOffset: 0.2 })
   })
+
+  it('keeps cue persistence separate for tracks with the same filename', async () => {
+    const { deck } = createDeck()
+    const analysis = { bpm: 120, firstBeatOffset: 0 }
+
+    await deck.loadFile(new File(['first'], 'shared-name.mp3'), analysis, 'track-a')
+    deck.setCuePoint(3)
+
+    await deck.loadFile(new File(['second'], 'shared-name.mp3'), analysis, 'track-b')
+    expect(deck.cuePoint).toBe(0)
+    deck.setCuePoint(6)
+
+    await deck.loadFile(new File(['first'], 'shared-name.mp3'), analysis, 'track-a')
+    expect(deck.cuePoint).toBe(3)
+  })
 })

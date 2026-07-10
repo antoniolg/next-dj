@@ -26,7 +26,7 @@ export function useEngine(): {
   channels: Record<DeckId, ChannelState>
   mixer: MixerState
   output: OutputState
-  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis) => Promise<boolean>
+  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis, trackId?: string) => Promise<boolean>
   togglePlayback: (deckId: DeckId) => Promise<void>
   seek: (deckId: DeckId, seconds: number) => void
   cueToStart: (deckId: DeckId) => void

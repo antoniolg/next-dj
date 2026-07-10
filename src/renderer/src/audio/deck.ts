@@ -12,6 +12,7 @@ import {
 import {
   loadCuePoint,
   loadHotCues,
+  migrateDeckPersistenceKey,
   saveCuePoint,
   saveHotCues
 } from './deckPersistence'
@@ -69,6 +70,7 @@ export class Deck {
   private jogLastFoldTime = 0
   private transportIntent = 0
   private loadIntent = 0
+  private persistenceKey = 'No track loaded'
 
   duration = 0
   metadata: TrackMetadata = { name: 'No track loaded', bpm: 0, firstBeatOffset: 0 }
@@ -116,7 +118,7 @@ export class Deck {
     return this.started
   }
 
-  async loadFile(file: File | ArrayBuffer, analysis?: DeckLoadAnalysis): Promise<boolean> {
+  async loadFile(file: File | ArrayBuffer, analysis?: DeckLoadAnalysis, persistenceKey?: string): Promise<boolean> {
     const intent = ++this.loadIntent
     const arrayBuffer =
       file instanceof File ? await measureAsync('deck.loadFile.readFile', () => file.arrayBuffer()) : file
@@ -142,13 +144,18 @@ export class Deck {
     this.buffer = decoded
     this.duration = decoded.duration
     this.waveform = waveform
+    const trackName = file instanceof File ? file.name : 'Loaded audio'
+    const stablePersistenceKey = persistenceKey ?? trackName
+
     this.metadata = {
-      name: file instanceof File ? file.name : 'Loaded audio',
+      name: trackName,
       bpm,
       firstBeatOffset
     }
-    this.hotCues = loadHotCues(this.metadata.name, (seconds) => this.clampPosition(seconds))
-    this.cuePoint = loadCuePoint(this.metadata.name, (seconds) => this.clampPosition(seconds))
+    this.persistenceKey = stablePersistenceKey
+    migrateDeckPersistenceKey(trackName, stablePersistenceKey)
+    this.hotCues = loadHotCues(stablePersistenceKey, (seconds) => this.clampPosition(seconds))
+    this.cuePoint = loadCuePoint(stablePersistenceKey, (seconds) => this.clampPosition(seconds))
     this.loop = createEmptyLoop()
     return true
   }
@@ -240,7 +247,7 @@ export class Deck {
 
   setCuePoint(seconds: number = this.getPosition()): void {
     this.cuePoint = this.clampPosition(seconds)
-    saveCuePoint(this.metadata.name, this.cuePoint)
+    saveCuePoint(this.persistenceKey, this.cuePoint)
   }
 
   async cuePress(): Promise<void> {
@@ -291,13 +298,13 @@ export class Deck {
     this.hotCues = result.hotCues
 
     if (result.shouldSave) {
-      saveHotCues(this.metadata.name, this.hotCues)
+      saveHotCues(this.persistenceKey, this.hotCues)
     }
   }
 
   clearHotCue(index: number): void {
     this.hotCues = clearHotCueState(this.hotCues, index)
-    saveHotCues(this.metadata.name, this.hotCues)
+    saveHotCues(this.persistenceKey, this.hotCues)
   }
 
   setLoopIn(): void {

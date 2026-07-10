@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { loadCuePoint, loadHotCues, saveCuePoint, saveHotCues } from './deckPersistence'
+import { loadCuePoint, loadHotCues, migrateDeckPersistenceKey, saveCuePoint, saveHotCues } from './deckPersistence'
 
 describe('deck persistence', () => {
   beforeEach(() => {
@@ -48,5 +48,19 @@ describe('deck persistence', () => {
 
     localStorage.setItem('nextdj.cuePoints', '{')
     expect(loadCuePoint('track.mp3', (seconds) => seconds)).toBe(0)
+  })
+
+  it('migrates filename-keyed cues to a stable track identity without overwriting it', () => {
+    saveHotCues('same-name.mp3', [{ position: 5, color: '#22d3ee' }, null, null, null])
+    saveCuePoint('same-name.mp3', 4)
+
+    migrateDeckPersistenceKey('same-name.mp3', 'track-123')
+
+    expect(loadHotCues('track-123', (seconds) => seconds)[0]).toMatchObject({ position: 5 })
+    expect(loadCuePoint('track-123', (seconds) => seconds)).toBe(4)
+
+    saveCuePoint('track-123', 8)
+    migrateDeckPersistenceKey('same-name.mp3', 'track-123')
+    expect(loadCuePoint('track-123', (seconds) => seconds)).toBe(8)
   })
 })

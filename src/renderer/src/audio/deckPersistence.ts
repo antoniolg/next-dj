@@ -3,6 +3,28 @@ import { EMPTY_HOT_CUES, HOT_CUE_COLORS, type HotCue } from './deckTypes'
 const HOT_CUE_STORAGE_KEY = 'nextdj.hotCues'
 const CUE_POINT_STORAGE_KEY = 'nextdj.cuePoints'
 
+function copyStoredTrackEntry(storageKey: string, legacyKey: string, stableKey: string): void {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(storageKey) ?? '{}') as Record<string, unknown>
+
+    if (parsed[stableKey] === undefined && parsed[legacyKey] !== undefined) {
+      parsed[stableKey] = parsed[legacyKey]
+      localStorage.setItem(storageKey, JSON.stringify(parsed))
+    }
+  } catch {
+    // Corrupt persistence is handled by the defensive readers below.
+  }
+}
+
+export function migrateDeckPersistenceKey(legacyKey: string, stableKey: string): void {
+  if (legacyKey === stableKey) {
+    return
+  }
+
+  copyStoredTrackEntry(HOT_CUE_STORAGE_KEY, legacyKey, stableKey)
+  copyStoredTrackEntry(CUE_POINT_STORAGE_KEY, legacyKey, stableKey)
+}
+
 export function loadHotCues(trackName: string, clampPosition: (seconds: number) => number): Array<HotCue | null> {
   try {
     const parsed = JSON.parse(localStorage.getItem(HOT_CUE_STORAGE_KEY) ?? '{}') as Record<

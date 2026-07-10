@@ -15,7 +15,7 @@ interface UseDeckLoadingOptions {
   addFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
   resolveTrackFile: (track: LibraryTrack) => Promise<ResolvedTrackFile | null>
   getTrack: (trackId: string) => LibraryTrack | undefined
-  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis) => Promise<boolean>
+  loadTrack: (deckId: DeckId, file: File, analysis?: DeckLoadAnalysis, trackId?: string) => Promise<boolean>
 }
 
 function getValidAnalysis(analysis: DeckLoadAnalysis | undefined): DeckLoadAnalysis | undefined {
@@ -86,7 +86,7 @@ export function useDeckLoading({
         }
 
         setDeckLoading(deckId, 'Loading deck...')
-        const committed = await loadTrack(deckId, file, getTrackAnalysis(track))
+        const committed = await loadTrack(deckId, file, getTrackAnalysis(track), track?.id)
 
         if (committed && track && isCurrentOperation(deckId, operationId)) {
           persistDeckTrack(deckId, track.id)
@@ -116,7 +116,8 @@ export function useDeckLoading({
         const committed = await loadTrack(
           deckId,
           resolved.file,
-          getValidAnalysis(resolved.analysis) ?? getTrackAnalysis(track)
+          getValidAnalysis(resolved.analysis) ?? getTrackAnalysis(track),
+          track.id
         )
 
         if (committed && isCurrentOperation(deckId, operationId)) {
