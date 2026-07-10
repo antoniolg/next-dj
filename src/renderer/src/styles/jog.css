@@ -116,22 +116,9 @@
     0 0 16px rgba(0, 0, 0, 0.62);
 }
 
-.jog-platter-artwork {
-  position: absolute;
-  inset: 2px;
-  width: calc(100% - 4px);
-  height: calc(100% - 4px);
-  border-radius: inherit;
-  filter: brightness(0.72) saturate(0.82) contrast(1.08);
-  object-fit: cover;
-  opacity: 0.78;
-  pointer-events: none;
-}
-
 .jog-platter::before,
 .jog-platter::after {
   position: absolute;
-  z-index: 1;
   border-radius: inherit;
   pointer-events: none;
   content: '';

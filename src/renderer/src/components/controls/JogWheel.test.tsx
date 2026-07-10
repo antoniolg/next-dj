@@ -59,29 +59,6 @@ describe('JogWheel', () => {
     })
   })
 
-  it('renders artwork inside the rotating platter when available', () => {
-    const { container } = render(
-      <JogWheel
-        accent="#22d3ee"
-        artworkUrl="https://example.com/cover.jpg"
-        duration={60}
-        isPlaying
-        label="Deck A jog"
-        position={30}
-        onBend={vi.fn()}
-        onScratchEnd={vi.fn()}
-        onScratchStart={() => 30}
-        onScrub={vi.fn()}
-        onSeek={vi.fn()}
-      />
-    )
-
-    expect(container.querySelector('.jog-rotor .jog-platter-artwork')).toHaveAttribute(
-      'src',
-      'https://example.com/cover.jpg'
-    )
-  })
-
   it('seeks stopped decks and bends playing decks from the keyboard', () => {
     const onSeek = vi.fn()
     const onBend = vi.fn()
