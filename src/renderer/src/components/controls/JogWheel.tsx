@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { NextDjMark } from './NextDjMark'
 import { getJogAngleDelta, getJogProgressDegrees, getJogSeekPosition } from './jogWheelMath'
+import { hasReleasedPointerButtons, useCancelDragOnWindowBlur } from './usePointerDragSafety'
 
 interface JogWheelProps {
   position: number
@@ -42,9 +43,18 @@ export function JogWheel({
     [position]
   )
 
+  const clearDrag = useCallback((): void => {
+    dragRef.current = null
+  }, [])
+
   const handlePointerMove = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>): void => {
       if (!dragRef.current || duration <= 0) {
+        return
+      }
+
+      if (hasReleasedPointerButtons(event.nativeEvent)) {
+        clearDrag()
         return
       }
 
@@ -64,12 +74,10 @@ export function JogWheel({
       setDragRotation((current: number) => current + delta)
       onSeek(nextPosition)
     },
-    [duration, isPlaying, onBend, onSeek]
+    [clearDrag, duration, isPlaying, onBend, onSeek]
   )
 
-  const clearDrag = useCallback((): void => {
-    dragRef.current = null
-  }, [])
+  useCancelDragOnWindowBlur(clearDrag)
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>): void => {
@@ -126,6 +134,7 @@ export function JogWheel({
       }
       type="button"
       onKeyDown={handleKeyDown}
+      onLostPointerCapture={clearDrag}
       onPointerCancel={clearDrag}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

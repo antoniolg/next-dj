@@ -77,4 +77,30 @@ describe('JogWheel', () => {
     fireEvent.keyDown(screen.getByRole('slider', { name: 'Deck A jog' }), { key: 'ArrowLeft' })
     expect(onBend).toHaveBeenCalledWith(-3)
   })
+
+  it('ends a drag when the window loses focus', () => {
+    const onSeek = vi.fn()
+    render(
+      <JogWheel
+        accent="#22d3ee"
+        duration={60}
+        isPlaying={false}
+        label="Deck A jog"
+        position={30}
+        onBend={vi.fn()}
+        onSeek={onSeek}
+      />
+    )
+    const slider = screen.getByRole('slider', { name: 'Deck A jog' })
+
+    Object.assign(slider, {
+      getBoundingClientRect: () => ({ top: 0, height: 100, left: 0, width: 100 }),
+      setPointerCapture: vi.fn()
+    })
+    fireEvent.pointerDown(slider, { pointerId: 1, clientX: 100, clientY: 50, buttons: 1 })
+    fireEvent.blur(window)
+    fireEvent.pointerMove(slider, { pointerId: 1, clientX: 50, clientY: 100, buttons: 1 })
+
+    expect(onSeek).not.toHaveBeenCalled()
+  })
 })

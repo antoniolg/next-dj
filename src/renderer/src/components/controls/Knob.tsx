@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { hasReleasedPointerButtons, useCancelDragOnWindowBlur } from './usePointerDragSafety'
 
 interface KnobProps {
   value: number
@@ -59,22 +60,29 @@ export function Knob({
     [value]
   )
 
+  const clearDrag = useCallback((): void => {
+    dragRef.current = null
+    setShowValue(false)
+  }, [])
+
   const handlePointerMove = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>): void => {
       if (!dragRef.current) {
         return
       }
 
+      if (hasReleasedPointerButtons(event.nativeEvent)) {
+        clearDrag()
+        return
+      }
+
       const delta = dragRef.current.y - event.clientY
       commitValue(dragRef.current.value + (delta / 160) * (max - min))
     },
-    [commitValue, max, min]
+    [clearDrag, commitValue, max, min]
   )
 
-  const clearDrag = useCallback((): void => {
-    dragRef.current = null
-    setShowValue(false)
-  }, [])
+  useCancelDragOnWindowBlur(clearDrag)
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>): void => {
@@ -134,6 +142,7 @@ export function Knob({
           type="button"
           onDoubleClick={() => commitValue(defaultValue)}
           onKeyDown={handleKeyDown}
+          onLostPointerCapture={clearDrag}
           onPointerCancel={clearDrag}
           onPointerDown={handlePointerDown}
           onPointerEnter={() => setShowValue(true)}

@@ -108,4 +108,27 @@ describe('Knob', () => {
     expect(onChange).toHaveBeenNthCalledWith(3, 0)
     expect(onChange).toHaveBeenNthCalledWith(4, 2)
   })
+
+  it('ends a drag when pointer capture is lost', () => {
+    const onChange = vi.fn()
+    render(
+      <Knob
+        accent="#22d3ee"
+        defaultValue={0}
+        label="Trim"
+        max={2}
+        min={0}
+        value={1}
+        onChange={onChange}
+      />
+    )
+    const slider = screen.getByRole('slider', { name: 'Trim' })
+
+    Object.assign(slider, { setPointerCapture: vi.fn() })
+    fireEvent.pointerDown(slider, { pointerId: 1, clientY: 80, buttons: 1 })
+    fireEvent.lostPointerCapture(slider, { pointerId: 1 })
+    fireEvent.pointerMove(slider, { pointerId: 1, clientY: 20, buttons: 1 })
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
 })

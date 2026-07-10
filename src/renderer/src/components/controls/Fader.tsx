@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react'
+import { hasReleasedPointerButtons, useCancelDragOnWindowBlur } from './usePointerDragSafety'
 
 interface FaderScale {
   count: number
@@ -97,22 +98,38 @@ export function Fader({
     [commitValue, disabled, valueFromPointer]
   )
 
-  const handlePointerMove = useCallback(
+  const stopDrag = useCallback((): void => {
+    draggingRef.current = false
+  }, [])
+
+  const clearDrag = useCallback(
     (event: React.PointerEvent<HTMLDivElement>): void => {
-      if (draggingRef.current) {
-        commitValue(valueFromPointer(event))
+      stopDrag()
+
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId)
       }
     },
-    [commitValue, valueFromPointer]
+    [stopDrag]
   )
 
-  const clearDrag = useCallback((event: React.PointerEvent<HTMLDivElement>): void => {
-    draggingRef.current = false
+  const handlePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>): void => {
+      if (!draggingRef.current) {
+        return
+      }
 
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-  }, [])
+      if (hasReleasedPointerButtons(event.nativeEvent)) {
+        clearDrag(event)
+        return
+      }
+
+      commitValue(valueFromPointer(event))
+    },
+    [clearDrag, commitValue, valueFromPointer]
+  )
+
+  useCancelDragOnWindowBlur(stopDrag)
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>): void => {
@@ -149,6 +166,7 @@ export function Fader({
         tabIndex={disabled ? -1 : 0}
         title={`${label}: ${valueFormatter(value)}`}
         onKeyDown={handleKeyDown}
+        onLostPointerCapture={stopDrag}
         onPointerCancel={clearDrag}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
