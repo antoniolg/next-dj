@@ -278,6 +278,34 @@
   gap: 0.35rem;
 }
 
+.library-window-controls {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  border-top: 1px solid rgba(212, 220, 232, 0.08);
+  background: rgba(7, 10, 14, 0.96);
+  color: #8b9aae;
+  font-size: 0.68rem;
+  padding: 0.35rem;
+}
+
+.library-window-controls button {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 5px;
+  background: #10141a;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 0.2rem 0.55rem;
+}
+
+.library-window-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 .load-chip {
   display: inline-flex;
   width: 27px;

@@ -133,4 +133,27 @@ describe('LibraryPanel', () => {
     expect(localStorage.getItem('nextdj.library.collapsed')).toBe('0')
     expect(screen.getByText('First Track')).toBeInTheDocument()
   })
+
+  it('windows large libraries and provides accessible page navigation', () => {
+    const largeLibrary = Array.from({ length: 450 }, (_, index): LibraryTrack => ({
+      id: `track-${index + 1}`,
+      title: `Track ${index + 1}`,
+      duration: 60,
+      bpm: 120,
+      firstBeatOffset: 0,
+      source: 'local'
+    }))
+
+    renderPanel({ tracks: largeLibrary })
+
+    expect(screen.getByText('Track 1')).toBeInTheDocument()
+    expect(screen.queryByText('Track 201')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('row')).toHaveLength(201)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+    expect(screen.getByText('Track 201')).toBeInTheDocument()
+    expect(screen.getByText('Tracks 201–400 of 450')).toBeInTheDocument()
+    expect(screen.getAllByRole('row')).toHaveLength(201)
+  })
 })
