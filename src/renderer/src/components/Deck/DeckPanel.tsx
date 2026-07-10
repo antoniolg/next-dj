@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { FolderOpen, Pause, Play, X } from 'lucide-react'
 import { MAX_PITCH_PERCENT } from '../../audio/deck'
 import type { LoopState } from '../../audio/deckTypes'
@@ -7,6 +7,7 @@ import { ZoomWaveform } from '../Waveform/ZoomWaveform'
 import type { WaveformData } from '../../audio/waveformData'
 import { Fader } from '../controls/Fader'
 import { JogWheel } from '../controls/JogWheel'
+import { useCueButton } from './useCueButton'
 
 interface DeckPanelProps {
   deckId: 'A' | 'B'
@@ -32,6 +33,7 @@ interface DeckPanelProps {
   onTrackDrop: (trackId: string) => Promise<void>
   onTogglePlayback: () => Promise<void>
   onCueDown: () => Promise<void>
+  onCueSet: () => void
   onCueUp: () => void
   onPitchChange: (percent: number) => void
   onSync: () => void
@@ -92,6 +94,7 @@ export const DeckPanel = memo(function DeckPanel({
   onTrackDrop,
   onTogglePlayback,
   onCueDown,
+  onCueSet,
   onCueUp,
   onPitchChange,
   onSync,
@@ -106,7 +109,6 @@ export const DeckPanel = memo(function DeckPanel({
   const hasTrack = duration > 0
   const [syncFlashing, setSyncFlashing] = useState(false)
   const [loopBeats, setLoopBeats] = useState<4 | 8>(8)
-  const cueKeyboardHeldRef = useRef(false)
   const isMaster = masterDeckId === deckId
   const hasMaster = masterDeckId !== null
   const deckRole = !hasTrack ? 'EMPTY' : isMaster ? 'MASTER' : hasMaster ? 'FOLLOW' : 'READY'
@@ -134,54 +136,7 @@ export const DeckPanel = memo(function DeckPanel({
     void onTogglePlayback()
   }, [onTogglePlayback])
 
-  const handleCuePointerDown = useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>): void => {
-      event.currentTarget.setPointerCapture(event.pointerId)
-      void onCueDown()
-    },
-    [onCueDown]
-  )
-
-  const handleCuePointerUp = useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>): void => {
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId)
-      }
-
-      onCueUp()
-    },
-    [onCueUp]
-  )
-
-  const handleCueKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLButtonElement>): void => {
-      if ((event.key !== ' ' && event.key !== 'Enter') || event.repeat || cueKeyboardHeldRef.current) {
-        return
-      }
-
-      event.preventDefault()
-      cueKeyboardHeldRef.current = true
-      void onCueDown()
-    },
-    [onCueDown]
-  )
-
-  const releaseKeyboardCue = useCallback((): void => {
-    if (cueKeyboardHeldRef.current) {
-      cueKeyboardHeldRef.current = false
-      onCueUp()
-    }
-  }, [onCueUp])
-
-  const handleCueKeyUp = useCallback(
-    (event: React.KeyboardEvent<HTMLButtonElement>): void => {
-      if (event.key === ' ' || event.key === 'Enter') {
-        event.preventDefault()
-        releaseKeyboardCue()
-      }
-    },
-    [releaseKeyboardCue]
-  )
+  const cueButtonHandlers = useCueButton({ isPlaying, onCueDown, onCueSet, onCueUp })
 
   const handleSyncClick = useCallback((): void => {
     onSync()
@@ -379,16 +334,17 @@ export const DeckPanel = memo(function DeckPanel({
         </button>
         <button
           aria-label="Cue"
-          className="transport-button"
+          className={`transport-button ${cueButtonHandlers.cueSetFlashing ? 'led-button-flash' : ''}`}
           disabled={isLoading || !hasTrack}
-          title="CUE: set cue when stopped, hold to preview, or return to cue while playing"
+          title="CUE: click to set, hold to preview, or return while playing"
           type="button"
-          onBlur={releaseKeyboardCue}
-          onKeyDown={handleCueKeyDown}
-          onKeyUp={handleCueKeyUp}
-          onPointerCancel={handleCuePointerUp}
-          onPointerDown={handleCuePointerDown}
-          onPointerUp={handleCuePointerUp}
+          onBlur={cueButtonHandlers.onBlur}
+          onKeyDown={cueButtonHandlers.onKeyDown}
+          onKeyUp={cueButtonHandlers.onKeyUp}
+          onLostPointerCapture={cueButtonHandlers.onLostPointerCapture}
+          onPointerCancel={cueButtonHandlers.onPointerCancel}
+          onPointerDown={cueButtonHandlers.onPointerDown}
+          onPointerUp={cueButtonHandlers.onPointerUp}
         >
           CUE
         </button>

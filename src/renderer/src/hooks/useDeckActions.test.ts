@@ -64,4 +64,24 @@ describe('useDeckActions', () => {
     expect(decks.A.getEffectiveBpm).not.toHaveBeenCalled()
     expect(result.current.deckState).toBe(deckState)
   })
+
+  it('sets a cue point at the stopped deck position', () => {
+    const { result, decks } = renderDeckActions()
+    Object.assign(decks.A, {
+      duration: 180,
+      isPlaying: false,
+      cuePoint: 0,
+      getPosition: vi.fn(() => 42),
+      setCuePoint: vi.fn(() => {
+        decks.A.cuePoint = 42
+      })
+    })
+
+    act(() => {
+      result.current.actions.setCuePoint('A')
+    })
+
+    expect(decks.A.setCuePoint).toHaveBeenCalledTimes(1)
+    expect(result.current.deckState.A).toMatchObject({ cuePoint: 42, position: 42 })
+  })
 })

@@ -16,6 +16,7 @@ export interface DeckActions {
   togglePlayback: (deckId: DeckId) => Promise<void>
   seek: (deckId: DeckId, seconds: number) => void
   cueToStart: (deckId: DeckId) => void
+  setCuePoint: (deckId: DeckId) => void
   cuePress: (deckId: DeckId) => Promise<void>
   cueRelease: (deckId: DeckId) => void
   setPitch: (deckId: DeckId, percent: number) => void
@@ -105,6 +106,23 @@ export function useDeckActions(
       seek(deckId, 0)
     },
     [seek]
+  )
+
+  const setCuePoint = useCallback(
+    (deckId: DeckId): void => {
+      const deck = getDeck(deckId)
+
+      if (deck.isPlaying || deck.duration <= 0) {
+        return
+      }
+
+      deck.setCuePoint()
+      setDecks((current) => ({
+        ...current,
+        [deckId]: { ...current[deckId], cuePoint: deck.cuePoint, position: deck.getPosition() }
+      }))
+    },
+    [getDeck, setDecks]
   )
 
   const cuePress = useCallback(
@@ -266,6 +284,7 @@ export function useDeckActions(
     togglePlayback,
     seek,
     cueToStart,
+    setCuePoint,
     cuePress,
     cueRelease,
     setPitch,

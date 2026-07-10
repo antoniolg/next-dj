@@ -31,6 +31,7 @@ export function App(): JSX.Element {
     loadTrack,
     togglePlayback,
     seek,
+    setCuePoint,
     cuePress,
     cueRelease,
     setPitch,
@@ -84,6 +85,8 @@ export function App(): JSX.Element {
   const autoLoopDeckB = useCallback((beats: number): void => setAutoLoop('B', beats), [setAutoLoop])
   const cueDownDeckA = useCallback((): Promise<void> => cuePress('A'), [cuePress])
   const cueDownDeckB = useCallback((): Promise<void> => cuePress('B'), [cuePress])
+  const cueSetDeckA = useCallback((): void => setCuePoint('A'), [setCuePoint])
+  const cueSetDeckB = useCallback((): void => setCuePoint('B'), [setCuePoint])
   const cueUpDeckA = useCallback((): void => cueRelease('A'), [cueRelease])
   const cueUpDeckB = useCallback((): void => cueRelease('B'), [cueRelease])
   const jogBendDeckA = useCallback((degrees: number): void => jogBend('A', degrees), [jogBend])
@@ -216,6 +219,7 @@ export function App(): JSX.Element {
               waveform={decks.A.waveform}
               onAutoLoop={autoLoopDeckA}
               onCueDown={cueDownDeckA}
+              onCueSet={cueSetDeckA}
               onCueUp={cueUpDeckA}
               onJogBend={jogBendDeckA}
               onLoad={loadFileToDeckA}
@@ -274,6 +278,7 @@ export function App(): JSX.Element {
               waveform={decks.B.waveform}
               onAutoLoop={autoLoopDeckB}
               onCueDown={cueDownDeckB}
+              onCueSet={cueSetDeckB}
               onCueUp={cueUpDeckB}
               onJogBend={jogBendDeckB}
               onLoad={loadFileToDeckB}

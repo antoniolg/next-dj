@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LoopState } from '../../audio/deckTypes'
 import { DeckPanel } from './DeckPanel'
 
@@ -59,6 +59,7 @@ function renderDeck(overrides: Partial<Parameters<typeof DeckPanel>[0]> = {}) {
       waveform={null}
       onAutoLoop={vi.fn()}
       onCueDown={vi.fn().mockResolvedValue(undefined)}
+      onCueSet={vi.fn()}
       onCueUp={vi.fn()}
       onJogBend={vi.fn()}
       onLoad={vi.fn().mockResolvedValue(undefined)}
@@ -75,6 +76,10 @@ function renderDeck(overrides: Partial<Parameters<typeof DeckPanel>[0]> = {}) {
 }
 
 describe('DeckPanel', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('renders loaded transport state and dispatches transport actions', () => {
     const onTogglePlayback = vi.fn().mockResolvedValue(undefined)
     const onSync = vi.fn()
@@ -172,5 +177,87 @@ describe('DeckPanel', () => {
 
     expect(onCueDown).toHaveBeenCalledTimes(1)
     expect(onCueUp).toHaveBeenCalledTimes(1)
+  })
+
+  it('sets CUE without previewing on a short pointer click', () => {
+    const onCueDown = vi.fn().mockResolvedValue(undefined)
+    const onCueSet = vi.fn()
+    const onCueUp = vi.fn()
+    renderDeck({ onCueDown, onCueSet, onCueUp })
+    const cue = screen.getByRole('button', { name: 'Cue' })
+
+    Object.assign(cue, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn(() => true),
+      releasePointerCapture: vi.fn()
+    })
+    fireEvent.pointerDown(cue, { pointerId: 1, pointerType: 'mouse', button: 0 })
+    fireEvent.pointerUp(cue, { pointerId: 1, pointerType: 'mouse', button: 0 })
+
+    expect(onCueSet).toHaveBeenCalledTimes(1)
+    expect(onCueDown).not.toHaveBeenCalled()
+    expect(onCueUp).not.toHaveBeenCalled()
+    expect(cue).toHaveClass('led-button-flash')
+  })
+
+  it('previews CUE only after a sustained pointer press', () => {
+    vi.useFakeTimers()
+    const onCueDown = vi.fn().mockResolvedValue(undefined)
+    const onCueSet = vi.fn()
+    const onCueUp = vi.fn()
+    renderDeck({ onCueDown, onCueSet, onCueUp })
+    const cue = screen.getByRole('button', { name: 'Cue' })
+
+    Object.assign(cue, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn(() => true),
+      releasePointerCapture: vi.fn()
+    })
+    fireEvent.pointerDown(cue, { pointerId: 1, pointerType: 'mouse', button: 0 })
+    vi.advanceTimersByTime(200)
+
+    expect(onCueSet).toHaveBeenCalledTimes(1)
+    expect(onCueDown).toHaveBeenCalledTimes(1)
+
+    fireEvent.pointerUp(cue, { pointerId: 1, pointerType: 'mouse', button: 0 })
+    expect(onCueUp).toHaveBeenCalledTimes(1)
+  })
+
+  it('ends CUE preview if pointer capture is lost', () => {
+    vi.useFakeTimers()
+    const onCueUp = vi.fn()
+    renderDeck({ onCueSet: vi.fn(), onCueDown: vi.fn().mockResolvedValue(undefined), onCueUp })
+    const cue = screen.getByRole('button', { name: 'Cue' })
+
+    Object.assign(cue, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn(() => false),
+      releasePointerCapture: vi.fn()
+    })
+    fireEvent.pointerDown(cue, { pointerId: 1, pointerType: 'mouse', button: 0 })
+    vi.advanceTimersByTime(200)
+    fireEvent.lostPointerCapture(cue, { pointerId: 1 })
+
+    expect(onCueUp).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns to CUE immediately when clicked during playback', () => {
+    const onCueDown = vi.fn().mockResolvedValue(undefined)
+    const onCueSet = vi.fn()
+    const onCueUp = vi.fn()
+    renderDeck({ isPlaying: true, onCueDown, onCueSet, onCueUp })
+    const cue = screen.getByRole('button', { name: 'Cue' })
+
+    Object.assign(cue, {
+      setPointerCapture: vi.fn(),
+      hasPointerCapture: vi.fn(() => true),
+      releasePointerCapture: vi.fn()
+    })
+    fireEvent.pointerDown(cue, { pointerId: 1, pointerType: 'mouse', button: 0 })
+    fireEvent.pointerUp(cue, { pointerId: 1, pointerType: 'mouse', button: 0 })
+
+    expect(onCueDown).toHaveBeenCalledTimes(1)
+    expect(onCueSet).not.toHaveBeenCalled()
+    expect(onCueUp).not.toHaveBeenCalled()
   })
 })

@@ -81,6 +81,7 @@ vi.mock('./hooks/useEngine', () => ({
     loadTrack: vi.fn(),
     togglePlayback,
     seek: vi.fn(),
+    setCuePoint: vi.fn(),
     cuePress: vi.fn(),
     cueRelease: vi.fn(),
     setPitch: vi.fn(),

@@ -30,6 +30,7 @@ export function useEngine(): {
   togglePlayback: (deckId: DeckId) => Promise<void>
   seek: (deckId: DeckId, seconds: number) => void
   cueToStart: (deckId: DeckId) => void
+  setCuePoint: (deckId: DeckId) => void
   cuePress: (deckId: DeckId) => Promise<void>
   cueRelease: (deckId: DeckId) => void
   setPitch: (deckId: DeckId, percent: number) => void
