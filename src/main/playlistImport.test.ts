@@ -1,7 +1,7 @@
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createPlaylistImportRegistry,
   loadPlaylistImportProviders,
@@ -9,9 +9,21 @@ import {
 } from './playlistImport.js'
 import { createDemoPlaylistProvider } from './demoPlaylistProvider.js'
 
+const temporaryDirectories: string[] = []
+
+async function createTemporaryDirectory(): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), 'nextdj-playlist-import-'))
+  temporaryDirectories.push(directory)
+  return directory
+}
+
+afterEach(async () => {
+  await Promise.all(temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })))
+})
+
 describe('playlist import registry', () => {
   it('returns no plugin paths when config is missing or empty', async () => {
-    const tempDir = await mkdtemp(join(tmpdir(), 'nextdj-playlist-import-'))
+    const tempDir = await createTemporaryDirectory()
     const configPath = join(tempDir, 'playlist-plugins.json')
 
     await expect(readPlaylistPluginPaths(configPath)).resolves.toEqual([])
@@ -21,7 +33,7 @@ describe('playlist import registry', () => {
   })
 
   it('resolves relative plugin paths from the config directory', async () => {
-    const tempDir = await mkdtemp(join(tmpdir(), 'nextdj-playlist-import-'))
+    const tempDir = await createTemporaryDirectory()
     const configPath = join(tempDir, 'playlist-plugins.json')
 
     await writeFile(configPath, JSON.stringify({ plugins: ['./plugins/demo.mjs'] }))
@@ -46,6 +58,33 @@ describe('playlist import registry', () => {
     expect(providers[0].id).toBe('fixture')
   })
 
+  it('isolates plugin load and validation failures', async () => {
+    const brokenPlugin = `data:text/javascript,${encodeURIComponent(`throw new Error('broken plugin')`)}`
+    const missingCanHandle = `data:text/javascript,${encodeURIComponent(`
+      export default {
+        id: 'invalid',
+        displayName: 'Invalid',
+        listTracks: async () => [],
+        resolveTrack: async () => ({ file: null, outputDirectory: '' })
+      }
+    `)}`
+    const validPlugin = `data:text/javascript,${encodeURIComponent(`
+      export default {
+        id: 'valid',
+        displayName: 'Valid',
+        canHandle: () => true,
+        listTracks: async () => [],
+        resolveTrack: async () => ({ file: null, outputDirectory: '' })
+      }
+    `)}`
+    const onError = vi.fn()
+
+    const providers = await loadPlaylistImportProviders([brokenPlugin, missingCanHandle, validPlugin], onError)
+
+    expect(providers.map((provider) => provider.id)).toEqual(['valid'])
+    expect(onError).toHaveBeenCalledTimes(2)
+  })
+
   it('lists tracks through the first provider that can handle the input', async () => {
     const registry = createPlaylistImportRegistry([createDemoPlaylistProvider()])
 
@@ -60,11 +99,48 @@ describe('playlist import registry', () => {
     ])
   })
 
-  it('rejects unknown providers and duplicate provider ids', async () => {
+  it('rejects unknown providers and isolates duplicate provider ids', async () => {
     const provider = createDemoPlaylistProvider()
-    const registry = createPlaylistImportRegistry([provider])
+    const onError = vi.fn()
+    const registry = createPlaylistImportRegistry([provider, provider], onError)
 
     await expect(registry.resolveTrack('missing', 'track')).rejects.toThrow('Unknown playlist import provider.')
-    expect(() => createPlaylistImportRegistry([provider, provider])).toThrow('Duplicate playlist import provider id')
+    expect(registry.listProviders()).toHaveLength(1)
+    expect(onError).toHaveBeenCalledWith('registration', provider.id, expect.any(Error))
+  })
+
+  it('falls through to another matching provider after an isolated failure', async () => {
+    const onError = vi.fn()
+    const failingProvider = {
+      ...createDemoPlaylistProvider(),
+      id: 'failing',
+      priority: 10,
+      listTracks: vi.fn(async () => {
+        throw new Error('remote unavailable')
+      })
+    }
+    const fallbackProvider = {
+      ...createDemoPlaylistProvider(),
+      id: 'fallback'
+    }
+    const registry = createPlaylistImportRegistry([fallbackProvider, failingProvider], onError)
+
+    await expect(registry.listTracks('demo:playlist')).resolves.toMatchObject([{ providerId: 'fallback' }])
+    expect(failingProvider.listTracks).toHaveBeenCalled()
+    expect(onError).toHaveBeenCalledWith('listTracks', 'failing', expect.any(Error))
+  })
+
+  it('rejects malformed provider metadata before IPC', async () => {
+    const onError = vi.fn()
+    const provider = {
+      ...createDemoPlaylistProvider(),
+      listTracks: vi.fn(async () => [
+        { id: 'one', title: { invalid: true }, duration: 1, externalRef: 'one' }
+      ])
+    }
+    const registry = createPlaylistImportRegistry([provider as never], onError)
+
+    await expect(registry.listTracks('demo:playlist')).rejects.toThrow('could not list tracks')
+    expect(onError).toHaveBeenCalledWith('listTracks', provider.id, expect.any(Error))
   })
 })

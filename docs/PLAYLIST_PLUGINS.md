@@ -24,14 +24,15 @@ A plugin is an ESM module that exports one provider, a default provider, or a `p
 export interface PlaylistImportProvider {
   id: string
   displayName: string
-  canHandle?: (input: string) => boolean | Promise<boolean>
-  listTracks: (input: string) => Promise<Array<{
+  priority?: number
+  canHandle: (input: string, context?: { signal: AbortSignal }) => boolean | Promise<boolean>
+  listTracks: (input: string, context?: { signal: AbortSignal }) => Promise<Array<{
     id: string
     title: string
     duration: number
     externalRef: string
   }>>
-  resolveTrack: (externalRef: string) => Promise<{
+  resolveTrack: (externalRef: string, context?: { signal: AbortSignal }) => Promise<{
     file: {
       data: ArrayBuffer
       name: string
@@ -44,6 +45,16 @@ export interface PlaylistImportProvider {
 ```
 
 Provider ids must be stable and match `^[a-z0-9][a-z0-9._-]*$`.
+`canHandle` is required so one generic provider cannot capture every input.
+Higher `priority` values are considered first; providers with the same priority
+keep their configuration order.
+
+Core validates and canonicalizes every provider response. A single playlist may
+contain at most 5,000 tracks, track strings and the complete serialized response
+have bounded sizes, durations must be finite and between zero and 24 hours, and
+resolved files may not exceed 512 MiB. Provider operations receive an abort
+signal and are subject to timeouts. Providers should stop network and file work
+promptly when that signal is aborted.
 
 ## Demo Provider
 

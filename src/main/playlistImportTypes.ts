@@ -7,9 +7,17 @@ import type {
 export interface PlaylistImportProvider {
   id: string
   displayName: string
-  canHandle?: (input: string) => boolean | Promise<boolean>
-  listTracks: (input: string) => Promise<Array<Omit<PlaylistImportTrack, 'providerId'>>>
-  resolveTrack: (externalRef: string) => Promise<PlaylistImportResolvedFile>
+  priority?: number
+  canHandle: (input: string, context?: PlaylistImportOperationContext) => boolean | Promise<boolean>
+  listTracks: (
+    input: string,
+    context?: PlaylistImportOperationContext
+  ) => Promise<Array<Omit<PlaylistImportTrack, 'providerId'>>>
+  resolveTrack: (externalRef: string, context?: PlaylistImportOperationContext) => Promise<PlaylistImportResolvedFile>
+}
+
+export interface PlaylistImportOperationContext {
+  signal: AbortSignal
 }
 
 export type PlaylistImportPluginExport =
