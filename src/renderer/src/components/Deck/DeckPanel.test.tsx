@@ -134,6 +134,15 @@ describe('DeckPanel', () => {
     expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled()
   })
 
+  it('shows dismissible deck loading errors', () => {
+    const onDismissError = vi.fn()
+    renderDeck({ errorMessage: 'Decoder rejected this file.', onDismissError })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Decoder rejected this file.')
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss deck A error' }))
+    expect(onDismissError).toHaveBeenCalledTimes(1)
+  })
+
   it('routes seek, jog and active loop controls', () => {
     const onJogBend = vi.fn()
     const onLoopExit = vi.fn()

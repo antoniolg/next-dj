@@ -1,5 +1,5 @@
 import { memo, useCallback, useState } from 'react'
-import { FolderOpen, Pause, Play } from 'lucide-react'
+import { FolderOpen, Pause, Play, X } from 'lucide-react'
 import { MAX_PITCH_PERCENT } from '../../audio/deck'
 import type { LoopState } from '../../audio/deckTypes'
 import { Overview } from '../Waveform/Overview'
@@ -17,6 +17,7 @@ interface DeckPanelProps {
   isPlaying: boolean
   isLoading: boolean
   loadingMessage?: string
+  errorMessage?: string
   pitch: number
   bpm: number
   firstBeatOffset: number
@@ -39,6 +40,7 @@ interface DeckPanelProps {
   onLoopExit: () => void
   onAutoLoop: (beats: number) => void
   onSeek: (seconds: number) => void
+  onDismissError?: () => void
 }
 
 const PITCH_SCALE = { count: 17, majorEvery: 2 }
@@ -75,6 +77,7 @@ export const DeckPanel = memo(function DeckPanel({
   isPlaying,
   isLoading,
   loadingMessage,
+  errorMessage,
   pitch,
   bpm,
   firstBeatOffset,
@@ -96,7 +99,8 @@ export const DeckPanel = memo(function DeckPanel({
   onJogBend,
   onLoopExit,
   onAutoLoop,
-  onSeek
+  onSeek,
+  onDismissError
 }: DeckPanelProps): JSX.Element {
   const remaining = Math.max(0, duration - position)
   const hasTrack = duration > 0
@@ -204,6 +208,15 @@ export const DeckPanel = memo(function DeckPanel({
         <div className="deck-loading-overlay" role="status" aria-live="polite">
           <span className="deck-loading-spinner" aria-hidden="true" />
           <span>{loadingMessage ?? 'Loading track...'}</span>
+        </div>
+      ) : null}
+
+      {errorMessage ? (
+        <div className="deck-error" role="alert">
+          <span>{errorMessage}</span>
+          <button aria-label={`Dismiss deck ${deckId} error`} type="button" onClick={onDismissError}>
+            <X aria-hidden="true" size={13} />
+          </button>
         </div>
       ) : null}
 

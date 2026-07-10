@@ -122,6 +122,8 @@ vi.mock('./hooks/useRecorder', () => ({
 vi.mock('./hooks/useDeckLoading', () => ({
   useDeckLoading: () => ({
     loadingDecks: { A: null, B: null },
+    deckErrors: {},
+    clearDeckError: vi.fn(),
     loadFileToDeck: vi.fn(),
     loadLibraryTrack: vi.fn(),
     loadLibraryTrackById: vi.fn()

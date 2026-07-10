@@ -57,13 +57,14 @@ export function App(): JSX.Element {
     getTrack
   } = useLibrary()
   const recorder = useRecorder(engine)
-  const { loadingDecks, loadFileToDeck, loadLibraryTrack, loadLibraryTrackById } = useDeckLoading({
-    libraryReady,
-    addFiles,
-    resolveTrackFile,
-    getTrack,
-    loadTrack
-  })
+  const { loadingDecks, deckErrors, clearDeckError, loadFileToDeck, loadLibraryTrack, loadLibraryTrackById } =
+    useDeckLoading({
+      libraryReady,
+      addFiles,
+      resolveTrackFile,
+      getTrack,
+      loadTrack
+    })
 
   const getDeckAPosition = useCallback((): number => engine.deckA.getPosition(), [engine])
   const getDeckBPosition = useCallback((): number => engine.deckB.getPosition(), [engine])
@@ -147,6 +148,7 @@ export function App(): JSX.Element {
               isPlaying={decks.A.isPlaying}
               isLoading={Boolean(loadingDecks.A)}
               loadingMessage={loadingDecks.A}
+              errorMessage={deckErrors.A}
               loop={decks.A.loop}
               masterDeckId={masterDeckId}
               masterEffectiveBpm={masterDeckId ? decks[masterDeckId].effectiveBpm : 0}
@@ -164,6 +166,7 @@ export function App(): JSX.Element {
               onNudge={nudgeDeckA}
               onPitchChange={pitchDeckA}
               onSeek={seekDeckA}
+              onDismissError={() => clearDeckError('A')}
               onSync={syncDeckA}
               onTogglePlayback={togglePlaybackDeckA}
               onTrackDrop={trackDropDeckA}
@@ -203,6 +206,7 @@ export function App(): JSX.Element {
               isPlaying={decks.B.isPlaying}
               isLoading={Boolean(loadingDecks.B)}
               loadingMessage={loadingDecks.B}
+              errorMessage={deckErrors.B}
               loop={decks.B.loop}
               masterDeckId={masterDeckId}
               masterEffectiveBpm={masterDeckId ? decks[masterDeckId].effectiveBpm : 0}
@@ -220,6 +224,7 @@ export function App(): JSX.Element {
               onNudge={nudgeDeckB}
               onPitchChange={pitchDeckB}
               onSeek={seekDeckB}
+              onDismissError={() => clearDeckError('B')}
               onSync={syncDeckB}
               onTogglePlayback={togglePlaybackDeckB}
               onTrackDrop={trackDropDeckB}

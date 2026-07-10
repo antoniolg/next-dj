@@ -62,6 +62,40 @@
   animation: nextdj-loading-spin 0.8s linear infinite;
 }
 
+.deck-error {
+  position: absolute;
+  z-index: 9;
+  top: 3.2rem;
+  left: 50%;
+  display: flex;
+  max-width: calc(100% - 2rem);
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(251, 113, 133, 0.34);
+  border-radius: 7px;
+  background: rgba(69, 10, 10, 0.94);
+  color: #fecdd3;
+  font-size: 0.72rem;
+  padding: 0.42rem 0.55rem;
+  transform: translateX(-50%);
+}
+
+.deck-error span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-error button {
+  display: inline-flex;
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
 .deck-panel-empty .waveform-canvas,
 .deck-panel-empty .led-display {
   opacity: 0.92;
@@ -312,4 +346,3 @@
   cursor: pointer;
   touch-action: none;
 }
-

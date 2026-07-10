@@ -9,6 +9,7 @@ import type { LibraryTrack, ResolvedTrackFile } from './useLibrary'
 import type { DeckId } from '../app/engineTypes'
 
 type DeckLoadingState = Partial<Record<DeckId, string>>
+type DeckErrorState = Partial<Record<DeckId, string>>
 
 interface UseDeckLoadingOptions {
   libraryReady: boolean
@@ -41,11 +42,14 @@ export function useDeckLoading({
   loadTrack
 }: UseDeckLoadingOptions): {
   loadingDecks: DeckLoadingState
+  deckErrors: DeckErrorState
+  clearDeckError: (deckId: DeckId) => void
   loadFileToDeck: (deckId: DeckId, file: File) => Promise<void>
   loadLibraryTrack: (deckId: DeckId, track: LibraryTrack) => Promise<void>
   loadLibraryTrackById: (deckId: DeckId, trackId: string) => Promise<void>
 } {
   const [loadingDecks, setLoadingDecks] = useState<DeckLoadingState>({})
+  const [deckErrors, setDeckErrors] = useState<DeckErrorState>({})
   const restoredDecksRef = useRef(false)
   const operationIdsRef = useRef<Record<DeckId, number>>({ A: 0, B: 0 })
 
@@ -73,9 +77,26 @@ export function useDeckLoading({
     })
   }, [])
 
+  const setDeckError = useCallback((deckId: DeckId, message: string | null): void => {
+    setDeckErrors((current) => {
+      const next = { ...current }
+
+      if (message) {
+        next[deckId] = message
+      } else {
+        delete next[deckId]
+      }
+
+      return next
+    })
+  }, [])
+
+  const clearDeckError = useCallback((deckId: DeckId): void => setDeckError(deckId, null), [setDeckError])
+
   const loadFileToDeck = useCallback(
     async (deckId: DeckId, file: File): Promise<void> => {
       const operationId = beginOperation(deckId)
+      setDeckError(deckId, null)
       setDeckLoading(deckId, 'Analyzing audio...')
 
       try {
@@ -91,18 +112,23 @@ export function useDeckLoading({
         if (committed && track && isCurrentOperation(deckId, operationId)) {
           persistDeckTrack(deckId, track.id)
         }
+      } catch (error) {
+        if (isCurrentOperation(deckId, operationId)) {
+          setDeckError(deckId, error instanceof Error ? error.message : 'Could not load this track.')
+        }
       } finally {
         if (isCurrentOperation(deckId, operationId)) {
           setDeckLoading(deckId, null)
         }
       }
     },
-    [addFiles, beginOperation, isCurrentOperation, loadTrack, setDeckLoading]
+    [addFiles, beginOperation, isCurrentOperation, loadTrack, setDeckError, setDeckLoading]
   )
 
   const loadLibraryTrack = useCallback(
     async (deckId: DeckId, track: LibraryTrack): Promise<void> => {
       const operationId = beginOperation(deckId)
+      setDeckError(deckId, null)
       setDeckLoading(deckId, track.file ? 'Loading deck...' : 'Downloading audio...')
 
       try {
@@ -123,13 +149,17 @@ export function useDeckLoading({
         if (committed && isCurrentOperation(deckId, operationId)) {
           persistDeckTrack(deckId, track.id)
         }
+      } catch (error) {
+        if (isCurrentOperation(deckId, operationId)) {
+          setDeckError(deckId, error instanceof Error ? error.message : 'Could not load this track.')
+        }
       } finally {
         if (isCurrentOperation(deckId, operationId)) {
           setDeckLoading(deckId, null)
         }
       }
     },
-    [beginOperation, isCurrentOperation, loadTrack, resolveTrackFile, setDeckLoading]
+    [beginOperation, isCurrentOperation, loadTrack, resolveTrackFile, setDeckError, setDeckLoading]
   )
 
   const loadLibraryTrackById = useCallback(
@@ -165,5 +195,5 @@ export function useDeckLoading({
     }
   }, [getTrack, libraryReady, loadLibraryTrack])
 
-  return { loadingDecks, loadFileToDeck, loadLibraryTrack, loadLibraryTrackById }
+  return { loadingDecks, deckErrors, clearDeckError, loadFileToDeck, loadLibraryTrack, loadLibraryTrackById }
 }

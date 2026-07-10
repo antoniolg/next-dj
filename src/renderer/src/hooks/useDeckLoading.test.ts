@@ -115,6 +115,23 @@ describe('useDeckLoading', () => {
     expect(result.current.loadingDecks.A).toBeUndefined()
   })
 
+  it('surfaces typed deck load failures without leaving the deck pending', async () => {
+    const options = createOptions({
+      loadTrack: vi.fn().mockRejectedValue(new Error('Decoder rejected this file.'))
+    })
+    const { result } = renderHook(() => useDeckLoading(options))
+
+    await act(async () => {
+      await result.current.loadLibraryTrack('A', localTrack)
+    })
+
+    expect(result.current.loadingDecks.A).toBeUndefined()
+    expect(result.current.deckErrors.A).toBe('Decoder rejected this file.')
+
+    act(() => result.current.clearDeckError('A'))
+    expect(result.current.deckErrors.A).toBeUndefined()
+  })
+
   it('loads tracks by id when present', async () => {
     const options = createOptions()
     const { result } = renderHook(() => useDeckLoading(options))
