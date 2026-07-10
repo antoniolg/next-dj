@@ -5,11 +5,14 @@ Thanks for helping improve NextDJ.
 ## Development Setup
 
 ```bash
-npm install
+nvm use
+npm ci
 npm run dev
 ```
 
-Use npm for this repository because `package-lock.json` is committed.
+The supported Node and npm versions are pinned in `.nvmrc` and
+`package.json`. The repository rejects unsupported Node versions and uses the
+committed `package-lock.json` for reproducible installs.
 
 ## Quality Gate
 
