@@ -10,6 +10,7 @@ jobs:
   quality:
     name: Quality Gate
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -36,11 +37,37 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb libatk-bridge2.0-0 libgbm1 libgtk-3-0 libnss3
 
-      - name: Run check
-        run: npm run check
+      - name: Lint
+        run: npm run lint
 
-      - name: Run coverage
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests and coverage
         run: npm run test:coverage
 
-      - name: Smoke deck load performance snapshot
-        run: xvfb-run -a npm run perf:snapshot -- --scenario deck-load --wait-ms 1000
+      - name: Production build
+        run: npm run build
+
+      - name: Electron end-to-end smoke
+        run: xvfb-run -a npm run test:e2e:run -- --out artifacts/e2e/report.json
+
+      - name: Production performance gate
+        run: >-
+          xvfb-run -a node scripts/run-performance-gate.mjs
+          --scenario deck-load
+          --repetitions 3
+          --warmup-ms 1000
+          --wait-ms 500
+          --out artifacts/performance/deck-load.json
+
+      - name: Upload quality reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: quality-reports-${{ github.run_attempt }}
+          path: |
+            artifacts/
+            coverage/
+          if-no-files-found: warn
+          retention-days: 14
