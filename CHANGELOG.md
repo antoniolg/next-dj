@@ -5,6 +5,24 @@ All notable changes to NextDJ will be documented in this file.
 The format is based on Keep a Changelog, and this project uses Semantic
 Versioning once public releases begin.
 
+## [0.1.2] - 2026-07-10
+
+This release introduces assisted application updates. NextDJ remains unsigned
+software below version 1.0, so macOS and Windows may still show
+operating-system security warnings.
+
+### Added
+
+- Automatic checks for the latest stable GitHub Release at startup.
+- A dismissible in-app banner with the installed and available versions.
+- Architecture-specific download links for macOS and Windows, with a safe release-page fallback.
+- Silent offline behavior so update checks never interrupt playback or recording.
+
+### Security
+
+- Restricted update metadata and download URLs to the official NextDJ GitHub repository.
+- Kept URL selection in the main process behind fixed, parameter-free IPC channels.
+
 ## [0.1.1] - 2026-07-10
 
 NextDJ remains early, unsigned software. This release is published as a
