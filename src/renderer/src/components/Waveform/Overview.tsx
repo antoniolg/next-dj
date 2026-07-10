@@ -4,6 +4,7 @@ import { subscribeVisualFrame } from '../../performance/visualClock'
 import { hasCanvasFrameChanged, type CanvasFrameState } from './canvasFrameState'
 import type { WaveformData } from '../../audio/waveformData'
 import { getLowPeakAt, getPeakAt } from '../../audio/waveformData'
+import { getWaveformKeyboardSeekPosition } from './waveformKeyboard'
 
 const LOW_BAND_GAIN = 1.5
 
@@ -182,12 +183,31 @@ export function Overview({
     event.currentTarget.releasePointerCapture(event.pointerId)
   }, [])
 
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLCanvasElement>): void => {
+      const nextPosition = getWaveformKeyboardSeekPosition(event.key, getPosition(), duration, 5, 30)
+
+      if (nextPosition !== null) {
+        event.preventDefault()
+        onSeek(nextPosition)
+      }
+    },
+    [duration, getPosition, onSeek]
+  )
+
+  const currentPosition = clamp(getPosition(), 0, duration)
+
   return (
     <canvas
       ref={canvasRef}
       aria-label="Track overview waveform"
+      aria-valuemax={duration}
+      aria-valuemin={0}
+      aria-valuenow={currentPosition}
       className="waveform-canvas waveform-overview"
-      role="img"
+      role="slider"
+      tabIndex={duration > 0 ? 0 : -1}
+      onKeyDown={handleKeyDown}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}

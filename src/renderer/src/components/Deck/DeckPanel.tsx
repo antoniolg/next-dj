@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useRef, useState } from 'react'
 import { FolderOpen, Pause, Play, X } from 'lucide-react'
 import { MAX_PITCH_PERCENT } from '../../audio/deck'
 import type { LoopState } from '../../audio/deckTypes'
@@ -106,6 +106,7 @@ export const DeckPanel = memo(function DeckPanel({
   const hasTrack = duration > 0
   const [syncFlashing, setSyncFlashing] = useState(false)
   const [loopBeats, setLoopBeats] = useState<4 | 8>(8)
+  const cueKeyboardHeldRef = useRef(false)
   const isMaster = masterDeckId === deckId
   const hasMaster = masterDeckId !== null
   const deckRole = !hasTrack ? 'EMPTY' : isMaster ? 'MASTER' : hasMaster ? 'FOLLOW' : 'READY'
@@ -150,6 +151,36 @@ export const DeckPanel = memo(function DeckPanel({
       onCueUp()
     },
     [onCueUp]
+  )
+
+  const handleCueKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>): void => {
+      if ((event.key !== ' ' && event.key !== 'Enter') || event.repeat || cueKeyboardHeldRef.current) {
+        return
+      }
+
+      event.preventDefault()
+      cueKeyboardHeldRef.current = true
+      void onCueDown()
+    },
+    [onCueDown]
+  )
+
+  const releaseKeyboardCue = useCallback((): void => {
+    if (cueKeyboardHeldRef.current) {
+      cueKeyboardHeldRef.current = false
+      onCueUp()
+    }
+  }, [onCueUp])
+
+  const handleCueKeyUp = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>): void => {
+      if (event.key === ' ' || event.key === 'Enter') {
+        event.preventDefault()
+        releaseKeyboardCue()
+      }
+    },
+    [releaseKeyboardCue]
   )
 
   const handleSyncClick = useCallback((): void => {
@@ -352,6 +383,9 @@ export const DeckPanel = memo(function DeckPanel({
           disabled={isLoading || !hasTrack}
           title="CUE: set cue when stopped, hold to preview, or return to cue while playing"
           type="button"
+          onBlur={releaseKeyboardCue}
+          onKeyDown={handleCueKeyDown}
+          onKeyUp={handleCueKeyUp}
           onPointerCancel={handleCuePointerUp}
           onPointerDown={handleCuePointerDown}
           onPointerUp={handleCuePointerUp}

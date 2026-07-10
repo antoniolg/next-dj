@@ -71,10 +71,53 @@ export function JogWheel({
     dragRef.current = null
   }, [])
 
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>): void => {
+      if (duration <= 0) {
+        return
+      }
+
+      if (event.key === 'Home' || event.key === 'End') {
+        event.preventDefault()
+        onSeek(event.key === 'Home' ? 0 : duration)
+        return
+      }
+
+      const direction = event.key === 'ArrowUp' || event.key === 'ArrowRight' || event.key === 'PageUp' ? 1 : -1
+
+      if (event.key === 'PageUp' || event.key === 'PageDown') {
+        event.preventDefault()
+        onSeek(Math.min(Math.max(position + direction * 10, 0), duration))
+      } else if (
+        event.key === 'ArrowUp' ||
+        event.key === 'ArrowRight' ||
+        event.key === 'ArrowDown' ||
+        event.key === 'ArrowLeft'
+      ) {
+        event.preventDefault()
+
+        if (isPlaying) {
+          onBend(direction * 3)
+        } else {
+          onSeek(Math.min(Math.max(position + direction, 0), duration))
+        }
+      }
+    },
+    [duration, isPlaying, onBend, onSeek, position]
+  )
+
   return (
     <button
       aria-label={label}
+      aria-valuemax={duration}
+      aria-valuemin={0}
+      aria-valuenow={position}
+      aria-valuetext={`${Math.floor(position / 60)}:${Math.floor(position % 60)
+        .toString()
+        .padStart(2, '0')}`}
       className={`jog-wheel ${isPlaying && !dragRef.current ? 'jog-wheel-playing' : ''}`}
+      disabled={duration <= 0}
+      role="slider"
       style={
         {
           '--jog-accent': accent,
@@ -82,6 +125,7 @@ export function JogWheel({
         } as React.CSSProperties
       }
       type="button"
+      onKeyDown={handleKeyDown}
       onPointerCancel={clearDrag}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

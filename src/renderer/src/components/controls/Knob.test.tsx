@@ -17,7 +17,7 @@ describe('Knob', () => {
       />
     )
 
-    expect(screen.getByRole('button', { name: 'High EQ 3 dB' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'High EQ' })).toHaveAttribute('aria-valuetext', '3 dB')
     expect(screen.getByText('High EQ')).toBeInTheDocument()
   })
 
@@ -37,7 +37,7 @@ describe('Knob', () => {
       />
     )
 
-    fireEvent.doubleClick(screen.getByRole('button', { name: /Trim/ }))
+    fireEvent.doubleClick(screen.getByRole('slider', { name: 'Trim' }))
 
     expect(onChange).toHaveBeenCalledWith(0)
   })
@@ -58,7 +58,7 @@ describe('Knob', () => {
       />
     )
 
-    fireEvent.doubleClick(screen.getByRole('button', { name: /Trim/ }))
+    fireEvent.doubleClick(screen.getByRole('slider', { name: 'Trim' }))
 
     expect(onChange).not.toHaveBeenCalled()
   })
@@ -77,8 +77,35 @@ describe('Knob', () => {
       />
     )
 
-    fireEvent.pointerEnter(screen.getByRole('button', { name: 'Mid EQ -2 dB' }))
+    fireEvent.pointerEnter(screen.getByRole('slider', { name: 'Mid EQ' }))
 
     expect(screen.getByText('-2 dB')).toBeInTheDocument()
+  })
+
+  it('supports arrow, page and boundary keyboard controls', () => {
+    const onChange = vi.fn()
+    render(
+      <Knob
+        accent="#22d3ee"
+        defaultValue={0}
+        label="Trim"
+        max={2}
+        min={0}
+        step={0.1}
+        value={1}
+        onChange={onChange}
+      />
+    )
+    const slider = screen.getByRole('slider', { name: 'Trim' })
+
+    fireEvent.keyDown(slider, { key: 'ArrowUp' })
+    fireEvent.keyDown(slider, { key: 'PageDown' })
+    fireEvent.keyDown(slider, { key: 'Home' })
+    fireEvent.keyDown(slider, { key: 'End' })
+
+    expect(onChange).toHaveBeenNthCalledWith(1, 1.1)
+    expect(onChange).toHaveBeenNthCalledWith(2, 0)
+    expect(onChange).toHaveBeenNthCalledWith(3, 0)
+    expect(onChange).toHaveBeenNthCalledWith(4, 2)
   })
 })

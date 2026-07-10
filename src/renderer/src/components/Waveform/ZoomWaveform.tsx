@@ -4,6 +4,7 @@ import { subscribeVisualFrame } from '../../performance/visualClock'
 import { hasCanvasFrameChanged, type CanvasFrameState } from './canvasFrameState'
 import type { WaveformData } from '../../audio/waveformData'
 import { getLowPeakAt, getPeakAt } from '../../audio/waveformData'
+import { getWaveformKeyboardSeekPosition } from './waveformKeyboard'
 
 interface ZoomWaveformProps {
   accent: string
@@ -269,12 +270,38 @@ export function ZoomWaveform({
     event.currentTarget.releasePointerCapture(event.pointerId)
   }, [])
 
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLCanvasElement>): void => {
+      const beatSeconds = bpm > 0 ? 60 / bpm : 1
+      const nextPosition = getWaveformKeyboardSeekPosition(
+        event.key,
+        getPosition(),
+        duration,
+        beatSeconds,
+        beatSeconds * 4
+      )
+
+      if (nextPosition !== null) {
+        event.preventDefault()
+        onSeek(nextPosition)
+      }
+    },
+    [bpm, duration, getPosition, onSeek]
+  )
+
+  const currentPosition = clamp(getPosition(), 0, duration)
+
   return (
     <canvas
       ref={canvasRef}
       aria-label="Zoomed deck waveform"
+      aria-valuemax={duration}
+      aria-valuemin={0}
+      aria-valuenow={currentPosition}
       className="waveform-canvas waveform-zoom"
-      role="img"
+      role="slider"
+      tabIndex={duration > 0 ? 0 : -1}
+      onKeyDown={handleKeyDown}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerCancel={handlePointerCancel}

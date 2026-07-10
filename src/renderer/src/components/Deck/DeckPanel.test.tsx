@@ -159,4 +159,18 @@ describe('DeckPanel', () => {
     expect(onSeek).toHaveBeenCalledWith(12)
     expect(onLoopExit).toHaveBeenCalledTimes(1)
   })
+
+  it('supports momentary CUE from keyboard press through release', () => {
+    const onCueDown = vi.fn().mockResolvedValue(undefined)
+    const onCueUp = vi.fn()
+    renderDeck({ onCueDown, onCueUp })
+    const cue = screen.getByRole('button', { name: 'Cue' })
+
+    fireEvent.keyDown(cue, { key: ' ' })
+    fireEvent.keyDown(cue, { key: ' ', repeat: true })
+    fireEvent.keyUp(cue, { key: ' ' })
+
+    expect(onCueDown).toHaveBeenCalledTimes(1)
+    expect(onCueUp).toHaveBeenCalledTimes(1)
+  })
 })
