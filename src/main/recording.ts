@@ -96,7 +96,7 @@ export function registerRecordingIpc(): void {
     }
 
     const id = randomUUID()
-    const filePath = join(directory, timestampedRecordingFileName(options.extension))
+    const filePath = join(directory, timestampedRecordingFileName(options.extension, new Date(), id))
 
     sessions.set(id, {
       stream: createWriteStream(filePath),
