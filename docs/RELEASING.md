@@ -4,9 +4,10 @@ Use this checklist before cutting a public build.
 
 ## Current Release Policy
 
-Early NextDJ binaries are published as unsigned pre-releases. Do not present
-them as fully production-ready installers until signing and notarization are
-configured.
+NextDJ versions below `1.0.0` may be published as regular GitHub Releases so
+the latest downloads remain visible from the repository home page. They are
+still early, unsigned builds and must not be presented as fully
+production-ready installers until signing and notarization are configured.
 
 Release notes for unsigned builds must say:
 
@@ -60,12 +61,12 @@ The performance snapshots should report empty `longTasks` and `slowFrames`.
 
 ## Distribution
 
-GitHub Releases are built from version tags. For the first unsigned public
-build, prefer an alpha tag:
+GitHub Releases are built from version tags. Use a stable tag for the latest
+visible download, even while the project remains below `1.0.0`:
 
 ```bash
-git tag v0.1.0-alpha.1
-git push origin v0.1.0-alpha.1
+git tag v0.1.1
+git push origin v0.1.1
 ```
 
 The release workflow builds macOS, Windows, and Linux artifacts on native GitHub runners and attaches them to the GitHub Release.
@@ -95,18 +96,17 @@ npm run icons:generate
 ```
 
 Do not remove `mac.identity: null` until Developer ID signing and notarization
-are configured. Unsigned builds are acceptable for early pre-releases, but the
-release must be marked as a pre-release and describe the expected operating
-system warnings.
+are configured. Unsigned builds below `1.0.0` may be regular releases, but the
+release notes must describe the expected operating-system warnings.
 
 ## Public Release Checklist
 
 - Confirm `LICENSE`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `CHANGELOG.md` are present.
 - Confirm the changelog entry matches the tag being released.
-- Confirm `package.json` version and the Git tag are compatible, for example `0.1.0` and `v0.1.0-alpha.1`.
+- Confirm `package.json` version and the Git tag are compatible, for example `0.1.1` and `v0.1.1`.
 - Confirm release artifacts include app icons on macOS, Windows, and Linux.
 - Confirm `SHA256SUMS.txt` is attached to the GitHub Release.
-- Confirm the release is marked as a GitHub pre-release while binaries are unsigned.
+- Confirm tags without a hyphen publish as regular releases and tags with a hyphen publish as pre-releases.
 - Confirm the release notes mention that binaries are unsigned and may trigger operating-system warnings.
 - Confirm this repository contains no service-specific playlist import providers.
 - Confirm any private plugin repositories are not referenced by public docs, tests, or release notes.

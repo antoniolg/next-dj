@@ -20,7 +20,7 @@ devices, and record sessions from one focused desktop app.
 
 NextDJ is early software. The repository is public and usable for development,
 testing, and feedback, but the first downloadable builds are unsigned
-pre-releases.
+releases while the project remains below version 1.0.
 
 macOS and Windows may show security warnings or require an extra confirmation
 before opening the app. If you prefer to inspect everything first, build from
@@ -28,7 +28,7 @@ source.
 
 ## Downloads
 
-GitHub Releases are configured to publish:
+[GitHub Releases](https://github.com/antoniolg/next-dj/releases) provide:
 
 - macOS x64/arm64: `.dmg` and `.zip`
 - Windows x64: installer and portable `.exe`

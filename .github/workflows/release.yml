@@ -148,6 +148,7 @@ jobs:
         with:
           files: artifacts/*
           prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ !contains(github.ref_name, '-') }}
           body: |
             These early builds are unsigned. macOS and Windows may show security warnings.
             You can build from source if you prefer to inspect the app before running it.
