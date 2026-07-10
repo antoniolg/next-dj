@@ -1,7 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { JogWheel } from './JogWheel'
-import { getJogAngleDelta, getJogProgressDegrees, getJogSeekPosition } from './jogWheelMath'
+import {
+  getJogAngleDelta,
+  getJogInteractionMode,
+  getJogProgressDegrees,
+  getJogScrubPosition,
+  getJogSeekPosition
+} from './jogWheelMath'
 
 describe('JogWheel helpers', () => {
   it('wraps angle deltas across the 180 degree boundary', () => {
@@ -14,6 +20,14 @@ describe('JogWheel helpers', () => {
     expect(getJogSeekPosition(10, 90, 60)).toBe(11)
     expect(getJogSeekPosition(0, -90, 60)).toBe(0)
     expect(getJogSeekPosition(59, 360, 60)).toBe(60)
+  })
+
+  it('uses finer movement on the platter and distinguishes it from the rim', () => {
+    const rect = { top: 0, height: 100, left: 0, width: 100 }
+
+    expect(getJogScrubPosition(10, 100, 60)).toBe(10.5)
+    expect(getJogInteractionMode(50, 50, rect)).toBe('platter')
+    expect(getJogInteractionMode(98, 50, rect)).toBe('rim')
   })
 
   it('calculates clamped progress degrees', () => {
@@ -33,6 +47,7 @@ describe('JogWheel', () => {
         label="Deck A jog"
         position={30}
         onBend={vi.fn()}
+        onScrub={vi.fn()}
         onSeek={vi.fn()}
       />
     )
@@ -53,6 +68,7 @@ describe('JogWheel', () => {
         label="Deck A jog"
         position={30}
         onBend={onBend}
+        onScrub={vi.fn()}
         onSeek={onSeek}
       />
     )
@@ -71,6 +87,7 @@ describe('JogWheel', () => {
         label="Deck A jog"
         position={30}
         onBend={onBend}
+        onScrub={vi.fn()}
         onSeek={onSeek}
       />
     )
@@ -88,6 +105,7 @@ describe('JogWheel', () => {
         label="Deck A jog"
         position={30}
         onBend={vi.fn()}
+        onScrub={vi.fn()}
         onSeek={onSeek}
       />
     )
@@ -102,5 +120,37 @@ describe('JogWheel', () => {
     fireEvent.pointerMove(slider, { pointerId: 1, clientX: 50, clientY: 100, buttons: 1 })
 
     expect(onSeek).not.toHaveBeenCalled()
+  })
+
+  it('scrubs audibly from the platter and seeks silently from the rim while stopped', () => {
+    const onScrub = vi.fn()
+    const onSeek = vi.fn()
+    render(
+      <JogWheel
+        accent="#22d3ee"
+        duration={60}
+        isPlaying={false}
+        label="Deck A jog"
+        position={10}
+        onBend={vi.fn()}
+        onScrub={onScrub}
+        onSeek={onSeek}
+      />
+    )
+    const slider = screen.getByRole('slider', { name: 'Deck A jog' })
+
+    Object.assign(slider, {
+      getBoundingClientRect: () => ({ top: 0, height: 100, left: 0, width: 100 }),
+      setPointerCapture: vi.fn()
+    })
+    fireEvent.pointerDown(slider, { pointerId: 1, clientX: 75, clientY: 50, buttons: 1 })
+    fireEvent.pointerMove(slider, { pointerId: 1, clientX: 50, clientY: 75, buttons: 1 })
+    fireEvent.pointerUp(slider, { pointerId: 1 })
+
+    fireEvent.pointerDown(slider, { pointerId: 2, clientX: 100, clientY: 50, buttons: 1 })
+    fireEvent.pointerMove(slider, { pointerId: 2, clientX: 50, clientY: 100, buttons: 1 })
+
+    expect(onScrub).toHaveBeenCalledWith(10.45, 1)
+    expect(onSeek).toHaveBeenCalledWith(11)
   })
 })

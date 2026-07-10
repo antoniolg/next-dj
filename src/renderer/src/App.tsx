@@ -38,6 +38,7 @@ export function App(): JSX.Element {
     syncDeck,
     nudgeDeck,
     jogBend,
+    jogScrub,
     exitLoop,
     setAutoLoop,
     setTrim,
@@ -91,6 +92,14 @@ export function App(): JSX.Element {
   const cueUpDeckB = useCallback((): void => cueRelease('B'), [cueRelease])
   const jogBendDeckA = useCallback((degrees: number): void => jogBend('A', degrees), [jogBend])
   const jogBendDeckB = useCallback((degrees: number): void => jogBend('B', degrees), [jogBend])
+  const jogScrubDeckA = useCallback(
+    (seconds: number, direction: -1 | 1): void => jogScrub('A', seconds, direction),
+    [jogScrub]
+  )
+  const jogScrubDeckB = useCallback(
+    (seconds: number, direction: -1 | 1): void => jogScrub('B', seconds, direction),
+    [jogScrub]
+  )
   const loadFileToDeckA = useCallback((file: File): Promise<void> => loadFileToDeck('A', file), [loadFileToDeck])
   const loadFileToDeckB = useCallback((file: File): Promise<void> => loadFileToDeck('B', file), [loadFileToDeck])
   const loopExitDeckA = useCallback((): void => exitLoop('A'), [exitLoop])
@@ -222,6 +231,7 @@ export function App(): JSX.Element {
               onCueSet={cueSetDeckA}
               onCueUp={cueUpDeckA}
               onJogBend={jogBendDeckA}
+              onJogScrub={jogScrubDeckA}
               onLoad={loadFileToDeckA}
               onLoopExit={loopExitDeckA}
               onNudge={nudgeDeckA}
@@ -281,6 +291,7 @@ export function App(): JSX.Element {
               onCueSet={cueSetDeckB}
               onCueUp={cueUpDeckB}
               onJogBend={jogBendDeckB}
+              onJogScrub={jogScrubDeckB}
               onLoad={loadFileToDeckB}
               onLoopExit={loopExitDeckB}
               onNudge={nudgeDeckB}

@@ -29,6 +29,7 @@ import {
 import { EMPTY_HOT_CUES, type HotCue, type LoopState, type TrackMetadata } from './deckTypes'
 import { configureDeckSourceLoop, startDeckSource } from './deckSource'
 import { DeckTrackLoader, type DeckLoadAnalysis } from './deckTrackLoader'
+import { ScratchAudio } from './scratchAudio'
 
 export type { DeckLoadAnalysis } from './deckTrackLoader'
 export type { EqBand } from './deckChannel'
@@ -46,6 +47,7 @@ export class Deck {
   private readonly context: AudioContext
   private readonly channel: DeckChannel
   private readonly trackLoader: DeckTrackLoader
+  private readonly scratchAudio: ScratchAudio
 
   private buffer: AudioBuffer | null = null
   private source: AudioBufferSourceNode | null = null
@@ -73,6 +75,7 @@ export class Deck {
     this.context = context
     this.channel = new DeckChannel(context)
     this.trackLoader = new DeckTrackLoader(context)
+    this.scratchAudio = new ScratchAudio(context, this.channel.input)
     this.output = this.channel.output
     this.cueOutput = this.channel.cueOutput
   }
@@ -148,6 +151,16 @@ export class Deck {
     if (shouldRestart) {
       this.startSourceAt(nextOffset)
     }
+  }
+
+  scrubTo(seconds: number, direction: -1 | 1): void {
+    if (!this.buffer || this.started) {
+      return
+    }
+
+    this.transportIntent += 1
+    this.offsetSeconds = getLoopedPosition(this.clampPosition(seconds), this.loop)
+    this.scratchAudio.play(this.buffer, this.offsetSeconds, direction)
   }
 
   setPitch(percent: number): number {
@@ -315,6 +328,8 @@ export class Deck {
       return
     }
 
+    this.scratchAudio.stop()
+
     const { source, offsetSeconds: scheduledOffset, startContextTime } = startDeckSource({
       buffer: this.buffer,
       context: this.context,
@@ -396,6 +411,7 @@ export class Deck {
   }
 
   private stopSource(suppressEnded: boolean): void {
+    this.scratchAudio.stop()
     if (this.jogIntervalId !== null) {
       window.clearInterval(this.jogIntervalId)
       this.jogIntervalId = null

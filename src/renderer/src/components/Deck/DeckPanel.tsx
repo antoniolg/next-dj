@@ -39,6 +39,7 @@ interface DeckPanelProps {
   onSync: () => void
   onNudge: (direction: -1 | 1) => void
   onJogBend: (degrees: number) => void
+  onJogScrub: (seconds: number, direction: -1 | 1) => void
   onLoopExit: () => void
   onAutoLoop: (beats: number) => void
   onSeek: (seconds: number) => void
@@ -100,6 +101,7 @@ export const DeckPanel = memo(function DeckPanel({
   onSync,
   onNudge,
   onJogBend,
+  onJogScrub,
   onLoopExit,
   onAutoLoop,
   onSeek,
@@ -262,6 +264,7 @@ export const DeckPanel = memo(function DeckPanel({
               label={`Deck ${deckId} jog wheel`}
               position={position}
               onBend={onJogBend}
+              onScrub={onJogScrub}
               onSeek={onSeek}
             />
           ) : (

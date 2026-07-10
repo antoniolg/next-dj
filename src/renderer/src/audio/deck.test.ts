@@ -24,6 +24,11 @@ class FakeAudioParam {
     this.value = value
     this.values.push(value)
   }
+
+  linearRampToValueAtTime(value: number): void {
+    this.value = value
+    this.values.push(value)
+  }
 }
 
 class FakeAudioNode {
@@ -95,18 +100,29 @@ class FakeAudioContext {
     return source as unknown as AudioBufferSourceNode
   }
 
+  createBuffer(numberOfChannels: number, length: number, sampleRate: number): AudioBuffer {
+    return createBufferFromData(
+      Array.from({ length: numberOfChannels }, () => new Float32Array(length)),
+      sampleRate
+    )
+  }
+
   async decodeAudioData(): Promise<AudioBuffer> {
     return createBuffer(10)
   }
 }
 
 function createBuffer(duration: number): AudioBuffer {
+  return createBufferFromData([new Float32Array(duration * 100)], 100)
+}
+
+function createBufferFromData(channels: Float32Array[], sampleRate: number): AudioBuffer {
   return {
-    duration,
-    length: duration * 100,
-    numberOfChannels: 1,
-    sampleRate: 100,
-    getChannelData: () => new Float32Array(duration * 100)
+    duration: channels[0].length / sampleRate,
+    length: channels[0].length,
+    numberOfChannels: channels.length,
+    sampleRate,
+    getChannelData: (channel: number) => channels[channel]
   } as unknown as AudioBuffer
 }
 
@@ -167,6 +183,23 @@ describe('Deck', () => {
 
     expect(context.sources[1].starts[0].when).toBeCloseTo(2.02)
     expect(context.sources[1].starts[0].offset).toBe(4.01)
+  })
+
+  it('scrubs stopped audio in both directions without starting transport playback', async () => {
+    const { context, deck } = createDeck()
+    const samples = Float32Array.from({ length: 1000 }, (_, index) => index)
+    vi.spyOn(context, 'decodeAudioData').mockResolvedValueOnce(createBufferFromData([samples], 100))
+    await deck.loadFile(new ArrayBuffer(8), { bpm: 120, firstBeatOffset: 0 })
+
+    deck.scrubTo(4, 1)
+    deck.scrubTo(3.5, -1)
+
+    expect(deck.isPlaying).toBe(false)
+    expect(deck.getPosition()).toBe(3.5)
+    expect(context.sources).toHaveLength(2)
+    expect(context.sources[0].buffer?.getChannelData(0)[0]).toBe(400)
+    expect(context.sources[1].buffer?.getChannelData(0)[0]).toBe(349)
+    expect(context.sources[1].buffer?.getChannelData(0)[1]).toBe(348)
   })
 
   it('clamps pitch and applies it to the active source', async () => {

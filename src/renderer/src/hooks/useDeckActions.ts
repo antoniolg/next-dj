@@ -23,6 +23,7 @@ export interface DeckActions {
   syncDeck: (deckId: DeckId) => void
   nudgeDeck: (deckId: DeckId, direction: -1 | 1) => void
   jogBend: (deckId: DeckId, degrees: number) => void
+  jogScrub: (deckId: DeckId, seconds: number, direction: -1 | 1) => void
   triggerHotCue: (deckId: DeckId, index: number) => void
   clearHotCue: (deckId: DeckId, index: number) => void
   setLoopIn: (deckId: DeckId) => void
@@ -237,6 +238,13 @@ export function useDeckActions(
     [updateDeckSnapshot]
   )
 
+  const jogScrub = useCallback(
+    (deckId: DeckId, seconds: number, direction: -1 | 1): void => {
+      updateDeckSnapshot(deckId, (deck) => deck.scrubTo(seconds, direction))
+    },
+    [updateDeckSnapshot]
+  )
+
   const triggerHotCue = useCallback(
     (deckId: DeckId, index: number): void => {
       updateDeckSnapshot(deckId, (deck) => deck.triggerHotCue(index))
@@ -291,6 +299,7 @@ export function useDeckActions(
     syncDeck,
     nudgeDeck,
     jogBend,
+    jogScrub,
     triggerHotCue,
     clearHotCue,
     setLoopIn,

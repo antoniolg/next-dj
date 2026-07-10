@@ -1,6 +1,13 @@
 import { useCallback, useRef, useState } from 'react'
 import { NextDjMark } from './NextDjMark'
-import { getJogAngleDelta, getJogProgressDegrees, getJogSeekPosition } from './jogWheelMath'
+import {
+  getJogAngleDelta,
+  getJogInteractionMode,
+  getJogProgressDegrees,
+  getJogScrubPosition,
+  getJogSeekPosition,
+  type JogInteractionMode
+} from './jogWheelMath'
 import { hasReleasedPointerButtons, useCancelDragOnWindowBlur } from './usePointerDragSafety'
 
 interface JogWheelProps {
@@ -10,6 +17,7 @@ interface JogWheelProps {
   accent: string
   label: string
   onBend: (degrees: number) => void
+  onScrub: (seconds: number, direction: -1 | 1) => void
   onSeek: (seconds: number) => void
 }
 
@@ -27,9 +35,11 @@ export function JogWheel({
   accent,
   label,
   onBend,
+  onScrub,
   onSeek
 }: JogWheelProps): JSX.Element {
-  const dragRef = useRef<{ angle: number; position: number } | null>(null)
+  const dragRef = useRef<{ angle: number; mode: JogInteractionMode; position: number } | null>(null)
+  const [dragMode, setDragMode] = useState<JogInteractionMode | null>(null)
   const [dragRotation, setDragRotation] = useState(0)
   const rotation = dragRef.current ? dragRotation : position * 150
   const progressDegrees = getJogProgressDegrees(position, duration)
@@ -37,7 +47,13 @@ export function JogWheel({
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>): void => {
       event.currentTarget.setPointerCapture(event.pointerId)
-      dragRef.current = { angle: pointerAngle(event), position }
+      const mode = getJogInteractionMode(
+        event.clientX,
+        event.clientY,
+        event.currentTarget.getBoundingClientRect()
+      )
+      dragRef.current = { angle: pointerAngle(event), mode, position }
+      setDragMode(mode)
       setDragRotation(position * 150)
     },
     [position]
@@ -45,6 +61,7 @@ export function JogWheel({
 
   const clearDrag = useCallback((): void => {
     dragRef.current = null
+    setDragMode(null)
   }, [])
 
   const handlePointerMove = useCallback(
@@ -62,19 +79,26 @@ export function JogWheel({
       const delta = getJogAngleDelta(dragRef.current.angle, nextAngle)
 
       if (isPlaying) {
-        dragRef.current = { angle: nextAngle, position: dragRef.current.position }
+        dragRef.current = { angle: nextAngle, mode: dragRef.current.mode, position: dragRef.current.position }
         setDragRotation((current: number) => current + delta)
         onBend(delta)
         return
       }
 
-      const nextPosition = getJogSeekPosition(dragRef.current.position, delta, duration)
+      const isPlatter = dragRef.current.mode === 'platter'
+      const nextPosition = isPlatter
+        ? getJogScrubPosition(dragRef.current.position, delta, duration)
+        : getJogSeekPosition(dragRef.current.position, delta, duration)
 
-      dragRef.current = { angle: nextAngle, position: nextPosition }
+      dragRef.current = { angle: nextAngle, mode: dragRef.current.mode, position: nextPosition }
       setDragRotation((current: number) => current + delta)
-      onSeek(nextPosition)
+      if (isPlatter && delta !== 0) {
+        onScrub(nextPosition, delta > 0 ? 1 : -1)
+      } else {
+        onSeek(nextPosition)
+      }
     },
-    [clearDrag, duration, isPlaying, onBend, onSeek]
+    [clearDrag, duration, isPlaying, onBend, onScrub, onSeek]
   )
 
   useCancelDragOnWindowBlur(clearDrag)
@@ -123,7 +147,7 @@ export function JogWheel({
       aria-valuetext={`${Math.floor(position / 60)}:${Math.floor(position % 60)
         .toString()
         .padStart(2, '0')}`}
-      className={`jog-wheel ${isPlaying && !dragRef.current ? 'jog-wheel-playing' : ''}`}
+      className={`jog-wheel ${isPlaying && !dragRef.current ? 'jog-wheel-playing' : ''} ${dragMode ? `jog-wheel-${dragMode}-dragging` : ''}`}
       disabled={duration <= 0}
       role="slider"
       style={
