@@ -271,6 +271,7 @@ export const DeckPanel = memo(function DeckPanel({
           {hasTrack ? (
             <JogWheel
               accent={accent}
+              artworkUrl={artworkUrl}
               duration={duration}
               isPlaying={isPlaying}
               label={`Deck ${deckId} jog wheel`}

@@ -16,6 +16,7 @@ interface JogWheelProps {
   isPlaying: boolean
   accent: string
   label: string
+  artworkUrl?: string
   onBend: (degrees: number) => void
   onScratchEnd: () => void
   onScratchStart: () => number
@@ -36,6 +37,7 @@ export function JogWheel({
   isPlaying,
   accent,
   label,
+  artworkUrl,
   onBend,
   onScratchEnd,
   onScratchStart,
@@ -176,7 +178,9 @@ export function JogWheel({
       <span aria-hidden="true" className="jog-arc" />
       <span aria-hidden="true" className="jog-ticks" />
       <span className="jog-rotor" style={{ transform: `rotate(${rotation}deg)` }}>
-        <span className="jog-platter" />
+        <span className="jog-platter">
+          {artworkUrl ? <img alt="" className="jog-platter-artwork" src={artworkUrl} /> : null}
+        </span>
         <span className="jog-cap">
           <NextDjMark className="jog-logo" />
         </span>
