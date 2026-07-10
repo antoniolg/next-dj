@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { getMasterBeatIndex } from './app/masterBeat'
 import { DeckPanel } from './components/Deck/DeckPanel'
@@ -7,6 +7,7 @@ import { MixerPanel } from './components/Mixer/MixerPanel'
 import { SettingsPanel } from './components/Settings/SettingsPanel'
 import { useAppShortcuts } from './hooks/useAppShortcuts'
 import { useDeckLoading } from './hooks/useDeckLoading'
+import { useDialogFocus } from './hooks/useDialogFocus'
 import { useEngine } from './hooks/useEngine'
 import { useLibrary } from './hooks/useLibrary'
 import { useRecorder } from './hooks/useRecorder'
@@ -72,6 +73,8 @@ export function App(): JSX.Element {
   const closeSettings = useCallback((): void => setSettingsOpen(false), [])
   const openShortcuts = useCallback((): void => setShortcutsOpen(true), [])
   const closeShortcuts = useCallback((): void => setShortcutsOpen(false), [])
+  const shortcutsDialogRef = useRef<HTMLDivElement>(null)
+  const shortcutsCloseButtonRef = useRef<HTMLButtonElement>(null)
   const autoLoopDeckA = useCallback((beats: number): void => setAutoLoop('A', beats), [setAutoLoop])
   const autoLoopDeckB = useCallback((beats: number): void => setAutoLoop('B', beats), [setAutoLoop])
   const cueDownDeckA = useCallback((): Promise<void> => cuePress('A'), [cuePress])
@@ -100,6 +103,13 @@ export function App(): JSX.Element {
   const trackDropDeckB = useCallback((trackId: string): Promise<void> => loadLibraryTrackById('B', trackId), [
     loadLibraryTrackById
   ])
+
+  useDialogFocus({
+    open: shortcutsOpen,
+    containerRef: shortcutsDialogRef,
+    initialFocusRef: shortcutsCloseButtonRef,
+    onClose: closeShortcuts
+  })
 
   useEffect(() => {
     document.title = 'NextDJ'
@@ -258,14 +268,25 @@ export function App(): JSX.Element {
       />
 
       {shortcutsOpen ? (
-        <div className="shortcut-overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
-          <div className="shortcut-card">
+        <div className="shortcut-overlay" onClick={closeShortcuts}>
+          <div
+            ref={shortcutsDialogRef}
+            aria-labelledby="shortcuts-title"
+            aria-modal="true"
+            className="shortcut-card"
+            role="dialog"
+            tabIndex={-1}
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="micro-label">Keyboard</p>
-                <h2 className="text-xl font-bold text-white">Shortcuts</h2>
+                <h2 className="text-xl font-bold text-white" id="shortcuts-title">
+                  Shortcuts
+                </h2>
               </div>
               <button
+                ref={shortcutsCloseButtonRef}
                 aria-label="Close keyboard shortcuts"
                 className="icon-button"
                 type="button"

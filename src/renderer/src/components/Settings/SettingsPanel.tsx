@@ -1,7 +1,8 @@
-import { memo } from 'react'
+import { memo, useRef } from 'react'
 import { Headphones, RefreshCw, Volume2, X } from 'lucide-react'
 import type { OutputDeviceInfo } from '../../audio/output'
 import type { OutputRouteState } from '../../app/engineTypes'
+import { useDialogFocus } from '../../hooks/useDialogFocus'
 
 interface SettingsPanelProps {
   open: boolean
@@ -26,6 +27,16 @@ export const SettingsPanel = memo(function SettingsPanel({
   onCueDeviceChange,
   onRefreshDevices
 }: SettingsPanelProps): JSX.Element | null {
+  const panelRef = useRef<HTMLElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useDialogFocus({
+    open,
+    containerRef: panelRef,
+    initialFocusRef: closeButtonRef,
+    onClose
+  })
+
   if (!open) {
     return null
   }
@@ -33,15 +44,29 @@ export const SettingsPanel = memo(function SettingsPanel({
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={onClose}>
       <aside
+        ref={panelRef}
+        aria-labelledby="settings-title"
+        aria-modal="true"
         className="settings-panel ml-auto flex h-full w-full max-w-md flex-col p-6 text-slate-100 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        tabIndex={-1}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="micro-label">Routing</p>
-            <h2 className="text-xl font-bold">Output Devices</h2>
+            <h2 className="text-xl font-bold" id="settings-title">
+              Output Devices
+            </h2>
           </div>
-          <button aria-label="Close settings" className="icon-button" title="Close" type="button" onClick={onClose}>
+          <button
+            ref={closeButtonRef}
+            aria-label="Close settings"
+            className="icon-button"
+            title="Close"
+            type="button"
+            onClick={onClose}
+          >
             <X size={15} strokeWidth={2.4} />
           </button>
         </div>
