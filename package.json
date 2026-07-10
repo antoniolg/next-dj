@@ -27,6 +27,7 @@
     "release:checksums": "node scripts/generate-release-checksums.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "npm run build && node scripts/run-electron-smoke.mjs",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
     "typecheck": "tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json"
   },

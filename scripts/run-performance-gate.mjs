@@ -1,10 +1,10 @@
-/* global clearTimeout, process, setTimeout */
-import { spawn } from 'node:child_process'
+/* global process */
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { evaluatePerformanceSnapshots, PERFORMANCE_BUDGETS } from './lib/performance-budget.mjs'
+import { runPerformanceCapture } from './lib/run-performance-capture.mjs'
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -21,33 +21,6 @@ function readNonNegativeInteger(name, fallback) {
   }
 
   return value
-}
-
-function runCapture(args, timeoutMs) {
-  return new Promise((resolveRun, rejectRun) => {
-    const child = spawn(process.execPath, [join(PROJECT_ROOT, 'scripts/capture-renderer-perf.mjs'), ...args], {
-      cwd: PROJECT_ROOT,
-      stdio: ['ignore', 'ignore', 'inherit']
-    })
-    const timeout = setTimeout(() => {
-      child.kill('SIGTERM')
-      rejectRun(new Error(`Performance capture exceeded ${timeoutMs}ms.`))
-    }, timeoutMs)
-
-    child.once('error', (error) => {
-      clearTimeout(timeout)
-      rejectRun(error)
-    })
-    child.once('exit', (code, signal) => {
-      clearTimeout(timeout)
-
-      if (code === 0) {
-        resolveRun()
-      } else {
-        rejectRun(new Error(`Performance capture failed with ${signal ?? `exit code ${code}`}.`))
-      }
-    })
-  })
 }
 
 const scenario = readOption('--scenario', 'deck-load')
@@ -71,7 +44,7 @@ const snapshots = []
 try {
   for (let index = 0; index < repetitions; index += 1) {
     const capturePath = join(temporaryDirectory, `run-${index + 1}.json`)
-    await runCapture(
+    await runPerformanceCapture(
       [
         '--scenario',
         scenario,
