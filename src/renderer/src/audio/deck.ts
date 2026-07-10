@@ -1,8 +1,6 @@
-import { computeWaveformData, type WaveformData } from './waveformData'
-import { measureAsync, measureSync } from '../performance/perfMarks'
-import { readCachedFileBuffer } from './audioFileCache'
-import { detectBpm } from './bpm'
+import type { WaveformData } from './waveformData'
 import { clearHotCueState, triggerHotCueState } from './deckHotCues'
+import { DeckChannel, type EqBand } from './deckChannel'
 import {
   createAutoLoopState,
   createEmptyLoop,
@@ -19,10 +17,7 @@ import {
 } from './deckPersistence'
 import {
   calculateJogPlaybackRate,
-  clampEqDb,
   clampPitchPercent,
-  clampPositiveValue,
-  clampUnitValue,
   pitchPercentToRate
 } from './deckMath'
 import {
@@ -33,12 +28,10 @@ import {
 } from './deckTransport'
 import { EMPTY_HOT_CUES, type HotCue, type LoopState, type TrackMetadata } from './deckTypes'
 import { configureDeckSourceLoop, startDeckSource } from './deckSource'
+import { DeckTrackLoader, type DeckLoadAnalysis } from './deckTrackLoader'
 
-export type EqBand = 'low' | 'mid' | 'high'
-export interface DeckLoadAnalysis {
-  bpm: number
-  firstBeatOffset: number
-}
+export type { DeckLoadAnalysis } from './deckTrackLoader'
+export type { EqBand } from './deckChannel'
 
 const JOG_TICK_MS = 40
 
@@ -51,11 +44,8 @@ export class Deck {
   onEnded: (() => void) | null = null
 
   private readonly context: AudioContext
-  private readonly trimGain: GainNode
-  private readonly lowFilter: BiquadFilterNode
-  private readonly midFilter: BiquadFilterNode
-  private readonly highFilter: BiquadFilterNode
-  private readonly channelFader: GainNode
+  private readonly channel: DeckChannel
+  private readonly trackLoader: DeckTrackLoader
 
   private buffer: AudioBuffer | null = null
   private source: AudioBufferSourceNode | null = null
@@ -70,7 +60,6 @@ export class Deck {
   private jogIntervalId: number | null = null
   private jogLastFoldTime = 0
   private transportIntent = 0
-  private loadIntent = 0
   private persistenceKey = 'No track loaded'
 
   duration = 0
@@ -82,37 +71,10 @@ export class Deck {
 
   constructor(context: AudioContext) {
     this.context = context
-    this.output = context.createGain()
-    this.cueOutput = context.createGain()
-    this.trimGain = context.createGain()
-    this.lowFilter = context.createBiquadFilter()
-    this.midFilter = context.createBiquadFilter()
-    this.highFilter = context.createBiquadFilter()
-    this.channelFader = context.createGain()
-
-    this.trimGain.gain.value = 1
-    this.channelFader.gain.value = 1
-    this.output.gain.value = 1
-    this.cueOutput.gain.value = 1
-
-    this.lowFilter.type = 'lowshelf'
-    this.lowFilter.frequency.value = 320
-
-    this.midFilter.type = 'peaking'
-    this.midFilter.frequency.value = 1000
-    this.midFilter.Q.value = 1
-
-    this.highFilter.type = 'highshelf'
-    this.highFilter.frequency.value = 3200
-
-    this.trimGain
-      .connect(this.lowFilter)
-      .connect(this.midFilter)
-      .connect(this.highFilter)
-      .connect(this.channelFader)
-      .connect(this.output)
-
-    this.highFilter.connect(this.cueOutput)
+    this.channel = new DeckChannel(context)
+    this.trackLoader = new DeckTrackLoader(context)
+    this.output = this.channel.output
+    this.cueOutput = this.channel.cueOutput
   }
 
   get isPlaying(): boolean {
@@ -120,43 +82,21 @@ export class Deck {
   }
 
   async loadFile(file: File | ArrayBuffer, analysis?: DeckLoadAnalysis, persistenceKey?: string): Promise<boolean> {
-    const intent = ++this.loadIntent
-    const arrayBuffer =
-      file instanceof File ? await measureAsync('deck.loadFile.readFile', () => readCachedFileBuffer(file)) : file
-    const decoded = await measureAsync('deck.loadFile.decodeAudioData', () =>
-      this.context.decodeAudioData(arrayBuffer.slice(0))
-    )
+    const prepared = await this.trackLoader.prepare(file, analysis, persistenceKey)
 
-    if (intent !== this.loadIntent) {
-      return false
-    }
-
-    const waveform = measureSync('deck.loadFile.computeWaveform', () => computeWaveformData(decoded))
-    const { bpm, firstBeatOffset } =
-      analysis && analysis.bpm > 0 && Number.isFinite(analysis.bpm) && Number.isFinite(analysis.firstBeatOffset)
-        ? analysis
-        : await measureAsync('deck.loadFile.detectBpm', () => detectBpm(decoded))
-
-    if (intent !== this.loadIntent) {
+    if (!prepared) {
       return false
     }
 
     this.stop()
-    this.buffer = decoded
-    this.duration = decoded.duration
-    this.waveform = waveform
-    const trackName = file instanceof File ? file.name : 'Loaded audio'
-    const stablePersistenceKey = persistenceKey ?? trackName
-
-    this.metadata = {
-      name: trackName,
-      bpm,
-      firstBeatOffset
-    }
-    this.persistenceKey = stablePersistenceKey
-    migrateDeckPersistenceKey(trackName, stablePersistenceKey)
-    this.hotCues = loadHotCues(stablePersistenceKey, (seconds) => this.clampPosition(seconds))
-    this.cuePoint = loadCuePoint(stablePersistenceKey, (seconds) => this.clampPosition(seconds))
+    this.buffer = prepared.buffer
+    this.duration = prepared.duration
+    this.waveform = prepared.waveform
+    this.metadata = prepared.metadata
+    this.persistenceKey = prepared.persistenceKey
+    migrateDeckPersistenceKey(prepared.metadata.name, prepared.persistenceKey)
+    this.hotCues = loadHotCues(prepared.persistenceKey, (seconds) => this.clampPosition(seconds))
+    this.cuePoint = loadCuePoint(prepared.persistenceKey, (seconds) => this.clampPosition(seconds))
     this.loop = createEmptyLoop()
     return true
   }
@@ -341,17 +281,15 @@ export class Deck {
   }
 
   setEq(band: EqBand, dB: number): void {
-    const gain = clampEqDb(dB)
-    const filter = this.getEqFilter(band)
-    filter.gain.setValueAtTime(gain, this.context.currentTime)
+    this.channel.setEq(band, dB)
   }
 
   setTrim(value: number): void {
-    this.trimGain.gain.setValueAtTime(clampPositiveValue(value), this.context.currentTime)
+    this.channel.setTrim(value)
   }
 
   setChannelFader(value: number): void {
-    this.channelFader.gain.setValueAtTime(clampUnitValue(value), this.context.currentTime)
+    this.channel.setFader(value)
   }
 
   getPosition(): number {
@@ -380,7 +318,7 @@ export class Deck {
     const { source, offsetSeconds: scheduledOffset, startContextTime } = startDeckSource({
       buffer: this.buffer,
       context: this.context,
-      destination: this.trimGain,
+      destination: this.channel.input,
       duration: this.duration,
       offsetSeconds,
       playbackRate: this.playbackRate,
@@ -482,15 +420,4 @@ export class Deck {
     return clampDeckPosition(seconds, this.duration)
   }
 
-  private getEqFilter(band: EqBand): BiquadFilterNode {
-    if (band === 'low') {
-      return this.lowFilter
-    }
-
-    if (band === 'mid') {
-      return this.midFilter
-    }
-
-    return this.highFilter
-  }
 }
