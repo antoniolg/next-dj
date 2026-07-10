@@ -13,6 +13,7 @@ export interface ChannelState {
 export interface MixerState {
   crossfade: number
   cueMix: number
+  phonesVolume: number
   masterVolume: number
 }
 

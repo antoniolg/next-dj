@@ -48,6 +48,7 @@ export function useEngine(): {
   toggleCue: (deckId: DeckId) => void
   setCrossfade: (value: number) => void
   setCueMix: (value: number) => void
+  setPhonesVolume: (value: number) => void
   setMasterVolume: (value: number) => void
   setMasterDevice: (deviceId: string) => void
   setCueDevice: (deviceId: string) => void
@@ -116,6 +117,7 @@ export function useEngine(): {
       })
       engine.mixer.setCrossfade(persistedControls.mixer.crossfade)
       engine.mixer.setCueMix(persistedControls.mixer.cueMix)
+      engine.mixer.setPhonesGain(persistedControls.mixer.phonesVolume)
       engine.mixer.setMasterGain(persistedControls.mixer.masterVolume)
     }
 

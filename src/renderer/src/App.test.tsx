@@ -71,7 +71,7 @@ vi.mock('./hooks/useEngine', () => ({
       A: { trim: 1, eq: { high: 0, mid: 0, low: 0 }, volume: 1, cue: false },
       B: { trim: 1, eq: { high: 0, mid: 0, low: 0 }, volume: 1, cue: false }
     },
-    mixer: { crossfade: 0, cueMix: 0, masterVolume: 0.9 },
+    mixer: { crossfade: 0, cueMix: 0, phonesVolume: 1, masterVolume: 0.9 },
     output: {
       devices: [],
       master: { activeDeviceId: 'default', requestedDeviceId: 'default', pending: false, error: null },
@@ -95,6 +95,7 @@ vi.mock('./hooks/useEngine', () => ({
     toggleCue: vi.fn(),
     setCrossfade: vi.fn(),
     setCueMix: vi.fn(),
+    setPhonesVolume: vi.fn(),
     setMasterVolume: vi.fn(),
     setMasterDevice: vi.fn(),
     setCueDevice: vi.fn(),

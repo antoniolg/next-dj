@@ -13,6 +13,7 @@ export interface MixerActions {
   toggleCue: (deckId: DeckId) => void
   setCrossfade: (value: number) => void
   setCueMix: (value: number) => void
+  setPhonesVolume: (value: number) => void
   setMasterVolume: (value: number) => void
 }
 
@@ -123,6 +124,20 @@ export function useMixerActions(
     [engine, setMixer]
   )
 
+  const setPhonesVolume = useCallback(
+    (value: number): void => {
+      setMixer((current) => {
+        if (current.phonesVolume === value) {
+          return current
+        }
+
+        engine.mixer.setPhonesGain(value)
+        return { ...current, phonesVolume: value }
+      })
+    },
+    [engine, setMixer]
+  )
+
   return {
     setTrim,
     setEq,
@@ -130,6 +145,7 @@ export function useMixerActions(
     toggleCue,
     setCrossfade,
     setCueMix,
+    setPhonesVolume,
     setMasterVolume
   }
 }

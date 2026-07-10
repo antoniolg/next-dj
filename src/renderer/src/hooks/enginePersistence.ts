@@ -22,6 +22,7 @@ export const createChannelState = (): ChannelState => ({
 export const createMixerState = (): MixerState => ({
   crossfade: 0,
   cueMix: 0,
+  phonesVolume: 1,
   masterVolume: 0.9
 })
 
@@ -80,6 +81,7 @@ export function parsePersistedControls(rawValue: string | null): PersistedContro
       mixer: {
         crossfade: numberFromRecord(mixerRoot, 'crossfade', fallbackMixer.crossfade, -1, 1),
         cueMix: numberFromRecord(mixerRoot, 'cueMix', fallbackMixer.cueMix, 0, 1),
+        phonesVolume: numberFromRecord(mixerRoot, 'phonesVolume', fallbackMixer.phonesVolume, 0, 1),
         masterVolume: numberFromRecord(mixerRoot, 'masterVolume', fallbackMixer.masterVolume, 0, 1)
       },
       deckPitch: {

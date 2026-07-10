@@ -111,6 +111,10 @@ export class Mixer {
     this.masterGain.gain.setValueAtTime(clamp(value, 0, 1), this.context.currentTime)
   }
 
+  setPhonesGain(value: number): void {
+    this.cueOutputGain.gain.setValueAtTime(clamp(value, 0, 1), this.context.currentTime)
+  }
+
   setCue(channel: 'A' | 'B', on: boolean): void {
     const cueGain = channel === 'A' ? this.channelACueGain : this.channelBCueGain
     cueGain.gain.setValueAtTime(on ? 1 : 0, this.context.currentTime)

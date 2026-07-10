@@ -45,6 +45,7 @@ export function App(): JSX.Element {
     toggleCue,
     setCrossfade,
     setCueMix,
+    setPhonesVolume,
     setMasterVolume,
     setMasterDevice,
     setCueDevice,
@@ -306,10 +307,12 @@ export function App(): JSX.Element {
         devices={output.devices}
         deviceListError={output.deviceListError}
         master={output.master}
+        phonesVolume={mixer.phonesVolume}
         open={settingsOpen}
         onClose={closeSettings}
         onCueDeviceChange={setCueDevice}
         onMasterDeviceChange={setMasterDevice}
+        onPhonesVolumeChange={setPhonesVolume}
         onRefreshDevices={refreshOutputDevices}
       />
 

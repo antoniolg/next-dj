@@ -24,6 +24,7 @@ const initialChannels: Record<DeckId, ChannelState> = {
 const initialMixer: MixerState = {
   crossfade: 0.5,
   cueMix: 0.5,
+  phonesVolume: 0.7,
   masterVolume: 0.8
 }
 
@@ -41,6 +42,7 @@ function createEngine(): DJEngine {
       setCue: vi.fn(),
       setCrossfade: vi.fn(),
       setCueMix: vi.fn(),
+      setPhonesGain: vi.fn(),
       setMasterGain: vi.fn()
     }
   } as unknown as DJEngine
@@ -106,15 +108,18 @@ describe('useMixerActions', () => {
     act(() => {
       result.current.actions.setCrossfade(0.25)
       result.current.actions.setCueMix(0.75)
+      result.current.actions.setPhonesVolume(0.4)
       result.current.actions.setMasterVolume(0.6)
     })
 
     expect(engine.mixer.setCrossfade).toHaveBeenCalledWith(0.25)
     expect(engine.mixer.setCueMix).toHaveBeenCalledWith(0.75)
+    expect(engine.mixer.setPhonesGain).toHaveBeenCalledWith(0.4)
     expect(engine.mixer.setMasterGain).toHaveBeenCalledWith(0.6)
     expect(result.current.mixer).toEqual({
       crossfade: 0.25,
       cueMix: 0.75,
+      phonesVolume: 0.4,
       masterVolume: 0.6
     })
   })
@@ -130,6 +135,7 @@ describe('useMixerActions', () => {
       result.current.actions.setChannelVolume('A', initialChannels.A.volume)
       result.current.actions.setCrossfade(initialMixer.crossfade)
       result.current.actions.setCueMix(initialMixer.cueMix)
+      result.current.actions.setPhonesVolume(initialMixer.phonesVolume)
       result.current.actions.setMasterVolume(initialMixer.masterVolume)
     })
 
@@ -138,6 +144,7 @@ describe('useMixerActions', () => {
     expect(decks.A.setChannelFader).not.toHaveBeenCalled()
     expect(engine.mixer.setCrossfade).not.toHaveBeenCalled()
     expect(engine.mixer.setCueMix).not.toHaveBeenCalled()
+    expect(engine.mixer.setPhonesGain).not.toHaveBeenCalled()
     expect(engine.mixer.setMasterGain).not.toHaveBeenCalled()
     expect(result.current.channels).toBe(channels)
     expect(result.current.mixer).toBe(mixer)
