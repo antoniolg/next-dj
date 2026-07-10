@@ -79,4 +79,12 @@ describe('LibraryTrackTable', () => {
     expect(onFocusTrack).toHaveBeenCalledWith('local-1')
     expect(onRowKeyDown).toHaveBeenCalledWith(expect.anything(), tracks[0])
   })
+
+  it('announces when automatic keyboard loading is locked', () => {
+    renderTable({ keyboardLoadDeckId: null })
+
+    expect(
+      screen.getByLabelText('Local Track. Enter loading is locked until a deck is safely off-air')
+    ).toBeInTheDocument()
+  })
 })

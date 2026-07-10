@@ -6,7 +6,7 @@ import { formatBpm, formatTime } from './libraryPanelUtils'
 
 interface LibraryTrackTableProps {
   focusedTrackId: string | null
-  keyboardLoadDeckId: DeckId
+  keyboardLoadDeckId: DeckId | null
   rowRefs: MutableRefObject<Record<string, HTMLTableRowElement | null>>
   tracks: LibraryTrack[]
   onDragStart: (event: React.DragEvent<HTMLTableRowElement>, trackId: string) => void
@@ -68,7 +68,11 @@ export function LibraryTrackTable({
                 rowRefs.current[track.id] = element
               }}
               key={track.id}
-              aria-label={`${track.title}. Press Enter to load into deck ${keyboardLoadDeckId}`}
+              aria-label={
+                keyboardLoadDeckId
+                  ? `${track.title}. Press Enter to load into deck ${keyboardLoadDeckId}`
+                  : `${track.title}. Enter loading is locked until a deck is safely off-air`
+              }
               draggable
               tabIndex={focusedTrackId === track.id ? 0 : -1}
               onDragStart={(event) => onDragStart(event, track.id)}

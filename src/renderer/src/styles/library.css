@@ -61,6 +61,31 @@
   color: var(--text-dim);
 }
 
+.library-keyboard-target {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 0.24rem 0.42rem;
+  white-space: nowrap;
+}
+
+.library-keyboard-target-a {
+  color: var(--accent-a);
+}
+
+.library-keyboard-target-b {
+  color: var(--accent-b);
+}
+
+.library-keyboard-target-blocked {
+  color: #fda4af;
+}
+
 .led-load {
   flex: none;
   align-self: flex-start;
@@ -161,6 +186,20 @@
   background: transparent;
   color: inherit;
   cursor: pointer;
+}
+
+.library-load-warning {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 7px;
+  background: rgba(120, 53, 15, 0.2);
+  color: #fde68a;
+  font-size: 0.72rem;
+  padding: 0.38rem 0.5rem;
 }
 
 .library-table-wrap {

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { getMasterBeatIndex } from './app/masterBeat'
+import { getSafeCrateLoadTarget } from './app/safeCrateLoad'
 import { DeckPanel } from './components/Deck/DeckPanel'
 import { LibraryPanel } from './components/Library/LibraryPanel'
 import { MixerPanel } from './components/Mixer/MixerPanel'
@@ -144,6 +145,37 @@ export function App(): JSX.Element {
   const masterDeck = masterDeckId ? decks[masterDeckId] : null
   const masterAccent = masterDeckId === 'B' ? '#f59e0b' : '#22d3ee'
   const masterBeatIndex = getMasterBeatIndex(masterDeckId, decks)
+  const keyboardLoadDeckId = useMemo(
+    () =>
+      getSafeCrateLoadTarget({
+        crossfade: mixer.crossfade,
+        decks: {
+          A: {
+            hasTrack: decks.A.waveform !== null,
+            isLoading: Boolean(loadingDecks.A),
+            isPlaying: decks.A.isPlaying,
+            volume: channels.A.volume
+          },
+          B: {
+            hasTrack: decks.B.waveform !== null,
+            isLoading: Boolean(loadingDecks.B),
+            isPlaying: decks.B.isPlaying,
+            volume: channels.B.volume
+          }
+        }
+      }),
+    [
+      channels.A.volume,
+      channels.B.volume,
+      decks.A.isPlaying,
+      decks.A.waveform,
+      decks.B.isPlaying,
+      decks.B.waveform,
+      loadingDecks.A,
+      loadingDecks.B,
+      mixer.crossfade
+    ]
+  )
 
   return (
     <main className="flex h-screen flex-col overflow-hidden text-slate-100">
@@ -259,7 +291,7 @@ export function App(): JSX.Element {
             <LibraryPanel
               tracks={tracks}
               error={libraryError}
-              keyboardLoadDeckId={masterDeckId === 'A' ? 'B' : 'A'}
+              keyboardLoadDeckId={keyboardLoadDeckId}
               onAddFiles={addFiles}
               onAddPlaylistImportTracks={addPlaylistImportTracks}
               onDismissError={clearLibraryError}
@@ -336,7 +368,7 @@ export function App(): JSX.Element {
               <dt>K</dt>
               <dd>Expand or shrink the crate</dd>
               <dt>Enter</dt>
-              <dd>Load the focused crate track into the non-master deck</dd>
+              <dd>Load into the safe deck (blocked while both decks are audible)</dd>
               <dt>?</dt>
               <dd>Toggle this panel (Esc closes)</dd>
             </dl>

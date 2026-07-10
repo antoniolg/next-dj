@@ -10,7 +10,7 @@ import { usePlaylistImport } from './usePlaylistImport'
 interface LibraryPanelProps {
   tracks: LibraryTrack[]
   error: string | null
-  keyboardLoadDeckId: DeckId
+  keyboardLoadDeckId: DeckId | null
   onAddFiles: (files: File[] | FileList) => Promise<LibraryTrack[]>
   onAddPlaylistImportTracks: (importTracks: PlaylistImportTrack[]) => Promise<LibraryTrack[]>
   onDismissError: () => void
@@ -34,6 +34,7 @@ export const LibraryPanel = memo(function LibraryPanel({
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1')
   const [expanded, setExpanded] = useState(false)
   const [focusedTrackId, setFocusedTrackId] = useState<string | null>(null)
+  const [keyboardLoadWarning, setKeyboardLoadWarning] = useState(false)
   const [playlistImportOpen, setPlaylistImportOpen] = useState(false)
   const {
     handlePlaylistImport,
@@ -51,6 +52,12 @@ export const LibraryPanel = memo(function LibraryPanel({
   useEffect(() => {
     localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0')
   }, [collapsed])
+
+  useEffect(() => {
+    if (keyboardLoadDeckId) {
+      setKeyboardLoadWarning(false)
+    }
+  }, [keyboardLoadDeckId])
 
   const toggleExpanded = useCallback((): void => {
     setExpanded((current) => {
@@ -144,10 +151,24 @@ export const LibraryPanel = memo(function LibraryPanel({
 
   const loadTrackFromKeyboard = useCallback(
     (track: LibraryTrack): void => {
+      if (!keyboardLoadDeckId) {
+        setKeyboardLoadWarning(true)
+        return
+      }
+
+      setKeyboardLoadWarning(false)
       setExpanded(false)
       void onLoadTrack(keyboardLoadDeckId, track)
     },
     [keyboardLoadDeckId, onLoadTrack]
+  )
+
+  const loadTrackExplicitly = useCallback(
+    (deckId: DeckId, track: LibraryTrack): void => {
+      setKeyboardLoadWarning(false)
+      void onLoadTrack(deckId, track)
+    },
+    [onLoadTrack]
   )
 
   const handleRowKeyDown = useCallback(
@@ -240,6 +261,17 @@ export const LibraryPanel = memo(function LibraryPanel({
           <span className="library-info" title={`${tracks.length} tracks`}>
             <Info size={13} strokeWidth={2.2} />
           </span>
+          <span
+            aria-live="polite"
+            className={`library-keyboard-target ${keyboardLoadDeckId ? `library-keyboard-target-${keyboardLoadDeckId.toLowerCase()}` : 'library-keyboard-target-blocked'}`}
+            title={
+              keyboardLoadDeckId
+                ? `Enter loads into deck ${keyboardLoadDeckId}`
+                : 'Enter is locked until a deck is safely off-air'
+            }
+          >
+            Enter {keyboardLoadDeckId ? `→ ${keyboardLoadDeckId}` : 'locked'}
+          </span>
         </div>
         <div className="library-actions">
           {hasPlaylistImportProviders ? (
@@ -313,6 +345,13 @@ export const LibraryPanel = memo(function LibraryPanel({
             </div>
           ) : null}
 
+          {keyboardLoadWarning ? (
+            <div className="library-load-warning" role="status">
+              <AlertTriangle aria-hidden="true" size={14} />
+              <span>No safe deck is available. Move the crossfader, stop a deck, or wait for loading to finish.</span>
+            </div>
+          ) : null}
+
           <div className="library-table-wrap">
             {tracks.length === 0 ? (
               <div className="library-empty">
@@ -327,7 +366,7 @@ export const LibraryPanel = memo(function LibraryPanel({
                 tracks={tracks}
                 onDragStart={handleDragStart}
                 onFocusTrack={setFocusedTrackId}
-                onLoadTrack={(deckId, track) => void onLoadTrack(deckId, track)}
+                onLoadTrack={loadTrackExplicitly}
                 onRowKeyDown={handleRowKeyDown}
               />
             )}

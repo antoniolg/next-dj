@@ -61,6 +61,23 @@ describe('LibraryPanel', () => {
     expect(screen.getByRole('button', { name: 'Expand crate' })).toBeInTheDocument()
   })
 
+  it('blocks Enter when neither deck is a safe automatic target', async () => {
+    const onLoadTrack = vi.fn().mockResolvedValue(undefined)
+    renderPanel({ keyboardLoadDeckId: null, onLoadTrack })
+
+    expect(screen.getByText('Enter locked')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Expand crate' }))
+    const firstRow = await screen.findByLabelText(
+      'First Track. Enter loading is locked until a deck is safely off-air'
+    )
+    fireEvent.keyDown(firstRow, { key: 'Enter' })
+
+    expect(onLoadTrack).not.toHaveBeenCalled()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'No safe deck is available. Move the crossfader, stop a deck, or wait for loading to finish.'
+    )
+  })
+
   it('adds files from the hidden file input and drop target', () => {
     const onAddFiles = vi.fn().mockResolvedValue([])
     const { container } = renderPanel({ onAddFiles })
