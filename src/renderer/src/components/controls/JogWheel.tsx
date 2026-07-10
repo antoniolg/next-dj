@@ -17,6 +17,8 @@ interface JogWheelProps {
   accent: string
   label: string
   onBend: (degrees: number) => void
+  onScratchEnd: () => void
+  onScratchStart: () => number
   onScrub: (seconds: number, direction: -1 | 1) => void
   onSeek: (seconds: number) => void
 }
@@ -35,6 +37,8 @@ export function JogWheel({
   accent,
   label,
   onBend,
+  onScratchEnd,
+  onScratchStart,
   onScrub,
   onSeek
 }: JogWheelProps): JSX.Element {
@@ -52,17 +56,22 @@ export function JogWheel({
         event.clientY,
         event.currentTarget.getBoundingClientRect()
       )
-      dragRef.current = { angle: pointerAngle(event), mode, position }
+      const startPosition = mode === 'platter' ? onScratchStart() : position
+      dragRef.current = { angle: pointerAngle(event), mode, position: startPosition }
       setDragMode(mode)
-      setDragRotation(position * 150)
+      setDragRotation(startPosition * 150)
     },
-    [position]
+    [onScratchStart, position]
   )
 
   const clearDrag = useCallback((): void => {
+    if (dragRef.current?.mode === 'platter') {
+      onScratchEnd()
+    }
+
     dragRef.current = null
     setDragMode(null)
-  }, [])
+  }, [onScratchEnd])
 
   const handlePointerMove = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>): void => {
@@ -78,7 +87,7 @@ export function JogWheel({
       const nextAngle = pointerAngle(event)
       const delta = getJogAngleDelta(dragRef.current.angle, nextAngle)
 
-      if (isPlaying) {
+      if (dragRef.current.mode === 'rim' && isPlaying) {
         dragRef.current = { angle: nextAngle, mode: dragRef.current.mode, position: dragRef.current.position }
         setDragRotation((current: number) => current + delta)
         onBend(delta)

@@ -38,6 +38,8 @@ export function App(): JSX.Element {
     syncDeck,
     nudgeDeck,
     jogBend,
+    jogScratchEnd,
+    jogScratchStart,
     jogScrub,
     exitLoop,
     setAutoLoop,
@@ -92,6 +94,10 @@ export function App(): JSX.Element {
   const cueUpDeckB = useCallback((): void => cueRelease('B'), [cueRelease])
   const jogBendDeckA = useCallback((degrees: number): void => jogBend('A', degrees), [jogBend])
   const jogBendDeckB = useCallback((degrees: number): void => jogBend('B', degrees), [jogBend])
+  const jogScratchEndDeckA = useCallback((): void => jogScratchEnd('A'), [jogScratchEnd])
+  const jogScratchEndDeckB = useCallback((): void => jogScratchEnd('B'), [jogScratchEnd])
+  const jogScratchStartDeckA = useCallback((): number => jogScratchStart('A'), [jogScratchStart])
+  const jogScratchStartDeckB = useCallback((): number => jogScratchStart('B'), [jogScratchStart])
   const jogScrubDeckA = useCallback(
     (seconds: number, direction: -1 | 1): void => jogScrub('A', seconds, direction),
     [jogScrub]
@@ -231,6 +237,8 @@ export function App(): JSX.Element {
               onCueSet={cueSetDeckA}
               onCueUp={cueUpDeckA}
               onJogBend={jogBendDeckA}
+              onJogScratchEnd={jogScratchEndDeckA}
+              onJogScratchStart={jogScratchStartDeckA}
               onJogScrub={jogScrubDeckA}
               onLoad={loadFileToDeckA}
               onLoopExit={loopExitDeckA}
@@ -291,6 +299,8 @@ export function App(): JSX.Element {
               onCueSet={cueSetDeckB}
               onCueUp={cueUpDeckB}
               onJogBend={jogBendDeckB}
+              onJogScratchEnd={jogScratchEndDeckB}
+              onJogScratchStart={jogScratchStartDeckB}
               onJogScrub={jogScrubDeckB}
               onLoad={loadFileToDeckB}
               onLoopExit={loopExitDeckB}

@@ -37,6 +37,8 @@ export function useEngine(): {
   syncDeck: (deckId: DeckId) => void
   nudgeDeck: (deckId: DeckId, direction: -1 | 1) => void
   jogBend: (deckId: DeckId, degrees: number) => void
+  jogScratchEnd: (deckId: DeckId) => void
+  jogScratchStart: (deckId: DeckId) => number
   jogScrub: (deckId: DeckId, seconds: number, direction: -1 | 1) => void
   triggerHotCue: (deckId: DeckId, index: number) => void
   clearHotCue: (deckId: DeckId, index: number) => void

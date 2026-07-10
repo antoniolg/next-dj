@@ -20,13 +20,15 @@ vi.mock('../Waveform/ZoomWaveform', () => ({
 }))
 
 vi.mock('../controls/JogWheel', () => ({
-  JogWheel: ({ label, onBend, onScrub, onSeek }: { label: string; onBend: (degrees: number) => void; onScrub: (seconds: number, direction: -1 | 1) => void; onSeek: (seconds: number) => void }) => (
+  JogWheel: ({ label, onBend, onScratchEnd, onScratchStart, onScrub, onSeek }: { label: string; onBend: (degrees: number) => void; onScratchEnd: () => void; onScratchStart: () => number; onScrub: (seconds: number, direction: -1 | 1) => void; onSeek: (seconds: number) => void }) => (
     <button
       type="button"
       aria-label={label}
       onClick={() => {
+        onScratchStart()
         onBend(3)
         onScrub(29, -1)
+        onScratchEnd()
         onSeek(30)
       }}
     >
@@ -63,6 +65,8 @@ function renderDeck(overrides: Partial<Parameters<typeof DeckPanel>[0]> = {}) {
       onCueSet={vi.fn()}
       onCueUp={vi.fn()}
       onJogBend={vi.fn()}
+      onJogScratchEnd={vi.fn()}
+      onJogScratchStart={vi.fn(() => 45)}
       onJogScrub={vi.fn()}
       onLoad={vi.fn().mockResolvedValue(undefined)}
       onLoopExit={vi.fn()}
@@ -152,18 +156,31 @@ describe('DeckPanel', () => {
 
   it('routes seek, jog and active loop controls', () => {
     const onJogBend = vi.fn()
+    const onJogScratchEnd = vi.fn()
+    const onJogScratchStart = vi.fn(() => 45)
     const onJogScrub = vi.fn()
     const onLoopExit = vi.fn()
     const onSeek = vi.fn()
 
-    renderDeck({ isPlaying: true, loop: activeLoop, onJogBend, onJogScrub, onLoopExit, onSeek })
+    renderDeck({
+      isPlaying: true,
+      loop: activeLoop,
+      onJogBend,
+      onJogScratchEnd,
+      onJogScratchStart,
+      onJogScrub,
+      onLoopExit,
+      onSeek
+    })
 
     fireEvent.click(screen.getByRole('button', { name: 'Deck A jog wheel' }))
     fireEvent.click(screen.getByText('Overview mock'))
     fireEvent.click(screen.getByRole('button', { name: 'Exit loop' }))
 
     expect(onJogBend).toHaveBeenCalledWith(3)
+    expect(onJogScratchStart).toHaveBeenCalledTimes(1)
     expect(onJogScrub).toHaveBeenCalledWith(29, -1)
+    expect(onJogScratchEnd).toHaveBeenCalledTimes(1)
     expect(onSeek).toHaveBeenCalledWith(30)
     expect(onSeek).toHaveBeenCalledWith(12)
     expect(onLoopExit).toHaveBeenCalledTimes(1)

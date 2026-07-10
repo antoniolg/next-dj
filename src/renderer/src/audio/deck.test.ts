@@ -202,6 +202,40 @@ describe('Deck', () => {
     expect(context.sources[1].buffer?.getChannelData(0)[1]).toBe(348)
   })
 
+  it('scratches playing audio in both directions and resumes from the new position', async () => {
+    const { context, deck } = createDeck()
+    await loadDeck(deck, context)
+    await deck.play()
+    context.currentTime = 2.01
+
+    const startPosition = deck.scratchStart()
+    deck.scrubTo(1.5, -1)
+
+    expect(startPosition).toBeCloseTo(2.01, 2)
+    expect(context.sources[0].stopCalls).toBe(1)
+    expect(deck.isPlaying).toBe(true)
+    expect(deck.getPosition()).toBe(1.5)
+
+    deck.scratchEnd()
+
+    expect(deck.isPlaying).toBe(true)
+    expect(context.sources).toHaveLength(3)
+    expect(context.sources[2].starts[0].offset).toBe(1.51)
+  })
+
+  it('does not resume after playback is paused during an active scratch', async () => {
+    const { context, deck } = createDeck()
+    await loadDeck(deck, context)
+    await deck.play()
+
+    deck.scratchStart()
+    deck.pause()
+    deck.scratchEnd()
+
+    expect(deck.isPlaying).toBe(false)
+    expect(context.sources).toHaveLength(1)
+  })
+
   it('clamps pitch and applies it to the active source', async () => {
     const { context, deck } = createDeck()
     await loadDeck(deck, context)

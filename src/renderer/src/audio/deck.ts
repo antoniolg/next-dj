@@ -58,6 +58,8 @@ export class Deck {
   private playbackRate = 1
   private basePlaybackRate = 1
   private cuePreviewing = false
+  private scratchActive = false
+  private scratchResumePlayback = false
   private jogPendingSeconds = 0
   private jogIntervalId: number | null = null
   private jogLastFoldTime = 0
@@ -81,7 +83,7 @@ export class Deck {
   }
 
   get isPlaying(): boolean {
-    return this.started
+    return this.started || (this.scratchActive && this.scratchResumePlayback)
   }
 
   async loadFile(file: File | ArrayBuffer, analysis?: DeckLoadAnalysis, persistenceKey?: string): Promise<boolean> {
@@ -107,7 +109,7 @@ export class Deck {
   async play(): Promise<void> {
     const intent = ++this.transportIntent
 
-    if (!this.buffer || this.started) {
+    if (!this.buffer || this.started || this.scratchActive) {
       return
     }
 
@@ -125,6 +127,13 @@ export class Deck {
   pause(): void {
     this.transportIntent += 1
 
+    if (this.scratchActive) {
+      this.scratchResumePlayback = false
+      this.scratchActive = false
+      this.scratchAudio.stop()
+      return
+    }
+
     if (!this.started) {
       return
     }
@@ -135,6 +144,8 @@ export class Deck {
 
   stop(): void {
     this.transportIntent += 1
+    this.scratchActive = false
+    this.scratchResumePlayback = false
     this.stopSource(true)
     this.offsetSeconds = 0
     this.startContextTime = 0
@@ -142,6 +153,8 @@ export class Deck {
 
   seek(seconds: number): void {
     this.transportIntent += 1
+    this.scratchActive = false
+    this.scratchResumePlayback = false
     const nextOffset = getLoopedPosition(this.clampPosition(seconds), this.loop)
     const shouldRestart = this.started
 
@@ -161,6 +174,38 @@ export class Deck {
     this.transportIntent += 1
     this.offsetSeconds = getLoopedPosition(this.clampPosition(seconds), this.loop)
     this.scratchAudio.play(this.buffer, this.offsetSeconds, direction)
+  }
+
+  scratchStart(): number {
+    if (!this.buffer || this.scratchActive) {
+      return this.getPosition()
+    }
+
+    this.transportIntent += 1
+    const position = this.getPosition()
+
+    this.scratchResumePlayback = this.started
+    this.offsetSeconds = position
+    this.stopSource(true)
+    this.offsetSeconds = position
+    this.scratchActive = true
+    return position
+  }
+
+  scratchEnd(): void {
+    if (!this.scratchActive) {
+      return
+    }
+
+    const shouldResume = this.scratchResumePlayback
+
+    this.scratchAudio.stop()
+    this.scratchActive = false
+    this.scratchResumePlayback = false
+
+    if (shouldResume) {
+      this.startSourceAt(this.offsetSeconds)
+    }
   }
 
   setPitch(percent: number): number {
@@ -186,6 +231,10 @@ export class Deck {
   }
 
   jogShift(seconds: number): void {
+    if (this.scratchActive) {
+      return
+    }
+
     if (!this.started) {
       this.nudge(seconds)
       return
