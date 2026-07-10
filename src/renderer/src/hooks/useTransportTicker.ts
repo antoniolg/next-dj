@@ -3,8 +3,10 @@ import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
 import type { DJEngine } from '../audio/engine'
 import type { DeckState } from '../app/deckState'
 import type { DeckId } from '../app/engineTypes'
+import { subscribeVisualFrame } from '../performance/visualClock'
 
 type TransportDeckSnapshot = Pick<DeckState, 'position' | 'isPlaying' | 'effectiveBpm' | 'hotCues' | 'loop'>
+const TRANSPORT_VIEW_INTERVAL_MS = 50
 
 function hasTransportSnapshotChanged(current: DeckState, snapshot: TransportDeckSnapshot): boolean {
   return (
@@ -23,9 +25,14 @@ export function useTransportTicker(
   setDecks: Dispatch<SetStateAction<Record<DeckId, DeckState>>>
 ): void {
   useEffect(() => {
-    let frameId = 0
+    let lastUpdate = Number.NEGATIVE_INFINITY
 
-    const tick = (): void => {
+    const tick = (timestamp: number): void => {
+      if (timestamp - lastUpdate < TRANSPORT_VIEW_INTERVAL_MS) {
+        return
+      }
+
+      lastUpdate = timestamp
       const deckAPlaying = engine.deckA.isPlaying
       const deckBPlaying = engine.deckB.isPlaying
       const currentMaster = masterDeckIdRef.current
@@ -73,10 +80,8 @@ export function useTransportTicker(
           }
         }
       })
-      frameId = window.requestAnimationFrame(tick)
     }
 
-    frameId = window.requestAnimationFrame(tick)
-    return () => window.cancelAnimationFrame(frameId)
+    return subscribeVisualFrame(tick)
   }, [engine, masterDeckIdRef, setDecks, updateMasterDeck])
 }

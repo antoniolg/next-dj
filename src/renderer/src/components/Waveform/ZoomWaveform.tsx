@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { createFrameMeter } from '../../performance/frameMetrics'
+import { subscribeVisualFrame } from '../../performance/visualClock'
 import { hasCanvasFrameChanged, type CanvasFrameState } from './canvasFrameState'
 import type { WaveformData } from '../../audio/waveformData'
 import { getLowPeakAt, getPeakAt } from '../../audio/waveformData'
@@ -194,7 +195,6 @@ export function ZoomWaveform({
   const windowSeconds = useMemo(() => getZoomWindowSeconds(duration, bpm), [bpm, duration])
 
   useEffect(() => {
-    let frameId = 0
     const frameMeter = createFrameMeter('waveform.zoom')
     let previousFrame: CanvasFrameState | null = null
 
@@ -219,11 +219,9 @@ export function ZoomWaveform({
         }
       }
 
-      frameId = window.requestAnimationFrame(tick)
     }
 
-    frameId = window.requestAnimationFrame(tick)
-    return () => window.cancelAnimationFrame(frameId)
+    return subscribeVisualFrame(tick)
   }, [accent, bpm, duration, firstBeatOffset, getPosition, waveform])
 
   const seekFromPointer = useCallback(

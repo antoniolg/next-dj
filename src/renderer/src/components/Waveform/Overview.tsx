@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { createFrameMeter } from '../../performance/frameMetrics'
+import { subscribeVisualFrame } from '../../performance/visualClock'
 import { hasCanvasFrameChanged, type CanvasFrameState } from './canvasFrameState'
 import type { WaveformData } from '../../audio/waveformData'
 import { getLowPeakAt, getPeakAt } from '../../audio/waveformData'
@@ -114,7 +115,6 @@ export function Overview({
   const draggingRef = useRef(false)
 
   useEffect(() => {
-    let frameId = 0
     const frameMeter = createFrameMeter('waveform.overview')
     let previousFrame: CanvasFrameState | null = null
 
@@ -139,11 +139,9 @@ export function Overview({
         }
       }
 
-      frameId = window.requestAnimationFrame(tick)
     }
 
-    frameId = window.requestAnimationFrame(tick)
-    return () => window.cancelAnimationFrame(frameId)
+    return subscribeVisualFrame(tick)
   }, [accent, duration, getPosition, waveform])
 
   const seekFromPointer = useCallback(

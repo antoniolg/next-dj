@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createFrameMeter } from '../../performance/frameMetrics'
+import { subscribeVisualFrame } from '../../performance/visualClock'
 import { calculateMeterLevel, getLitSegmentCount, getPeakSegment, getVuSegmentColor } from './vuMeterMath'
 
 interface VUMeterProps {
@@ -41,7 +42,6 @@ export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.E
     }
 
     dataRef.current = new Uint8Array(analyser.frequencyBinCount) as Uint8Array<ArrayBuffer>
-    let frameId = 0
     const frameMeter = createFrameMeter('vu.meter')
 
     const tick = (): void => {
@@ -79,11 +79,9 @@ export function VUMeter({ analyser, label, segments = 18 }: VUMeterProps): JSX.E
         })
       }
 
-      frameId = window.requestAnimationFrame(tick)
     }
 
-    frameId = window.requestAnimationFrame(tick)
-    return () => window.cancelAnimationFrame(frameId)
+    return subscribeVisualFrame(tick)
   }, [analyser, segments])
 
   return (
