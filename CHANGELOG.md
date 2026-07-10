@@ -5,6 +5,22 @@ All notable changes to NextDJ will be documented in this file.
 The format is based on Keep a Changelog, and this project uses Semantic
 Versioning once public releases begin.
 
+## [0.1.3] - 2026-07-10
+
+This corrective release makes the unsigned macOS download internally
+consistent. Gatekeeper may still require explicit user approval because the app
+is not Developer ID-signed or notarized, but it should no longer classify the
+bundle as damaged due to an incomplete signature.
+
+### Fixed
+
+- Applied a complete ad-hoc signature to the app, helpers, and Electron frameworks.
+- Preserved Hardened Runtime with the JIT, library-validation, camera, and audio entitlements required by NextDJ.
+
+### Changed
+
+- Made macOS packaging fail unless strict deep signature validation passes for every architecture.
+
 ## [0.1.2] - 2026-07-10
 
 This release introduces assisted application updates. NextDJ remains unsigned
