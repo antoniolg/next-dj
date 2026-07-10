@@ -275,6 +275,10 @@
     0 0 16px color-mix(in srgb, var(--deck-accent), transparent 88%);
 }
 
+.deck-artwork-image {
+  object-fit: cover;
+}
+
 .led-content {
   min-width: 0;
   flex: 1;

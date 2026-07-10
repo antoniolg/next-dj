@@ -2,6 +2,7 @@ export interface TrackMetadata {
   name: string
   bpm: number
   firstBeatOffset: number
+  artworkUrl?: string
 }
 
 export interface HotCue {

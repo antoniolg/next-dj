@@ -1,11 +1,13 @@
 import { detectBpm } from '../audio/bpm'
 import { readCachedFileBuffer } from '../audio/audioFileCache'
 import { measureAsync } from '../performance/perfMarks'
+import { createEmbeddedArtworkUrl } from './audioArtwork'
 
 export interface AudioMetadata {
   duration: number
   bpm: number
   firstBeatOffset: number
+  artworkUrl?: string
 }
 
 export class AudioMetadataError extends Error {
@@ -38,9 +40,11 @@ async function analyzeAudioFile(file: File): Promise<AudioMetadata> {
       context.decodeAudioData(arrayBuffer.slice(0))
     )
     const bpm = await measureAsync('library.audioMetadata.detectBpm', () => detectBpm(buffer))
+    const artworkUrl = createEmbeddedArtworkUrl(arrayBuffer)
 
     return {
       duration: Number.isFinite(buffer.duration) ? buffer.duration : 0,
+      ...(artworkUrl ? { artworkUrl } : {}),
       ...bpm
     }
   } catch (error) {

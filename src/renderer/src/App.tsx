@@ -216,6 +216,7 @@ export function App(): JSX.Element {
               accent="#22d3ee"
               deckId="A"
               duration={decks.A.duration}
+              artworkUrl={decks.A.artworkUrl}
               bpm={decks.A.bpm}
               effectiveBpm={decks.A.effectiveBpm}
               firstBeatOffset={decks.A.firstBeatOffset}
@@ -278,6 +279,7 @@ export function App(): JSX.Element {
               accent="#f59e0b"
               deckId="B"
               duration={decks.B.duration}
+              artworkUrl={decks.B.artworkUrl}
               bpm={decks.B.bpm}
               effectiveBpm={decks.B.effectiveBpm}
               firstBeatOffset={decks.B.firstBeatOffset}

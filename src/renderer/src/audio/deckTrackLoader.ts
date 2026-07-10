@@ -7,6 +7,7 @@ import { computeWaveformData, type WaveformData } from './waveformData'
 export interface DeckLoadAnalysis {
   bpm: number
   firstBeatOffset: number
+  artworkUrl?: string
 }
 
 export interface PreparedDeckTrack {
@@ -53,7 +54,7 @@ export class DeckTrackLoader {
     return {
       buffer: decoded,
       duration: decoded.duration,
-      metadata: { name, ...detected },
+      metadata: { name, ...detected, artworkUrl: analysis?.artworkUrl },
       persistenceKey: persistenceKey ?? name,
       waveform
     }

@@ -34,12 +34,14 @@ describe('useLibrary', () => {
 
     await act(async () => {
       await result.current.addPlaylistImportTracks([
-        { providerId: 'demo', id: 'one', title: 'One', duration: 60, externalRef: 'one' }
+        { providerId: 'demo', id: 'one', title: 'One', artworkUrl: 'https://example.com/one.jpg', duration: 60, externalRef: 'one' }
       ])
     })
 
     expect(repository.persistTrackMetadata).toHaveBeenCalledTimes(1)
-    expect(result.current.tracks).toMatchObject([{ id: 'external-demo-one', title: 'One' }])
+    expect(result.current.tracks).toMatchObject([
+      { id: 'external-demo-one', title: 'One', artworkUrl: 'https://example.com/one.jpg' }
+    ])
     expect(result.current.error).toBeNull()
   })
 

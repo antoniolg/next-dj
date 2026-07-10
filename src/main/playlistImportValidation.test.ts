@@ -11,11 +11,11 @@ describe('playlist import validation', () => {
   it('normalizes bounded provider tracks into canonical records', () => {
     expect(
       normalizePlaylistTracks(
-        [{ id: ' one ', title: ' Track ', artist: ' Artist ', duration: 90, externalRef: ' remote:one ' }],
+        [{ id: ' one ', title: ' Track ', artist: ' Artist ', artworkUrl: ' https://example.com/cover.jpg ', duration: 90, externalRef: ' remote:one ' }],
         'provider'
       )
     ).toEqual([
-      { providerId: 'provider', id: 'one', title: 'Track', artist: 'Artist', duration: 90, externalRef: 'remote:one' }
+      { providerId: 'provider', id: 'one', title: 'Track', artist: 'Artist', artworkUrl: 'https://example.com/cover.jpg', duration: 90, externalRef: 'remote:one' }
     ])
   })
 
@@ -26,6 +26,12 @@ describe('playlist import validation', () => {
     expect(() =>
       normalizePlaylistTracks([{ id: 'one', title: 'Track', artist: {}, duration: 1, externalRef: 'one' }], 'p')
     ).toThrow('artist must be a string')
+    expect(() =>
+      normalizePlaylistTracks(
+        [{ id: 'one', title: 'Track', artworkUrl: 'http://example.com/cover.jpg', duration: 1, externalRef: 'one' }],
+        'p'
+      )
+    ).toThrow('must use HTTPS')
     expect(() =>
       normalizePlaylistTracks(
         Array.from({ length: PLAYLIST_IMPORT_LIMITS.tracks + 1 }, (_, index) => ({

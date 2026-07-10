@@ -8,6 +8,7 @@ export const PLAYLIST_IMPORT_LIMITS = {
   idCharacters: 256,
   titleCharacters: 512,
   artistCharacters: 512,
+  artworkUrlCharacters: 2048,
   externalRefCharacters: 2048,
   durationSeconds: 24 * 60 * 60,
   resolvedFileBytes: 512 * 1024 * 1024,
@@ -72,6 +73,11 @@ export function normalizePlaylistTracks(value: unknown, providerId: string): Pla
     const id = requireBoundedString(track.id, 'id', PLAYLIST_IMPORT_LIMITS.idCharacters)
     const title = requireBoundedString(track.title, 'title', PLAYLIST_IMPORT_LIMITS.titleCharacters)
     const artist = optionalBoundedString(track.artist, 'artist', PLAYLIST_IMPORT_LIMITS.artistCharacters)
+    const artworkUrl = optionalBoundedString(
+      track.artworkUrl,
+      'artwork URL',
+      PLAYLIST_IMPORT_LIMITS.artworkUrlCharacters
+    )
     const externalRef = requireBoundedString(
       track.externalRef,
       'externalRef',
@@ -90,13 +96,36 @@ export function normalizePlaylistTracks(value: unknown, providerId: string): Pla
 
     payloadBytes += Buffer.byteLength(providerId) + Buffer.byteLength(id) + Buffer.byteLength(title)
     payloadBytes += artist ? Buffer.byteLength(artist) : 0
+    payloadBytes += artworkUrl ? Buffer.byteLength(artworkUrl) : 0
     payloadBytes += Buffer.byteLength(externalRef) + 16
 
     if (payloadBytes > PLAYLIST_IMPORT_LIMITS.payloadBytes) {
       throw new Error('Playlist provider response exceeds the allowed size.')
     }
 
-    return { providerId, id, title, ...(artist ? { artist } : {}), duration, externalRef }
+    if (artworkUrl) {
+      let parsedArtworkUrl: URL
+
+      try {
+        parsedArtworkUrl = new URL(artworkUrl)
+      } catch {
+        throw new Error('Playlist track artwork URL is invalid.')
+      }
+
+      if (parsedArtworkUrl.protocol !== 'https:') {
+        throw new Error('Playlist track artwork URL must use HTTPS.')
+      }
+    }
+
+    return {
+      providerId,
+      id,
+      title,
+      ...(artist ? { artist } : {}),
+      ...(artworkUrl ? { artworkUrl } : {}),
+      duration,
+      externalRef
+    }
   })
 }
 

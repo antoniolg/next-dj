@@ -26,7 +26,8 @@ function getValidAnalysis(analysis: DeckLoadAnalysis | undefined): DeckLoadAnaly
 
   return {
     bpm: analysis.bpm,
-    firstBeatOffset: analysis.firstBeatOffset
+    firstBeatOffset: analysis.firstBeatOffset,
+    artworkUrl: analysis.artworkUrl
   }
 }
 

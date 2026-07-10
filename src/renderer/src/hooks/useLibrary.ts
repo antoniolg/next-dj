@@ -14,6 +14,8 @@ import {
 import { LibraryTransactionQueue, prepareLibraryUpdate } from '../library/libraryTransactions'
 import type { LibraryTrack } from '../library/libraryTypes'
 import type { DeckLoadAnalysis } from '../audio/deck'
+import { createEmbeddedArtworkUrl } from '../library/audioArtwork'
+import { readCachedFileBuffer } from '../audio/audioFileCache'
 
 export type { LibraryTrack } from '../library/libraryTypes'
 
@@ -41,6 +43,7 @@ function migratePersistedTrack(track: ReturnType<typeof readPersistedLibrary>['t
       id: `external-${LEGACY_PROVIDER_ID}-${legacyId}`,
       title: track.title,
       artist: track.artist,
+      artworkUrl: track.artworkUrl,
       duration: track.duration,
       bpm: track.bpm,
       firstBeatOffset: track.firstBeatOffset,
@@ -54,6 +57,7 @@ function migratePersistedTrack(track: ReturnType<typeof readPersistedLibrary>['t
     id: track.id,
     title: track.title,
     artist: track.artist,
+    artworkUrl: track.artworkUrl,
     duration: track.duration,
     bpm: track.bpm,
     firstBeatOffset: track.firstBeatOffset,
@@ -97,6 +101,9 @@ export function useLibrary(): {
           const blob = track.hasFile ? await getPersistedFile(track.id).catch(() => null) : null
           const migratedTrack = migratePersistedTrack(track)
           const file = blob ? fileFromBlob(blob, track) : undefined
+          const artworkUrl =
+            migratedTrack.artworkUrl ??
+            (file ? createEmbeddedArtworkUrl(await readCachedFileBuffer(file).catch(() => new ArrayBuffer(0))) : undefined)
 
           if (file && migratedTrack.id !== track.id) {
             await putPersistedFile(migratedTrack.id, file).catch(() => undefined)
@@ -104,6 +111,7 @@ export function useLibrary(): {
 
           return {
             ...migratedTrack,
+            artworkUrl,
             file
           }
         }
@@ -162,6 +170,7 @@ export function useLibrary(): {
       id: `external-${track.providerId}-${track.id}`,
       title: track.title,
       artist: track.artist,
+      artworkUrl: track.artworkUrl,
       duration: track.duration,
       bpm: 0,
       firstBeatOffset: 0,
@@ -208,7 +217,10 @@ export function useLibrary(): {
 
   const resolveTrackFile = useCallback(async (track: LibraryTrack): Promise<ResolvedTrackFile | null> => {
     if (track.file) {
-      return { file: track.file, analysis: { bpm: track.bpm, firstBeatOffset: track.firstBeatOffset } }
+      return {
+        file: track.file,
+        analysis: { bpm: track.bpm, firstBeatOffset: track.firstBeatOffset, artworkUrl: track.artworkUrl }
+      }
     }
 
     if (track.source !== 'external' || !track.providerId || !track.externalRef) {
@@ -232,7 +244,11 @@ export function useLibrary(): {
         lastModified: result.file.lastModified,
         type: result.file.type ?? 'audio/mpeg'
       })
-      const { duration, ...analysis } = await readAudioMetadata(file)
+      const { duration, ...fileAnalysis } = await readAudioMetadata(file)
+      const analysis = {
+        ...fileAnalysis,
+        artworkUrl: track.artworkUrl ?? fileAnalysis.artworkUrl
+      }
 
       await transactionQueueRef.current.run(async () => {
         const updatedTracks = tracksRef.current.map((currentTrack) =>

@@ -62,6 +62,7 @@ export function useDeckActions(
           pitch,
           bpm: deck.metadata.bpm,
           firstBeatOffset: deck.metadata.firstBeatOffset,
+          artworkUrl: deck.metadata.artworkUrl,
           effectiveBpm: deck.getEffectiveBpm(),
           hotCues: deck.hotCues,
           cuePoint: deck.cuePoint,

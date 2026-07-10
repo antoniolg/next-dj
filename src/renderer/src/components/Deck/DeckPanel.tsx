@@ -13,6 +13,7 @@ interface DeckPanelProps {
   deckId: 'A' | 'B'
   accent: string
   trackName: string
+  artworkUrl?: string
   position: number
   duration: number
   isPlaying: boolean
@@ -77,6 +78,7 @@ export const DeckPanel = memo(function DeckPanel({
   deckId,
   accent,
   trackName,
+  artworkUrl,
   position,
   duration,
   isPlaying,
@@ -232,7 +234,13 @@ export const DeckPanel = memo(function DeckPanel({
       </div>
 
       <div className="led-display">
-        {hasTrack ? <span className="deck-artwork" aria-hidden="true" /> : null}
+        {hasTrack ? (
+          artworkUrl ? (
+            <img alt="" className="deck-artwork deck-artwork-image" src={artworkUrl} />
+          ) : (
+            <span className="deck-artwork" aria-hidden="true" />
+          )
+        ) : null}
         <div className="led-content">
           <p className="led-title" title={trackName}>
             {hasTrack ? trackName : 'No track loaded'}

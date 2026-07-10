@@ -20,6 +20,7 @@ export interface PlaylistImportTrack {
   id: string
   title: string
   artist?: string
+  artworkUrl?: string
   duration: number
   externalRef: string
 }

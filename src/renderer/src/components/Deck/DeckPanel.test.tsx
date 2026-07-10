@@ -109,6 +109,12 @@ describe('DeckPanel', () => {
     expect(onAutoLoop).toHaveBeenCalledWith(8)
   })
 
+  it('shows track artwork in the deck display when available', () => {
+    renderDeck({ artworkUrl: 'https://example.com/cover.jpg' })
+
+    expect(document.querySelector('.deck-artwork-image')).toHaveAttribute('src', 'https://example.com/cover.jpg')
+  })
+
   it('loads files and track drops without changing visible load controls', () => {
     const onLoad = vi.fn().mockResolvedValue(undefined)
     const onTrackDrop = vi.fn().mockResolvedValue(undefined)

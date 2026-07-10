@@ -10,6 +10,7 @@ export interface DeckState {
   pitch: number
   bpm: number
   firstBeatOffset: number
+  artworkUrl?: string
   effectiveBpm: number
   waveform: WaveformData | null
   hotCues: Array<HotCue | null>
@@ -25,6 +26,7 @@ export const createDeckState = (): DeckState => ({
   pitch: 0,
   bpm: 0,
   firstBeatOffset: 0,
+  artworkUrl: undefined,
   effectiveBpm: 0,
   waveform: null,
   hotCues: [null, null, null, null],
@@ -41,6 +43,7 @@ export function getDeckSnapshot(deck: Deck, pitch: number): DeckState {
     pitch,
     bpm: deck.metadata.bpm,
     firstBeatOffset: deck.metadata.firstBeatOffset,
+    artworkUrl: deck.metadata.artworkUrl,
     effectiveBpm: deck.getEffectiveBpm(),
     waveform: deck.waveform,
     hotCues: deck.hotCues,
