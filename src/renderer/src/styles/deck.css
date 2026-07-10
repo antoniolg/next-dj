@@ -11,6 +11,7 @@
 }
 
 .deck-panel {
+  --jog-max-size: 390px;
   position: relative;
   display: flex;
   min-height: 0;
@@ -132,7 +133,7 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  height: min(100%, 390px);
+  height: min(100%, var(--jog-max-size));
   max-width: 100%;
   aspect-ratio: 1;
   border-radius: 999px;
@@ -153,7 +154,7 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  height: min(100%, 390px);
+  height: min(100%, var(--jog-max-size));
   max-width: 100%;
   aspect-ratio: 1;
   border-radius: 999px;
