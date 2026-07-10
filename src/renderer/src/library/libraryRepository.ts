@@ -95,6 +95,7 @@ function parsePersistedTrack(value: unknown): PersistedTrack {
   return {
     id: requireString(record, 'id'),
     title: requireString(record, 'title'),
+    artist: optionalString(record, 'artist', 512),
     duration: requireFiniteNumber(record, 'duration', 0, 24 * 60 * 60),
     bpm: requireFiniteNumber(record, 'bpm', 0, 400),
     firstBeatOffset: requireFiniteNumber(record, 'firstBeatOffset', 0, 24 * 60 * 60),
@@ -129,6 +130,7 @@ function serializeTrack(track: LibraryTrack): PersistedTrack {
   return {
     id: track.id,
     title: track.title,
+    artist: track.artist,
     duration: track.duration,
     bpm: track.bpm,
     firstBeatOffset: track.firstBeatOffset,
@@ -248,6 +250,25 @@ export async function getPersistedFile(trackId: string): Promise<Blob | null> {
 
   db.close()
   return file
+}
+
+export async function deletePersistedFiles(trackIds: string[]): Promise<void> {
+  if (trackIds.length === 0) {
+    return
+  }
+
+  const db = await openLibraryDb()
+
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(FILE_STORE_NAME, 'readwrite')
+    const store = transaction.objectStore(FILE_STORE_NAME)
+
+    trackIds.forEach((trackId) => store.delete(trackId))
+    transaction.oncomplete = () => resolve()
+    transaction.onerror = () => reject(transaction.error ?? new Error('Could not remove old audio files.'))
+  })
+
+  db.close()
 }
 
 export function fileFromBlob(blob: Blob, track: PersistedTrack): File {

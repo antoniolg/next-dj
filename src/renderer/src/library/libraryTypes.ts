@@ -1,6 +1,7 @@
 export interface LibraryTrack {
   id: string
   title: string
+  artist?: string
   duration: number
   bpm: number
   firstBeatOffset: number
@@ -13,6 +14,7 @@ export interface LibraryTrack {
 export interface PersistedTrack {
   id: string
   title: string
+  artist?: string
   duration: number
   bpm: number
   firstBeatOffset: number

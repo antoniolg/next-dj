@@ -29,6 +29,7 @@ export interface PlaylistImportProvider {
   listTracks: (input: string, context?: { signal: AbortSignal }) => Promise<Array<{
     id: string
     title: string
+    artist?: string
     duration: number
     externalRef: string
   }>>
@@ -73,6 +74,7 @@ export default {
       {
         id: 'demo-track',
         title: 'Demo Playlist Track',
+        artist: 'Demo Artist',
         duration: 30,
         externalRef: 'demo-track'
       }

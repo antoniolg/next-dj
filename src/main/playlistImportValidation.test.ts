@@ -11,16 +11,21 @@ describe('playlist import validation', () => {
   it('normalizes bounded provider tracks into canonical records', () => {
     expect(
       normalizePlaylistTracks(
-        [{ id: ' one ', title: ' Track ', duration: 90, externalRef: ' remote:one ' }],
+        [{ id: ' one ', title: ' Track ', artist: ' Artist ', duration: 90, externalRef: ' remote:one ' }],
         'provider'
       )
-    ).toEqual([{ providerId: 'provider', id: 'one', title: 'Track', duration: 90, externalRef: 'remote:one' }])
+    ).toEqual([
+      { providerId: 'provider', id: 'one', title: 'Track', artist: 'Artist', duration: 90, externalRef: 'remote:one' }
+    ])
   })
 
   it('rejects malformed metadata, oversized lists and oversized fields', () => {
     expect(() => normalizePlaylistTracks([{ id: 'one', title: {}, duration: 1, externalRef: 'one' }], 'p')).toThrow(
       'title must be a string'
     )
+    expect(() =>
+      normalizePlaylistTracks([{ id: 'one', title: 'Track', artist: {}, duration: 1, externalRef: 'one' }], 'p')
+    ).toThrow('artist must be a string')
     expect(() =>
       normalizePlaylistTracks(
         Array.from({ length: PLAYLIST_IMPORT_LIMITS.tracks + 1 }, (_, index) => ({

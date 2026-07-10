@@ -55,6 +55,7 @@ export function LibraryTrackTable({
         <thead>
           <tr>
             <th>Title</th>
+            <th className="library-col-artist">Artist</th>
             <th className="library-col-time">Time</th>
             <th className="library-col-bpm">BPM</th>
             <th className="library-col-load" aria-label="Load controls" />
@@ -83,6 +84,9 @@ export function LibraryTrackTable({
                     </span>
                   ) : null}
                 </span>
+              </td>
+              <td className="library-col-artist" title={track.artist}>
+                {track.artist ?? '—'}
               </td>
               <td className="library-col-time">{formatTime(track.duration)}</td>
               <td className="library-col-bpm">{formatBpm(track.bpm)}</td>

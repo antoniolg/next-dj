@@ -93,6 +93,7 @@ describe('playlist import registry', () => {
         providerId: 'demo-local',
         id: 'demo-track',
         title: 'Demo Playlist Track',
+        artist: 'Demo Artist',
         duration: 30,
         externalRef: 'demo-track'
       }

@@ -13,6 +13,7 @@ describe('library repository', () => {
       {
         id: 'track-1',
         title: 'Set',
+        artist: 'DJ Example',
         duration: 120,
         bpm: 124,
         firstBeatOffset: 0.12,
@@ -29,6 +30,7 @@ describe('library repository', () => {
       {
         id: 'track-1',
         title: 'Set',
+        artist: 'DJ Example',
         duration: 120,
         bpm: 124,
         firstBeatOffset: 0.12,

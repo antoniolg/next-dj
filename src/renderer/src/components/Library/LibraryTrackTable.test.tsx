@@ -16,6 +16,7 @@ const tracks: LibraryTrack[] = [
   {
     id: 'external-1',
     title: 'Remote Track',
+    artist: 'Remote Artist',
     duration: 0,
     bpm: 0,
     firstBeatOffset: 0,
@@ -51,6 +52,7 @@ describe('LibraryTrackTable', () => {
     expect(screen.getByText('1:05')).toBeInTheDocument()
     expect(screen.getByText('124.2')).toBeInTheDocument()
     expect(screen.getByText('Remote Track')).toBeInTheDocument()
+    expect(screen.getByText('Remote Artist')).toBeInTheDocument()
     expect(screen.getByLabelText('Not stored locally')).toBeInTheDocument()
   })
 

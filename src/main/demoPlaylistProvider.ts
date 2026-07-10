@@ -10,6 +10,7 @@ export function createDemoPlaylistProvider(): PlaylistImportProvider {
         {
           id: 'demo-track',
           title: 'Demo Playlist Track',
+          artist: 'Demo Artist',
           duration: 30,
           externalRef: 'demo-track'
         }

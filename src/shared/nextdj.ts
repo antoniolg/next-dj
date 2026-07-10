@@ -19,6 +19,7 @@ export interface PlaylistImportTrack {
   providerId: string
   id: string
   title: string
+  artist?: string
   duration: number
   externalRef: string
 }

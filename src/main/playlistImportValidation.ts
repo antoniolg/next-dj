@@ -7,6 +7,7 @@ export const PLAYLIST_IMPORT_LIMITS = {
   payloadBytes: 4 * 1024 * 1024,
   idCharacters: 256,
   titleCharacters: 512,
+  artistCharacters: 512,
   externalRefCharacters: 2048,
   durationSeconds: 24 * 60 * 60,
   resolvedFileBytes: 512 * 1024 * 1024,
@@ -27,6 +28,14 @@ function requireBoundedString(value: unknown, field: string, maximum: number): s
   }
 
   return normalized
+}
+
+function optionalBoundedString(value: unknown, field: string, maximum: number): string | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined
+  }
+
+  return requireBoundedString(value, field, maximum)
 }
 
 function requireRecord(value: unknown, message: string): Record<string, unknown> {
@@ -62,6 +71,7 @@ export function normalizePlaylistTracks(value: unknown, providerId: string): Pla
     const track = requireRecord(rawTrack, 'Playlist provider returned an invalid track.')
     const id = requireBoundedString(track.id, 'id', PLAYLIST_IMPORT_LIMITS.idCharacters)
     const title = requireBoundedString(track.title, 'title', PLAYLIST_IMPORT_LIMITS.titleCharacters)
+    const artist = optionalBoundedString(track.artist, 'artist', PLAYLIST_IMPORT_LIMITS.artistCharacters)
     const externalRef = requireBoundedString(
       track.externalRef,
       'externalRef',
@@ -79,13 +89,14 @@ export function normalizePlaylistTracks(value: unknown, providerId: string): Pla
     }
 
     payloadBytes += Buffer.byteLength(providerId) + Buffer.byteLength(id) + Buffer.byteLength(title)
+    payloadBytes += artist ? Buffer.byteLength(artist) : 0
     payloadBytes += Buffer.byteLength(externalRef) + 16
 
     if (payloadBytes > PLAYLIST_IMPORT_LIMITS.payloadBytes) {
       throw new Error('Playlist provider response exceeds the allowed size.')
     }
 
-    return { providerId, id, title, duration, externalRef }
+    return { providerId, id, title, ...(artist ? { artist } : {}), duration, externalRef }
   })
 }
 

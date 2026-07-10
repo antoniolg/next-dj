@@ -82,7 +82,14 @@ describe('LibraryPanel', () => {
   it('imports external playlists through the desktop bridge', async () => {
     const onAddPlaylistImportTracks = vi.fn().mockResolvedValue([])
     const importTracks = [
-      { providerId: 'demo-local', id: 'abc', title: 'Playlist Track', duration: 180, externalRef: 'abc' }
+      {
+        providerId: 'demo-local',
+        id: 'abc',
+        title: 'Playlist Track',
+        artist: 'Playlist Artist',
+        duration: 180,
+        externalRef: 'abc'
+      }
     ]
 
     window.nextdj = {
@@ -114,6 +121,7 @@ describe('LibraryPanel', () => {
   })
 
   it('shows a clean missing playlist dependency error', async () => {
+    const onAddPlaylistImportTracks = vi.fn().mockResolvedValue([])
     window.nextdj = {
       appName: 'NextDJ',
       checkForUpdate: vi.fn(),
@@ -133,7 +141,7 @@ describe('LibraryPanel', () => {
       onRecordingWriteError: vi.fn()
     }
 
-    renderPanel()
+    renderPanel({ onAddPlaylistImportTracks })
 
     fireEvent.click(await screen.findByRole('button', { name: 'Import playlist' }))
     fireEvent.change(screen.getByLabelText('Playlist URL'), {
@@ -147,6 +155,7 @@ describe('LibraryPanel', () => {
       )
     ).toBeInTheDocument()
     expect(screen.queryByText(/Error invoking remote method/)).not.toBeInTheDocument()
+    expect(onAddPlaylistImportTracks).not.toHaveBeenCalled()
   })
 
   it('shows and dismisses recoverable library errors', () => {

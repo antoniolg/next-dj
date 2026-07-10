@@ -4,6 +4,7 @@ import { readAudioMetadata } from '../library/audioMetadata'
 import { mapWithConcurrency } from '../library/concurrentTasks'
 import { createPlaylistFileName, createTrackId, isAudioFile } from '../library/libraryFiles'
 import {
+  deletePersistedFiles,
   fileFromBlob,
   getPersistedFile,
   persistTrackMetadata,
@@ -39,6 +40,7 @@ function migratePersistedTrack(track: ReturnType<typeof readPersistedLibrary>['t
     return {
       id: `external-${LEGACY_PROVIDER_ID}-${legacyId}`,
       title: track.title,
+      artist: track.artist,
       duration: track.duration,
       bpm: track.bpm,
       firstBeatOffset: track.firstBeatOffset,
@@ -51,6 +53,7 @@ function migratePersistedTrack(track: ReturnType<typeof readPersistedLibrary>['t
   return {
     id: track.id,
     title: track.title,
+    artist: track.artist,
     duration: track.duration,
     bpm: track.bpm,
     firstBeatOffset: track.firstBeatOffset,
@@ -155,9 +158,10 @@ export function useLibrary(): {
   }, [])
 
   const addPlaylistImportTracks = useCallback(async (importTracks: PlaylistImportTrack[]): Promise<LibraryTrack[]> => {
-    const nextTracks = importTracks.map((track) => ({
+    const importedTracks = importTracks.map((track) => ({
       id: `external-${track.providerId}-${track.id}`,
       title: track.title,
+      artist: track.artist,
       duration: track.duration,
       bpm: 0,
       firstBeatOffset: 0,
@@ -168,12 +172,32 @@ export function useLibrary(): {
 
     try {
       return await transactionQueueRef.current.run(async () => {
-        const updatedTracks = prepareLibraryUpdate(tracksRef.current, nextTracks)
+        const currentTracks = tracksRef.current
+        const currentTracksById = new Map(currentTracks.map((track) => [track.id, track]))
+        const nextTracks = importedTracks.map((track) => {
+          const currentTrack = currentTracksById.get(track.id)
+
+          return currentTrack?.file
+            ? {
+                ...track,
+                duration: currentTrack.duration,
+                bpm: currentTrack.bpm,
+                firstBeatOffset: currentTrack.firstBeatOffset,
+                file: currentTrack.file
+              }
+            : track
+        })
+        const updatedTracks = prepareLibraryUpdate([], nextTracks)
+        const retainedTrackIds = new Set(updatedTracks.map((track) => track.id))
+        const removedFileIds = currentTracks
+          .filter((track) => !retainedTrackIds.has(track.id))
+          .map((track) => track.id)
 
         persistTrackMetadata(updatedTracks)
         tracksRef.current = updatedTracks
         setTracks(updatedTracks)
         setError(null)
+        await deletePersistedFiles(removedFileIds).catch(() => undefined)
         return nextTracks
       })
     } catch (operationError) {
