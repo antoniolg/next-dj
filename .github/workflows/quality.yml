@@ -1,26 +1,15 @@
-name: CI
+name: Reusable Quality Gate
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   quality:
-    uses: ./.github/workflows/quality.yml
-
-  performance-smoke:
-    name: Manual Performance Smoke
-    if: github.event_name == 'workflow_dispatch'
+    name: Quality Gate
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        scenario:
-          - deck-play
-          - deck-record
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -47,5 +36,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb libatk-bridge2.0-0 libgbm1 libgtk-3-0 libnss3
 
-      - name: Run performance smoke
-        run: xvfb-run -a npm run perf:snapshot -- --scenario ${{ matrix.scenario }} --wait-ms 3000
+      - name: Run check
+        run: npm run check
+
+      - name: Run coverage
+        run: npm run test:coverage
+
+      - name: Smoke deck load performance snapshot
+        run: xvfb-run -a npm run perf:snapshot -- --scenario deck-load --wait-ms 1000
