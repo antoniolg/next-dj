@@ -87,6 +87,10 @@
     gap: 0.18rem;
   }
 
+  .channel-fader-row {
+    padding-top: 1rem;
+  }
+
   .master-strip {
     --knob-size: 34px;
     --vu-height: 136px;
