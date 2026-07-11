@@ -56,10 +56,11 @@
   border-radius: inherit;
   background: conic-gradient(
     from 205deg,
-    transparent 0 42%,
-    color-mix(in srgb, var(--knob-accent), transparent 72%) 49%,
-    color-mix(in srgb, var(--knob-accent), transparent 42%) 58%,
-    transparent 68% 100%
+    transparent 0 32%,
+    color-mix(in srgb, var(--knob-accent), transparent 58%) 40%,
+    color-mix(in srgb, var(--knob-accent), transparent 12%) 55%,
+    color-mix(in srgb, var(--knob-accent), transparent 34%) 68%,
+    transparent 78% 100%
   );
   content: '';
   mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
