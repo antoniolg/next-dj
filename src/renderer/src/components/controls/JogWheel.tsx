@@ -176,6 +176,7 @@ export function JogWheel({
       <span aria-hidden="true" className="jog-arc" />
       <span aria-hidden="true" className="jog-ticks" />
       <span className="jog-rotor" style={{ transform: `rotate(${rotation}deg)` }}>
+        <span aria-hidden="true" className="jog-position-marker" />
         <span className="jog-platter" />
         <span className="jog-cap">
           <NextDjMark className="jog-logo" />

@@ -39,7 +39,7 @@ describe('JogWheel helpers', () => {
 
 describe('JogWheel', () => {
   it('renders an accessible jog control with progress styling', () => {
-    render(
+    const { container } = render(
       <JogWheel
         accent="#22d3ee"
         duration={60}
@@ -57,6 +57,7 @@ describe('JogWheel', () => {
     expect(screen.getByRole('slider', { name: 'Deck A jog' })).toHaveStyle({
       '--jog-progress': '180deg'
     })
+    expect(container.querySelector('.jog-rotor > .jog-position-marker')).toBeInTheDocument()
   })
 
   it('seeks stopped decks and bends playing decks from the keyboard', () => {

@@ -10,7 +10,6 @@
   border: none;
   border-radius: 999px;
   background:
-    linear-gradient(var(--jog-accent), var(--jog-accent)) 50% 7px / 2px 11px no-repeat,
     radial-gradient(circle at 50% 5%, rgba(255, 255, 255, 0.065), transparent 34%),
     conic-gradient(from 215deg, rgba(255, 255, 255, 0.018), transparent 22%, rgba(255, 255, 255, 0.045) 45%, transparent 64%),
     radial-gradient(
@@ -39,7 +38,7 @@
   z-index: 4;
   border-radius: 999px;
   background: conic-gradient(
-    from -0.5deg,
+    from 4deg,
     color-mix(in srgb, var(--jog-accent), transparent 32%) 0 var(--jog-progress),
     transparent var(--jog-progress) 360deg
   );
@@ -98,8 +97,22 @@
 .jog-rotor {
   position: absolute;
   inset: 0;
+  z-index: 3;
   pointer-events: none;
   will-change: transform;
+}
+
+.jog-position-marker {
+  position: absolute;
+  top: 9.7%;
+  left: 50%;
+  z-index: 3;
+  width: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--jog-accent), white 14%);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--jog-accent), transparent 56%);
+  transform: translateX(-50%);
 }
 
 .jog-platter {
@@ -120,10 +133,10 @@
     inset 0 2px 4px rgba(221, 232, 240, 0.1),
     inset 0 -14px 25px rgba(0, 0, 0, 0.46),
     inset 0 0 26px rgba(166, 187, 205, 0.035),
-    0 0 0 1px rgba(196, 211, 224, 0.48),
-    0 0 0 3px rgba(0, 0, 0, 0.86),
-    0 0 0 5px rgba(176, 194, 209, 0.2),
-    0 0 0 8px rgba(0, 0, 0, 0.62),
+    0 0 0 1px rgba(196, 211, 224, 0.36),
+    0 0 0 2px rgba(0, 0, 0, 0.88),
+    0 0 0 3px rgba(176, 194, 209, 0.1),
+    0 0 0 5px rgba(0, 0, 0, 0.66),
     0 0 18px rgba(0, 0, 0, 0.68);
 }
 
