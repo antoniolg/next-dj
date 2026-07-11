@@ -73,6 +73,7 @@
 
 .fader-thumb {
   position: absolute;
+  z-index: 1;
   border: 1px solid rgba(0, 0, 0, 0.9);
   border-radius: 2px;
   background:
@@ -118,15 +119,22 @@
 }
 
 .fader-thumb::after {
-  inset: 2px;
-  border-top: 1px solid rgba(222, 231, 239, 0.16);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.72);
+  top: 3px;
+  right: -4px;
+  bottom: 3px;
+  left: -4px;
+  z-index: -1;
+  border: 1px solid rgba(0, 0, 0, 0.86);
   border-radius: 1px;
+  background: linear-gradient(180deg, #39414b, #11161d 45% 58%, #252c35);
+  box-shadow:
+    inset 0 1px 0 rgba(221, 230, 238, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.72);
 }
 
 .fader-vertical .fader-thumb {
   left: 50%;
-  width: 40px;
+  width: 38px;
   height: 24px;
   transform: translate(-50%, 50%);
 }
@@ -171,11 +179,15 @@
 }
 
 .fader-horizontal .fader-thumb::after {
-  inset: 2px;
-  border-top: 0;
-  border-right: 1px solid rgba(0, 0, 0, 0.72);
-  border-bottom: 0;
-  border-left: 1px solid rgba(222, 231, 239, 0.16);
+  top: -4px;
+  right: 3px;
+  bottom: -4px;
+  left: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.86);
+  background: linear-gradient(90deg, #39414b, #11161d 45% 58%, #252c35);
+  box-shadow:
+    inset 1px 0 0 rgba(221, 230, 238, 0.2),
+    2px 0 4px rgba(0, 0, 0, 0.72);
 }
 
 .fader-detent {
