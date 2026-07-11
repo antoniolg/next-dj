@@ -23,6 +23,18 @@ describe('Fader', () => {
     expect(screen.getByText('Channel volume')).toBeInTheDocument()
   })
 
+  it('builds the handle from independent mechanical layers', () => {
+    render(<Fader accent="#22d3ee" label="Pitch" max={16} min={-16} value={0} onChange={vi.fn()} />)
+
+    const thumb = screen.getByRole('slider', { name: 'Pitch' }).querySelector('.fader-thumb')
+
+    expect(thumb?.children).toHaveLength(4)
+    expect(thumb?.querySelector('.fader-thumb-backplate')).toBeInTheDocument()
+    expect(thumb?.querySelector('.fader-thumb-face-start')).toBeInTheDocument()
+    expect(thumb?.querySelector('.fader-thumb-ridge')).toBeInTheDocument()
+    expect(thumb?.querySelector('.fader-thumb-face-end')).toBeInTheDocument()
+  })
+
   it('steps keyboard changes in vertical orientation', () => {
     const onChange = vi.fn()
 

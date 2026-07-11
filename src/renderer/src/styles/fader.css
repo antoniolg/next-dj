@@ -74,120 +74,147 @@
 .fader-thumb {
   position: absolute;
   z-index: 1;
-  border: 1px solid rgba(0, 0, 0, 0.9);
-  border-radius: 2px;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent 14% 80%, rgba(0, 0, 0, 0.48)),
-    linear-gradient(
-      180deg,
-      #0a0d12 0 7%,
-      #737e89 8% 14%,
-      #323a44 15% 38%,
-      #11161c 39% 45%,
-      #05070a 46% 48%,
-      #9ca7b2 49% 53%,
-      #090c10 54% 57%,
-      #46505b 58% 67%,
-      #242b34 68% 86%,
-      #080b0f 87% 100%
-    );
-  box-shadow:
-    inset 0 1px 0 rgba(235, 241, 247, 0.52),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.88),
-    inset 1px 0 0 rgba(194, 204, 214, 0.14),
-    inset -1px 0 0 rgba(0, 0, 0, 0.56),
-    0 0 0 1px rgba(127, 140, 154, 0.24),
-    0 4px 9px rgba(0, 0, 0, 0.76);
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.72));
   pointer-events: none;
 }
 
-.fader-thumb::before,
-.fader-thumb::after {
+.fader-thumb > span {
   position: absolute;
-  content: '';
+  display: block;
+  pointer-events: none;
 }
 
-.fader-thumb::before {
-  top: calc(50% - 2px);
-  right: 3px;
-  left: 3px;
-  height: 4px;
-  background: linear-gradient(180deg, #05070a 0 24%, #bec7d0 25% 52%, #68727d 53% 68%, #05070a 69% 100%);
+.fader-thumb-backplate {
+  z-index: 0;
+  border: 1px solid #05080c;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #5b6672 0, #303945 24%, #11171e 52%, #343d48 78%, #0b0f14 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(218, 228, 237, 0.24),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.82);
+}
+
+.fader-thumb-face {
+  z-index: 1;
+  border: 1px solid #070a0e;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(222, 231, 239, 0.11), transparent 16% 82%, rgba(0, 0, 0, 0.4));
+  box-shadow:
+    inset 0 1px 0 rgba(235, 241, 247, 0.42),
+    inset 1px 0 0 rgba(190, 201, 211, 0.1),
+    inset -1px 0 0 rgba(0, 0, 0, 0.48);
+}
+
+.fader-thumb-face-start {
+  background-color: #252c35;
+  background-image:
+    linear-gradient(90deg, rgba(222, 231, 239, 0.11), transparent 16% 82%, rgba(0, 0, 0, 0.4)),
+    linear-gradient(180deg, #77828e 0, #46505b 18%, #252c35 58%, #0b0f14 100%);
+}
+
+.fader-thumb-face-end {
+  background-color: #161b22;
+  background-image:
+    linear-gradient(90deg, rgba(222, 231, 239, 0.08), transparent 16% 82%, rgba(0, 0, 0, 0.44)),
+    linear-gradient(180deg, #56616c 0, #343d47 26%, #181e26 72%, #080b0f 100%);
+  box-shadow:
+    inset 1px 0 0 rgba(190, 201, 211, 0.08),
+    inset -1px 0 0 rgba(0, 0, 0, 0.48),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.9);
+}
+
+.fader-thumb-ridge {
+  z-index: 2;
+  border: 1px solid #05070a;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #080b0f 0 16%, #e1e6eb 17% 38%, #929da8 39% 62%, #38414b 63% 78%, #06080b 79% 100%);
   box-shadow:
     0 -1px 0 rgba(0, 0, 0, 0.9),
     0 1px 0 rgba(0, 0, 0, 0.9);
 }
 
-.fader-thumb::after {
-  top: 3px;
-  right: -4px;
-  bottom: 3px;
-  left: -4px;
-  z-index: -1;
-  border: 1px solid rgba(0, 0, 0, 0.86);
-  border-radius: 1px;
-  background: linear-gradient(180deg, #39414b, #11161d 45% 58%, #252c35);
-  box-shadow:
-    inset 0 1px 0 rgba(221, 230, 238, 0.2),
-    0 2px 4px rgba(0, 0, 0, 0.72);
-}
-
 .fader-vertical .fader-thumb {
   left: 50%;
   width: 38px;
-  height: 24px;
+  height: 30px;
   transform: translate(-50%, 50%);
+}
+
+.fader-vertical .fader-thumb-backplate {
+  top: 5px;
+  right: -4px;
+  bottom: 5px;
+  left: -4px;
+}
+
+.fader-vertical .fader-thumb-face {
+  right: 0;
+  left: 0;
+  height: 14px;
+}
+
+.fader-vertical .fader-thumb-face-start {
+  top: 0;
+}
+
+.fader-vertical .fader-thumb-face-end {
+  bottom: 0;
+}
+
+.fader-vertical .fader-thumb-ridge {
+  top: 50%;
+  right: -1px;
+  left: -1px;
+  height: 4px;
+  transform: translateY(-50%);
 }
 
 .fader-horizontal .fader-thumb {
   top: 50%;
-  width: 24px;
-  height: 32px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 14% 80%, rgba(0, 0, 0, 0.48)),
-    linear-gradient(
-      90deg,
-      #0a0d12 0 7%,
-      #737e89 8% 14%,
-      #323a44 15% 38%,
-      #11161c 39% 45%,
-      #05070a 46% 48%,
-      #9ca7b2 49% 53%,
-      #090c10 54% 57%,
-      #46505b 58% 67%,
-      #242b34 68% 86%,
-      #080b0f 87% 100%
-    );
+  width: 30px;
+  height: 38px;
   transform: translate(-50%, -50%);
 }
 
-.fader-horizontal .fader-thumb::before,
-.fader-horizontal .fader-thumb::after {
-  right: auto;
+.fader-horizontal .fader-thumb-backplate {
+  top: -4px;
+  right: 5px;
+  bottom: -4px;
+  left: 5px;
+  background: linear-gradient(90deg, #5b6672 0, #303945 24%, #11171e 52%, #343d48 78%, #0b0f14 100%);
 }
 
-.fader-horizontal .fader-thumb::before {
-  top: 3px;
-  bottom: 3px;
-  left: calc(50% - 2px);
-  width: 4px;
+.fader-horizontal .fader-thumb-face {
+  top: 0;
+  bottom: 0;
+  width: 14px;
   height: auto;
-  background: linear-gradient(90deg, #05070a 0 24%, #bec7d0 25% 52%, #68727d 53% 68%, #05070a 69% 100%);
+}
+
+.fader-horizontal .fader-thumb-face-start {
+  left: 0;
+  background-image:
+    linear-gradient(180deg, rgba(222, 231, 239, 0.11), transparent 16% 82%, rgba(0, 0, 0, 0.4)),
+    linear-gradient(90deg, #77828e 0, #46505b 18%, #252c35 58%, #0b0f14 100%);
+}
+
+.fader-horizontal .fader-thumb-face-end {
+  right: 0;
+  background-image:
+    linear-gradient(180deg, rgba(222, 231, 239, 0.08), transparent 16% 82%, rgba(0, 0, 0, 0.44)),
+    linear-gradient(90deg, #56616c 0, #343d47 26%, #181e26 72%, #080b0f 100%);
+}
+
+.fader-horizontal .fader-thumb-ridge {
+  top: -1px;
+  bottom: -1px;
+  left: 50%;
+  width: 4px;
+  background: linear-gradient(90deg, #080b0f 0 16%, #e1e6eb 17% 38%, #929da8 39% 62%, #38414b 63% 78%, #06080b 79% 100%);
   box-shadow:
     -1px 0 0 rgba(0, 0, 0, 0.9),
     1px 0 0 rgba(0, 0, 0, 0.9);
-}
-
-.fader-horizontal .fader-thumb::after {
-  top: -4px;
-  right: 3px;
-  bottom: -4px;
-  left: 3px;
-  border: 1px solid rgba(0, 0, 0, 0.86);
-  background: linear-gradient(90deg, #39414b, #11161d 45% 58%, #252c35);
-  box-shadow:
-    inset 1px 0 0 rgba(221, 230, 238, 0.2),
-    2px 0 4px rgba(0, 0, 0, 0.72);
+  transform: translateX(-50%);
 }
 
 .fader-detent {

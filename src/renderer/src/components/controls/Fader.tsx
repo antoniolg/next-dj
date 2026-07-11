@@ -196,7 +196,12 @@ export function Fader({
             style={isVertical ? { height: `${percentage * 100}%` } : { width: `${percentage * 100}%` }}
           />
         ) : null}
-        <span className="fader-thumb" style={thumbStyle} />
+        <span className="fader-thumb" style={thumbStyle}>
+          <span className="fader-thumb-backplate" />
+          <span className="fader-thumb-face fader-thumb-face-start" />
+          <span className="fader-thumb-ridge" />
+          <span className="fader-thumb-face fader-thumb-face-end" />
+        </span>
       </div>
       {label && !hideLabel ? <span className="fader-label">{label}</span> : null}
     </div>
