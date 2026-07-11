@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { isAbsolute, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { PlaylistImportResolvedFile, PlaylistImportTrack } from '../shared/nextdj.js'
+import { createM3uPlaylistProvider } from './m3uPlaylistProvider.js'
 import type {
   PlaylistImportPluginExport,
   PlaylistImportProvider,
@@ -273,14 +274,16 @@ export function createPlaylistImportRegistry(
   }
 }
 
-export async function createConfiguredPlaylistImportRegistry(): Promise<PlaylistImportRegistry> {
+export async function createConfiguredPlaylistImportRegistry(
+  builtinProviders: PlaylistImportProvider[] = [createM3uPlaylistProvider()]
+): Promise<PlaylistImportRegistry> {
   try {
     const pluginPaths = await readPlaylistPluginPaths()
     const providers = await loadPlaylistImportProviders(pluginPaths)
-    return createPlaylistImportRegistry(providers)
+    return createPlaylistImportRegistry([...providers, ...builtinProviders])
   } catch (error) {
     reportProviderError('configuration', CONFIG_FILE_NAME, error)
-    return createPlaylistImportRegistry([])
+    return createPlaylistImportRegistry(builtinProviders)
   }
 }
 
