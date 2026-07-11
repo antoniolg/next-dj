@@ -1,10 +1,75 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fileFromBlob, persistTrackMetadata, readPersistedLibrary, readPersistedTracks } from './libraryRepository'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  deletePersistedFiles,
+  fileFromBlob,
+  getPersistedFile,
+  persistTrackMetadata,
+  putPersistedFile,
+  readPersistedLibrary,
+  readPersistedTracks
+} from './libraryRepository'
 import type { LibraryTrack, PersistedTrack } from './libraryTypes'
 
 describe('library repository', () => {
   beforeEach(() => {
     localStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('stores, restores, and removes audio blobs in IndexedDB', async () => {
+    const storedBlob = new Blob(['persisted audio'], { type: 'audio/mpeg' })
+    const put = vi.fn()
+    const remove = vi.fn()
+    const close = vi.fn()
+    const store = {
+      put,
+      delete: remove,
+      get: vi.fn(() => {
+        const request: { result?: Blob; onsuccess?: () => void } = {}
+        queueMicrotask(() => {
+          request.result = storedBlob
+          request.onsuccess?.()
+        })
+        return request
+      })
+    }
+    const database = {
+      close,
+      createObjectStore: vi.fn(),
+      transaction: vi.fn(() => {
+        const transaction: { oncomplete?: () => void; objectStore: () => typeof store } = {
+          objectStore: () => store
+        }
+        queueMicrotask(() => transaction.oncomplete?.())
+        return transaction
+      })
+    }
+    const open = vi.fn(() => {
+      const request: {
+        result: typeof database
+        onupgradeneeded?: () => void
+        onsuccess?: () => void
+      } = { result: database }
+      queueMicrotask(() => {
+        request.onupgradeneeded?.()
+        request.onsuccess?.()
+      })
+      return request
+    })
+    vi.stubGlobal('indexedDB', { open })
+
+    const file = new File(['audio'], 'set.mp3', { type: 'audio/mpeg' })
+    await putPersistedFile('track-1', file)
+    await expect(getPersistedFile('track-1')).resolves.toBe(storedBlob)
+    await deletePersistedFiles([])
+    await deletePersistedFiles(['track-1', 'track-2'])
+
+    expect(put).toHaveBeenCalledWith(file, 'track-1')
+    expect(remove).toHaveBeenCalledTimes(2)
+    expect(close).toHaveBeenCalledTimes(3)
   })
 
   it('persists track metadata without storing File objects in localStorage', () => {

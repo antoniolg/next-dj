@@ -5,6 +5,37 @@ All notable changes to NextDJ will be documented in this file.
 The format is based on Keep a Changelog, and this project uses Semantic
 Versioning once public releases begin.
 
+## [0.1.4] - 2026-07-11
+
+This release expands the hands-on DJ workflow and brings the desktop console
+substantially closer to its intended hardware-inspired design. These early
+builds remain unsigned, so macOS and Windows may show security warnings.
+
+### Added
+
+- Audible jog scrubbing and bidirectional platter scratching.
+- Persistent track artwork for local files and imported playlists.
+- An independent headphones level control and persisted output routing.
+- Dedicated pitch, channel-volume, and crossfader control variants.
+
+### Changed
+
+- Extended the pitch range to +/-16% for wider tempo matching.
+- Replaced the crate contents when importing a new playlist.
+- Rebuilt the mixer, jog wheels, faders, crossfader, and output settings around a consistent hardware-inspired visual system.
+- Smoothed platter rotation on the compositor without increasing the React update rate.
+- Updated the project screenshot to reflect the current console.
+
+### Fixed
+
+- Prevented crate keyboard loading from replacing the deck that is currently audible.
+- Made CUE clicks deterministic and stopped pointer drags from remaining captured after release.
+- Preserved operating-system shortcuts such as Command-Q.
+- Improved playlist-import errors when a configured provider dependency is unavailable.
+
+These early builds are unsigned. macOS and Windows may show security warnings.
+You can build from source if you prefer to inspect the app before running it.
+
 ## [0.1.3] - 2026-07-10
 
 This corrective release makes the unsigned macOS download internally

@@ -288,12 +288,14 @@ async function loadSyntheticDeckTrack(client, options) {
   const fixture = await createSyntheticAudioFile(options)
 
   try {
-    const nodeId = await waitForSelectorNode(client, '.deck-panel input[type="file"]', 10000)
+    const nodeId = await waitForSelectorNode(client, '.library-panel input[type="file"]', 10000)
 
     await client.send('DOM.setFileInputFiles', {
       files: [fixture.filePath],
       nodeId
     })
+    const loadNodeId = await waitForSelectorNode(client, '.library-table tbody .load-chip-a', 10000)
+    await clickNode(client, loadNodeId)
     await waitForMeasures(
       client,
       [
