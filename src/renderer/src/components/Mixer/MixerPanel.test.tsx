@@ -52,7 +52,7 @@ describe('MixerPanel', () => {
 
     renderMixer({ onOpenSettings, onOpenShortcuts })
 
-    expect(screen.getByText('NEXTDJ')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'MIXER' })).toBeInTheDocument()
     expect(screen.getByText('126.4 BPM')).toBeInTheDocument()
     expect(screen.getAllByLabelText('VU meter')).toHaveLength(2)
 

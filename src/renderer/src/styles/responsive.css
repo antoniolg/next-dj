@@ -8,8 +8,8 @@
   }
 
   .mixer-panel {
+    --mixer-padding: 0.58rem;
     gap: 0.35rem;
-    padding: 0.58rem;
   }
 
   .mixer-body {
@@ -18,13 +18,22 @@
   }
 
   .channel-strip {
-    --knob-size: 36px;
-    gap: 0.28rem;
+    --knob-size: 38px;
+    --channel-fader-height: clamp(140px, 20vh, 150px);
+    gap: 0.5rem;
+  }
+
+  .channel-strip > .cue-button {
+    margin-top: 0.75rem;
+  }
+
+  .channel-fader-row {
+    margin-top: 1.5rem;
   }
 
   .master-strip {
-    --knob-size: 40px;
-    --vu-height: 178px;
+    --knob-size: 42px;
+    --vu-height: clamp(158px, 23vh, 190px);
     gap: 0.35rem;
   }
 
@@ -70,7 +79,8 @@
   }
 
   .crossfader-well {
-    padding: 0.35rem 0.9rem 0.5rem;
+    min-height: 72px;
+    padding: 0.5rem 0.8rem 0.6rem;
   }
 }
 
@@ -83,18 +93,24 @@
   }
 
   .channel-strip {
-    --knob-size: 30px;
-    gap: 0.18rem;
+    --knob-size: 38px;
+    --channel-fader-height: 150px;
+    gap: 0.62rem;
+  }
+
+  .channel-strip > .cue-button {
+    margin-top: 1rem;
   }
 
   .channel-fader-row {
-    padding-top: 1rem;
+    margin-top: 1.7rem;
   }
 
   .master-strip {
-    --knob-size: 34px;
-    --vu-height: 136px;
-    gap: 0.22rem;
+    --knob-size: 42px;
+    --vu-height: 174px;
+    gap: 0.25rem;
+    padding: 0.45rem 0.3rem 0.55rem;
   }
 
   .mixer-header {

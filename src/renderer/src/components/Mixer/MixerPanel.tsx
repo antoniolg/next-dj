@@ -66,7 +66,7 @@ export const MixerPanel = memo(function MixerPanel({
   return (
     <section className="console-panel mixer-panel">
       <div className="mixer-header">
-        <h1 className="mixer-brand">NEXTDJ</h1>
+        <h1 className="mixer-brand">MIXER</h1>
       </div>
 
       <div className="mixer-body">
