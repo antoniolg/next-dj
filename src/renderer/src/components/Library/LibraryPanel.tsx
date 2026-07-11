@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, ChevronDown, ChevronUp, Info, Link, Maximize2, Minimize2, Music, Plus, X } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronUp, Link, Maximize2, Minimize2, Music, Plus, X } from 'lucide-react'
 import type { DeckId } from '../../app/engineTypes'
 import type { LibraryTrack } from '../../hooks/useLibrary'
 import { LibraryTrackTable } from './LibraryTrackTable'
@@ -258,9 +258,6 @@ export const LibraryPanel = memo(function LibraryPanel({
         <div className="library-title">
           <Music size={13} strokeWidth={2.4} />
           <span>Crate</span>
-          <span className="library-info" title={`${tracks.length} tracks`}>
-            <Info size={13} strokeWidth={2.2} />
-          </span>
           <span
             aria-live="polite"
             className={`library-keyboard-target ${keyboardLoadDeckId ? `library-keyboard-target-${keyboardLoadDeckId.toLowerCase()}` : 'library-keyboard-target-blocked'}`}
