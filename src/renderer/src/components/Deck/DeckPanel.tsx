@@ -300,6 +300,7 @@ export const DeckPanel = memo(function DeckPanel({
             min={MIN_PITCH_PERCENT}
             scale={PITCH_SCALE}
             step={0.1}
+            variant="pitch"
             value={pitch}
             valueFormatter={(value) => `${value > 0 ? '+' : ''}${value.toFixed(1)}%`}
             onChange={onPitchChange}

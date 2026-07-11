@@ -20,6 +20,7 @@ interface FaderProps {
   hideLabel?: boolean
   showFill?: boolean
   scale?: FaderScale
+  variant?: 'standard' | 'pitch' | 'channel' | 'crossfader'
   valueFormatter?: (value: number) => string
 }
 
@@ -41,6 +42,7 @@ export function Fader({
   hideLabel = false,
   showFill = false,
   scale,
+  variant = 'standard',
   valueFormatter = (nextValue) => nextValue.toFixed(2)
 }: FaderProps): JSX.Element {
   const trackRef = useRef<HTMLDivElement | null>(null)
@@ -151,7 +153,9 @@ export function Fader({
     : { left: `${percentage * 100}%` }
 
   return (
-    <div className={`fader ${isVertical ? 'fader-vertical' : 'fader-horizontal'} ${disabled ? 'fader-disabled' : ''}`}>
+    <div
+      className={`fader ${isVertical ? 'fader-vertical' : 'fader-horizontal'} fader-variant-${variant} ${disabled ? 'fader-disabled' : ''}`}
+    >
       <div
         ref={trackRef}
         aria-label={label}

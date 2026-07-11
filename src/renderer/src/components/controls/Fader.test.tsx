@@ -35,6 +35,24 @@ describe('Fader', () => {
     expect(thumb?.querySelector('.fader-thumb-face-end')).toBeInTheDocument()
   })
 
+  it('exposes an explicit visual variant', () => {
+    render(
+      <Fader
+        accent="#22d3ee"
+        label="Channel volume"
+        max={1}
+        min={0}
+        value={0.5}
+        variant="channel"
+        onChange={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('slider', { name: 'Channel volume' }).closest('.fader')).toHaveClass(
+      'fader-variant-channel'
+    )
+  })
+
   it('steps keyboard changes in vertical orientation', () => {
     const onChange = vi.fn()
 

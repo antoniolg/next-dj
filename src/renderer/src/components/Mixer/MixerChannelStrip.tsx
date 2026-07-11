@@ -79,6 +79,7 @@ export const MixerChannelStrip = memo(function MixerChannelStrip({
           max={1}
           min={0}
           scale={{ count: 17, majorEvery: 2 }}
+          variant="channel"
           value={values.volume}
           valueFormatter={(value) => `${Math.round(value * 100)}%`}
           onChange={(value) => onChannelVolumeChange(deckId, value)}

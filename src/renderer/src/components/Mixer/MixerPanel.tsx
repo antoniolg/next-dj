@@ -187,6 +187,7 @@ export const MixerPanel = memo(function MixerPanel({
           min={-1}
           orientation="horizontal"
           step={0.01}
+          variant="crossfader"
           value={crossfade}
           valueFormatter={(value) => value.toFixed(2)}
           onChange={onCrossfadeChange}

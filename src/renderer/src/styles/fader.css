@@ -140,6 +140,18 @@
   transform: translate(-50%, 50%);
 }
 
+.fader-variant-channel .fader-track {
+  width: 56px;
+}
+
+.fader-variant-channel .fader-thumb {
+  width: 48px;
+}
+
+.fader-variant-channel .fader-tick {
+  width: 52px;
+}
+
 .fader-vertical .fader-thumb-backplate {
   top: 5px;
   right: 2px;
@@ -174,6 +186,11 @@
   width: 30px;
   height: 38px;
   transform: translate(-50%, -50%);
+}
+
+.fader-variant-crossfader .fader-thumb {
+  width: 30px;
+  height: 46px;
 }
 
 .fader-horizontal .fader-thumb-backplate {
