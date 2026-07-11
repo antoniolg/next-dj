@@ -48,7 +48,6 @@ export const MixerPanel = memo(function MixerPanel({
   cueMix,
   masterAccent,
   masterBeatIndex,
-  masterBpm,
   masterVolume,
   recorder,
   analyserA,
@@ -97,9 +96,6 @@ export const MixerPanel = memo(function MixerPanel({
             <VUMeter analyser={analyserB} segments={32} />
           </div>
           <div className="mixer-session">
-            <span className={`mixer-session-bpm ${masterBpm > 0 ? '' : 'mixer-session-bpm-idle'}`}>
-              {masterBpm > 0 ? `${masterBpm.toFixed(1)} BPM` : '--.- BPM'}
-            </span>
             <span aria-hidden="true" className="mixer-session-dots">
               {BEAT_DOTS.map((beat) => (
                 <span

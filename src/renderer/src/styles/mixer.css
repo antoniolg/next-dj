@@ -48,20 +48,10 @@
   order: 3;
 }
 
-.mixer-session-bpm {
-  color: #d8dee7;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.mixer-session-bpm-idle {
-  color: #64748b;
-}
-
 .mixer-session-dots {
   display: inline-flex;
   gap: 0.32rem;
+  margin-bottom: 0.2rem;
 }
 
 .mixer-session-actions {

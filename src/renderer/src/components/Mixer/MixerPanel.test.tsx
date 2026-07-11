@@ -53,7 +53,7 @@ describe('MixerPanel', () => {
     renderMixer({ onOpenSettings, onOpenShortcuts })
 
     expect(screen.getByRole('heading', { name: 'MIXER' })).toBeInTheDocument()
-    expect(screen.getByText('126.4 BPM')).toBeInTheDocument()
+    expect(screen.queryByText('126.4 BPM')).not.toBeInTheDocument()
     expect(screen.getAllByLabelText('VU meter')).toHaveLength(2)
 
     fireEvent.click(screen.getByRole('button', { name: 'Show keyboard shortcuts' }))
@@ -92,9 +92,9 @@ describe('MixerPanel', () => {
     expect(onCrossfadeChange).toHaveBeenCalledWith(0.06)
   })
 
-  it('shows idle BPM when there is no active master tempo', () => {
+  it('does not duplicate the master BPM in the mixer', () => {
     renderMixer({ masterBpm: 0, masterBeatIndex: -1 })
 
-    expect(screen.getByText('--.- BPM')).toBeInTheDocument()
+    expect(screen.queryByText('--.- BPM')).not.toBeInTheDocument()
   })
 })
