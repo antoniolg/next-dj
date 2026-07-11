@@ -76,86 +76,106 @@
   border: 1px solid rgba(0, 0, 0, 0.9);
   border-radius: 2px;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.11), transparent 16% 82%, rgba(0, 0, 0, 0.34)),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent 14% 80%, rgba(0, 0, 0, 0.48)),
     linear-gradient(
       180deg,
-      #11161d 0 12%,
-      #505a65 13% 19%,
-      #252b33 20% 43%,
-      #07090d 44% 54%,
-      #343c46 55% 66%,
-      #171c23 67% 86%,
-      #080b10 87% 100%
+      #0a0d12 0 7%,
+      #737e89 8% 14%,
+      #323a44 15% 38%,
+      #11161c 39% 45%,
+      #05070a 46% 48%,
+      #9ca7b2 49% 53%,
+      #090c10 54% 57%,
+      #46505b 58% 67%,
+      #242b34 68% 86%,
+      #080b0f 87% 100%
     );
   box-shadow:
-    inset 0 1px 0 rgba(224, 232, 240, 0.34),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.82),
-    0 0 0 1px rgba(127, 140, 154, 0.16),
-    0 3px 7px rgba(0, 0, 0, 0.68);
+    inset 0 1px 0 rgba(235, 241, 247, 0.52),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.88),
+    inset 1px 0 0 rgba(194, 204, 214, 0.14),
+    inset -1px 0 0 rgba(0, 0, 0, 0.56),
+    0 0 0 1px rgba(127, 140, 154, 0.24),
+    0 4px 9px rgba(0, 0, 0, 0.76);
   pointer-events: none;
 }
 
 .fader-thumb::before,
 .fader-thumb::after {
   position: absolute;
-  right: 3px;
-  left: 3px;
-  height: 1px;
   content: '';
 }
 
 .fader-thumb::before {
-  top: calc(50% - 1px);
-  background: rgba(0, 0, 0, 0.9);
+  top: calc(50% - 2px);
+  right: 3px;
+  left: 3px;
+  height: 4px;
+  background: linear-gradient(180deg, #05070a 0 24%, #bec7d0 25% 52%, #68727d 53% 68%, #05070a 69% 100%);
+  box-shadow:
+    0 -1px 0 rgba(0, 0, 0, 0.9),
+    0 1px 0 rgba(0, 0, 0, 0.9);
 }
 
 .fader-thumb::after {
-  top: 50%;
-  background: rgba(201, 211, 222, 0.2);
+  inset: 2px;
+  border-top: 1px solid rgba(222, 231, 239, 0.16);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.72);
+  border-radius: 1px;
 }
 
 .fader-vertical .fader-thumb {
   left: 50%;
-  width: 38px;
-  height: 19px;
+  width: 40px;
+  height: 24px;
   transform: translate(-50%, 50%);
 }
 
 .fader-horizontal .fader-thumb {
   top: 50%;
-  width: 22px;
-  height: 30px;
+  width: 24px;
+  height: 32px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.11), transparent 16% 82%, rgba(0, 0, 0, 0.34)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 14% 80%, rgba(0, 0, 0, 0.48)),
     linear-gradient(
       90deg,
-      #11161d 0 12%,
-      #505a65 13% 19%,
-      #252b33 20% 43%,
-      #07090d 44% 54%,
-      #343c46 55% 66%,
-      #171c23 67% 86%,
-      #080b10 87% 100%
+      #0a0d12 0 7%,
+      #737e89 8% 14%,
+      #323a44 15% 38%,
+      #11161c 39% 45%,
+      #05070a 46% 48%,
+      #9ca7b2 49% 53%,
+      #090c10 54% 57%,
+      #46505b 58% 67%,
+      #242b34 68% 86%,
+      #080b0f 87% 100%
     );
   transform: translate(-50%, -50%);
 }
 
 .fader-horizontal .fader-thumb::before,
 .fader-horizontal .fader-thumb::after {
-  top: 3px;
-  bottom: 3px;
-  width: 1px;
-  height: auto;
+  right: auto;
 }
 
 .fader-horizontal .fader-thumb::before {
-  right: auto;
-  left: calc(50% - 1px);
+  top: 3px;
+  bottom: 3px;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: auto;
+  background: linear-gradient(90deg, #05070a 0 24%, #bec7d0 25% 52%, #68727d 53% 68%, #05070a 69% 100%);
+  box-shadow:
+    -1px 0 0 rgba(0, 0, 0, 0.9),
+    1px 0 0 rgba(0, 0, 0, 0.9);
 }
 
 .fader-horizontal .fader-thumb::after {
-  right: auto;
-  left: 50%;
+  inset: 2px;
+  border-top: 0;
+  border-right: 1px solid rgba(0, 0, 0, 0.72);
+  border-bottom: 0;
+  border-left: 1px solid rgba(222, 231, 239, 0.16);
 }
 
 .fader-detent {
