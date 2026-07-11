@@ -198,6 +198,35 @@ describe('Recorder', () => {
     expect(lastChange(changes)).toMatchObject({ phase: 'error', error: 'disk full' })
   })
 
+  it('handles the session cleanup rejection when start fails after opening a session', async () => {
+    const { bridge } = installBridge()
+    // A vi.fn() mock observes its returned promises internally (for
+    // settledResults), which silently marks rejections as handled. To prove
+    // the recorder attaches its own rejection handler, hand back a thenable
+    // with a spied catch instead of a real rejected promise.
+    const rejectionHandled = vi.fn().mockReturnValue(Promise.resolve())
+    bridge.cancelRecording.mockReturnValue({ catch: rejectionHandled } as unknown as Promise<void>)
+    Object.defineProperty(globalThis, 'MediaRecorder', {
+      configurable: true,
+      value: class {
+        static isTypeSupported = FakeMediaRecorder.isTypeSupported
+
+        constructor() {
+          throw new Error('recorder construction failed')
+        }
+      }
+    })
+    const { changes, recorder } = createRecorder()
+
+    const startPromise = recorder.start('audio')
+    await finishCountdown(startPromise)
+
+    expect(bridge.startRecording).toHaveBeenCalledTimes(1)
+    expect(bridge.cancelRecording).toHaveBeenCalledWith('recording-1', true)
+    expect(rejectionHandled).toHaveBeenCalledTimes(1)
+    expect(lastChange(changes)).toMatchObject({ phase: 'error', error: 'recorder construction failed' })
+  })
+
   it('cancels an active main-process session when disposed', async () => {
     const { bridge } = installBridge()
     const { recorder } = createRecorder()

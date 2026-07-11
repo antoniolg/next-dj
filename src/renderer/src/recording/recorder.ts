@@ -81,7 +81,7 @@ export class Recorder {
       if (this.sessionId) {
         const sessionId = this.sessionId
         this.sessionId = null
-        void getBridge().cancelRecording(sessionId, true)
+        void getBridge().cancelRecording(sessionId, true).catch(() => undefined)
       }
 
       this.update(
