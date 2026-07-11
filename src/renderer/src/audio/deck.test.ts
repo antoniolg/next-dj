@@ -5,6 +5,10 @@ vi.mock('./waveformData', () => ({
   computeWaveformData: vi.fn(() => ({
     overview: { bucketCount: 1, peaks: new Float32Array([0, 1]), lows: new Float32Array([0, 0.5]) },
     zoom: { bucketCount: 1, peaks: new Float32Array([0, 1]), lows: new Float32Array([0, 0.5]) }
+  })),
+  computeWaveformDataAsync: vi.fn(async () => ({
+    overview: { bucketCount: 1, peaks: new Float32Array([0, 1]), lows: new Float32Array([0, 0.5]) },
+    zoom: { bucketCount: 1, peaks: new Float32Array([0, 1]), lows: new Float32Array([0, 0.5]) }
   }))
 }))
 

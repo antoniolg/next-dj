@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
-import { computeWaveformData, computeWaveformFromSamples, getLowPeakAt, getPeakAt } from '../../audio/waveformData'
+import {
+  buildPeakBuckets,
+  computeWaveformData,
+  computeWaveformDataAsync,
+  computeWaveformFromSamples,
+  getLowPeakAt,
+  getPeakAt
+} from '../../audio/waveformData'
 
 // Deterministic pseudo-random generator (mulberry32) so fixtures are reproducible.
 function mulberry32(seed: number): () => number {
@@ -39,46 +46,6 @@ function referenceBucketCounts(frameCount: number, duration: number): { overview
   )
 
   return { overview, zoom }
-}
-
-function referenceBuildPeakBuckets(
-  samples: Float32Array,
-  sampleRate: number,
-  bucketCount: number
-): { bucketCount: number; peaks: Float32Array; lows: Float32Array } {
-  const LOW_BAND_CUTOFF_HZ = 180
-  const frameCount = samples.length
-  const peaks = new Float32Array(bucketCount * 2)
-  const lows = new Float32Array(bucketCount * 2)
-  const alpha = 1 - Math.exp((-2 * Math.PI * LOW_BAND_CUTOFF_HZ) / sampleRate)
-  let lp1 = 0
-  let lp2 = 0
-
-  for (let bucket = 0; bucket < bucketCount; bucket += 1) {
-    const start = Math.floor((bucket / bucketCount) * frameCount)
-    const end = Math.max(start + 1, Math.floor(((bucket + 1) / bucketCount) * frameCount))
-    let min = 1
-    let max = -1
-    let lowMin = 1
-    let lowMax = -1
-
-    for (let frame = start; frame < end; frame += 1) {
-      const sample = samples[frame] ?? 0
-      min = Math.min(min, sample)
-      max = Math.max(max, sample)
-      lp1 += alpha * (sample - lp1)
-      lp2 += alpha * (lp1 - lp2)
-      lowMin = Math.min(lowMin, lp2)
-      lowMax = Math.max(lowMax, lp2)
-    }
-
-    peaks[bucket * 2] = min
-    peaks[bucket * 2 + 1] = max
-    lows[bucket * 2] = lowMin
-    lows[bucket * 2 + 1] = lowMax
-  }
-
-  return { bucketCount, peaks, lows }
 }
 
 function createAudioBuffer(channels: number[][], sampleRate = 1): AudioBuffer {
@@ -163,8 +130,8 @@ describe('computeWaveformFromSamples single-pass equivalence (realistic buffer l
         const duration = length / SAMPLE_RATE
         const { overview: overviewBucketCount, zoom: zoomBucketCount } = referenceBucketCounts(length, duration)
 
-        const refOverview = referenceBuildPeakBuckets(samples, SAMPLE_RATE, overviewBucketCount)
-        const refZoom = referenceBuildPeakBuckets(samples, SAMPLE_RATE, zoomBucketCount)
+        const refOverview = buildPeakBuckets(samples, SAMPLE_RATE, overviewBucketCount)
+        const refZoom = buildPeakBuckets(samples, SAMPLE_RATE, zoomBucketCount)
         const merged = computeWaveformFromSamples(samples, SAMPLE_RATE, length, duration)
 
         expect(merged.overview.bucketCount).toBe(overviewBucketCount)
@@ -206,5 +173,51 @@ describe('computeWaveformFromSamples single-pass equivalence (realistic buffer l
         expect(min).toBeLessThanOrEqual(max)
       }
     }
+  })
+})
+
+describe('computeWaveformFromSamples bucket-count clamps', () => {
+  it('clamps to MIN_ZOOM_BUCKETS and full overview range for a short (1s) input', () => {
+    const length = SAMPLE_RATE // 1 second at 44.1kHz
+    const samples = generateSamples(length, 11)
+    const duration = length / SAMPLE_RATE
+
+    const waveform = computeWaveformFromSamples(samples, SAMPLE_RATE, length, duration)
+
+    expect(waveform.overview.bucketCount).toBe(OVERVIEW_BUCKETS)
+    expect(waveform.zoom.bucketCount).toBe(MIN_ZOOM_BUCKETS)
+  })
+
+  it('clamps to MAX_ZOOM_BUCKETS for a long (>200s) input', () => {
+    const durationSeconds = 210
+    const length = durationSeconds * SAMPLE_RATE
+    const samples = generateSamples(1000, 22) // representative sample data; length param drives bucket math
+    const paddedSamples = new Float32Array(length)
+    paddedSamples.set(samples.subarray(0, Math.min(samples.length, length)))
+
+    const waveform = computeWaveformFromSamples(paddedSamples, SAMPLE_RATE, length, durationSeconds)
+
+    expect(waveform.overview.bucketCount).toBe(OVERVIEW_BUCKETS)
+    // durationSeconds * ZOOM_BUCKETS_PER_SECOND = 210 * 120 = 25200, clamped to MAX_ZOOM_BUCKETS
+    expect(waveform.zoom.bucketCount).toBe(MAX_ZOOM_BUCKETS)
+  })
+})
+
+describe('computeWaveformDataAsync', () => {
+  it('falls back to the sync path and resolves with correct data when Worker is undefined (jsdom default)', async () => {
+    expect(typeof Worker).toBe('undefined')
+
+    const buffer = createAudioBuffer([[-1, -0.5, 0.25, 0.75]], 4)
+    const [syncResult, asyncResult] = await Promise.all([
+      Promise.resolve(computeWaveformData(buffer)),
+      computeWaveformDataAsync(buffer)
+    ])
+
+    expect(asyncResult.overview.bucketCount).toBe(syncResult.overview.bucketCount)
+    expect(Array.from(asyncResult.overview.peaks)).toEqual(Array.from(syncResult.overview.peaks))
+    expect(Array.from(asyncResult.overview.lows)).toEqual(Array.from(syncResult.overview.lows))
+    expect(Array.from(asyncResult.zoom.peaks)).toEqual(Array.from(syncResult.zoom.peaks))
+    expect(getPeakAt(asyncResult.overview, 0)).toEqual({ min: -1, max: -1 })
+    expect(getPeakAt(asyncResult.overview, 3)).toEqual({ min: 0.75, max: 0.75 })
   })
 })

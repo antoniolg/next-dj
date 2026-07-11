@@ -1,8 +1,8 @@
-import { measureAsync, measureSync } from '../performance/perfMarks'
+import { measureAsync } from '../performance/perfMarks'
 import { readCachedFileBuffer } from './audioFileCache'
 import { detectBpm } from './bpm'
 import type { TrackMetadata } from './deckTypes'
-import { computeWaveformData, type WaveformData } from './waveformData'
+import { computeWaveformDataAsync, type WaveformData } from './waveformData'
 
 export interface DeckLoadAnalysis {
   bpm: number
@@ -39,7 +39,12 @@ export class DeckTrackLoader {
       return null
     }
 
-    const waveform = measureSync('deck.loadFile.computeWaveform', () => computeWaveformData(decoded))
+    const waveform = await measureAsync('deck.loadFile.computeWaveform', () => computeWaveformDataAsync(decoded))
+
+    if (intent !== this.intent) {
+      return null
+    }
+
     const detected =
       analysis && analysis.bpm > 0 && Number.isFinite(analysis.bpm) && Number.isFinite(analysis.firstBeatOffset)
         ? analysis

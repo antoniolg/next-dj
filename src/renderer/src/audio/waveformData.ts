@@ -21,7 +21,10 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
 }
 
-function buildPeakBuckets(samples: Float32Array, sampleRate: number, bucketCount: number): PeakBuckets {
+// Exported for use as the reference implementation in waveformData.test.ts, which asserts
+// the single-pass merge in buildPeakBucketsMerged is bit-exact against this two-pass
+// implementation for realistic buffer lengths.
+export function buildPeakBuckets(samples: Float32Array, sampleRate: number, bucketCount: number): PeakBuckets {
   const frameCount = samples.length
   const peaks = new Float32Array(bucketCount * 2)
   const lows = new Float32Array(bucketCount * 2)
@@ -184,6 +187,106 @@ export function computeWaveformData(buffer: AudioBuffer): WaveformData {
   const samples = buildMonoSamples(buffer)
 
   return computeWaveformFromSamples(samples, buffer.sampleRate, buffer.length, buffer.duration)
+}
+
+interface WaveformWorkerRequest {
+  requestId: number
+  samples: Float32Array
+  sampleRate: number
+  frameCount: number
+  duration: number
+}
+
+interface WaveformWorkerSuccessResponse {
+  requestId: number
+  ok: true
+  overviewPeaks: Float32Array
+  overviewLows: Float32Array
+  overviewBucketCount: number
+  zoomPeaks: Float32Array
+  zoomLows: Float32Array
+  zoomBucketCount: number
+}
+
+interface WaveformWorkerErrorResponse {
+  requestId: number
+  ok: false
+  message: string
+}
+
+type WaveformWorkerResponse = WaveformWorkerSuccessResponse | WaveformWorkerErrorResponse
+
+let worker: Worker | null = null
+let nextRequestId = 0
+const pendingRequests = new Map<
+  number,
+  { resolve: (value: WaveformData) => void; reject: (reason: unknown) => void }
+>()
+
+function getWorker(): Worker {
+  if (worker) {
+    return worker
+  }
+
+  const instance = new Worker(new URL('./waveformWorker.ts', import.meta.url), { type: 'module' })
+
+  instance.onmessage = (event: MessageEvent<WaveformWorkerResponse>) => {
+    const data = event.data
+    const pending = pendingRequests.get(data.requestId)
+
+    if (!pending) {
+      return
+    }
+
+    pendingRequests.delete(data.requestId)
+
+    if (data.ok) {
+      pending.resolve({
+        overview: { bucketCount: data.overviewBucketCount, peaks: data.overviewPeaks, lows: data.overviewLows },
+        zoom: { bucketCount: data.zoomBucketCount, peaks: data.zoomPeaks, lows: data.zoomLows }
+      })
+    } else {
+      pending.reject(new Error(data.message))
+    }
+  }
+
+  instance.onerror = (event: ErrorEvent) => {
+    for (const [requestId, pending] of pendingRequests) {
+      pending.reject(event.error ?? new Error(event.message || 'Waveform worker error'))
+      pendingRequests.delete(requestId)
+    }
+  }
+
+  worker = instance
+  return instance
+}
+
+function hasWorkerSupport(): boolean {
+  return typeof Worker !== 'undefined'
+}
+
+export async function computeWaveformDataAsync(buffer: AudioBuffer): Promise<WaveformData> {
+  if (!hasWorkerSupport()) {
+    return computeWaveformData(buffer)
+  }
+
+  const samples = buildMonoSamples(buffer)
+  const instance = getWorker()
+  const requestId = nextRequestId
+  nextRequestId += 1
+
+  const request: WaveformWorkerRequest = {
+    requestId,
+    samples,
+    sampleRate: buffer.sampleRate,
+    frameCount: buffer.length,
+    duration: buffer.duration
+  }
+
+  return new Promise<WaveformData>((resolve, reject) => {
+    pendingRequests.set(requestId, { resolve, reject })
+    instance.postMessage(request, [samples.buffer])
+  })
 }
 
 export function getPeakAt(buckets: PeakBuckets, index: number): { min: number; max: number } {
