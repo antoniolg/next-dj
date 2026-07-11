@@ -90,3 +90,19 @@ export default {
 ```
 
 Providers are responsible for only importing content that the user has the right to access, copy, and use.
+
+## Built-in Providers
+
+NextDJ ships one built-in provider: `m3u-local` (Local M3U playlist). It
+accepts the absolute path to a local `.m3u`/`.m3u8` file (a `file://` URL to
+that path also works) and lists the tracks it references. Playlist entries
+may be absolute paths, paths relative to the playlist file's directory, or
+`file://` URLs; `http(s)://` stream entries are skipped rather than causing
+an error. Nested playlist references are not followed.
+
+Built-in providers are registered after any providers loaded from
+`playlist-plugins.json`, so a configured plugin with a conflicting id takes
+precedence over the built-in.
+
+See [`src/main/m3uPlaylistProvider.ts`](../src/main/m3uPlaylistProvider.ts)
+for a reference implementation that plugin authors can copy.

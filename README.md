@@ -14,7 +14,7 @@ devices, and record sessions from one focused desktop app.
 - Shape channels with gain, EQ, filters, faders, crossfader, and VU meters.
 - Choose output devices where the platform supports it.
 - Record sessions from the app.
-- Add optional playlist import providers through a local plugin API.
+- Import local M3U/M3U8 playlists, or add more playlist import providers through a local plugin API.
 
 ## Status
 
