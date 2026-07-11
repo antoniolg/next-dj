@@ -59,6 +59,30 @@ export default defineConfig({
           functions: 85,
           lines: 80
         },
+        'src/main/recording.ts': {
+          statements: 58,
+          branches: 31,
+          functions: 43,
+          lines: 60
+        },
+        'src/main/window.ts': {
+          statements: 90,
+          branches: 80,
+          functions: 90,
+          lines: 90
+        },
+        'src/main/appSecurity.ts': {
+          statements: 90,
+          branches: 80,
+          functions: 90,
+          lines: 90
+        },
+        'src/renderer/src/hooks/useEngine.ts': {
+          statements: 70,
+          branches: 60,
+          functions: 60,
+          lines: 70
+        },
         'src/renderer/src/audio/{deckChannel,deckLoops,deckPersistence,deckTrackLoader,deckTransport,monoSamples}.ts': {
           statements: 80,
           branches: 70,
