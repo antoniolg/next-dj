@@ -5,7 +5,7 @@ import {
   appendRendererPerfFlag,
   isRendererPerfEnabled,
   readPerfUserDataDir,
-  readRemoteDebuggingPort
+  resolveRemoteDebuggingPort
 } from './performanceFlags.js'
 import { registerPlaylistImportIpc } from './playlistImport.js'
 import { registerRecordingIpc } from './recording.js'
@@ -15,9 +15,9 @@ import { dirname } from 'node:path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL)
-const remoteDebuggingPort = readRemoteDebuggingPort()
 const perfUserDataDir = readPerfUserDataDir()
 const rendererPerformanceEnabled = isRendererPerfEnabled()
+const remoteDebuggingPort = resolveRemoteDebuggingPort(isDev, rendererPerformanceEnabled)
 
 if (perfUserDataDir) {
   app.setPath('userData', perfUserDataDir)

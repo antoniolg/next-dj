@@ -4,7 +4,8 @@ import {
   isRendererPerfEnabled,
   readPerfRecordingsDir,
   readPerfUserDataDir,
-  readRemoteDebuggingPort
+  readRemoteDebuggingPort,
+  resolveRemoteDebuggingPort
 } from './performanceFlags.js'
 
 describe('main performance flags', () => {
@@ -14,6 +15,13 @@ describe('main performance flags', () => {
     expect(readRemoteDebuggingPort('65536')).toBeNull()
     expect(readRemoteDebuggingPort('abc')).toBeNull()
     expect(readRemoteDebuggingPort('')).toBeNull()
+  })
+
+  it('resolves the remote debugging port only in dev or perf mode', () => {
+    expect(resolveRemoteDebuggingPort(true, false, 9222)).toBe(9222)
+    expect(resolveRemoteDebuggingPort(false, true, 9222)).toBe(9222)
+    expect(resolveRemoteDebuggingPort(false, false, 9222)).toBeNull()
+    expect(resolveRemoteDebuggingPort(true, false, null)).toBeNull()
   })
 
   it('enables renderer perf tracing only with the explicit flag', () => {

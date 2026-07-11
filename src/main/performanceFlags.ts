@@ -15,6 +15,14 @@ export function isRendererPerfEnabled(value = process.env.NEXTDJ_PERF): boolean 
   return value === '1'
 }
 
+export function resolveRemoteDebuggingPort(
+  isDev: boolean,
+  perfEnabled = isRendererPerfEnabled(),
+  port = readRemoteDebuggingPort()
+): number | null {
+  return isDev || perfEnabled ? port : null
+}
+
 export function readPerfUserDataDir(value = process.env.NEXTDJ_PERF_USER_DATA_DIR): string | null {
   return value && value.trim() ? value : null
 }
