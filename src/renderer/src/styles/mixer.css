@@ -276,16 +276,16 @@
 
 .fader-variant-channel .fader-fill {
   width: 10px;
-  border-right: 1px solid color-mix(in srgb, var(--fader-accent), transparent 72%);
-  border-left: 1px solid color-mix(in srgb, var(--fader-accent), transparent 45%);
+  border-right: 0.5px solid color-mix(in srgb, var(--fader-accent), transparent 84%);
+  border-left: 0.5px solid color-mix(in srgb, var(--fader-accent), transparent 32%);
   border-radius: 2px;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--fader-accent), transparent 54%) 0,
-    color-mix(in srgb, var(--fader-accent), transparent 86%) 18%,
+    color-mix(in srgb, var(--fader-accent), transparent 48%) 0,
+    color-mix(in srgb, var(--fader-accent), transparent 88%) 18%,
     transparent 38% 62%,
-    color-mix(in srgb, var(--fader-accent), transparent 91%) 82%,
-    color-mix(in srgb, var(--fader-accent), transparent 76%) 100%
+    color-mix(in srgb, var(--fader-accent), transparent 94%) 82%,
+    color-mix(in srgb, var(--fader-accent), transparent 86%) 100%
   );
   box-shadow:
     -2px 0 4px color-mix(in srgb, var(--fader-accent), transparent 84%),
