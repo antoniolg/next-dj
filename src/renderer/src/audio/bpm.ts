@@ -349,15 +349,9 @@ function estimateFirstBeatOffset(
   return (maxBin / FOLD_BINS) * beatPeriod
 }
 
-export async function detectBpm(buffer: AudioBuffer): Promise<BpmDetectionResult> {
-  if (buffer.duration <= 0) {
-    return { bpm: 0, firstBeatOffset: 0 }
-  }
-
-  const rendered = await renderLowpassed(buffer)
-  const lowSamples = rendered.getChannelData(0)
+export function detectBpmFromLowBand(lowSamples: Float32Array, sampleRate: number): BpmDetectionResult {
   const tempoEnvelope = buildEnvelope(lowSamples, TEMPO_WINDOW)
-  const peaks = pickPeaks(tempoEnvelope, TEMPO_WINDOW / rendered.sampleRate)
+  const peaks = pickPeaks(tempoEnvelope, TEMPO_WINDOW / sampleRate)
   const best = scoreIntervals(peaks)
 
   if (!best) {
@@ -365,9 +359,18 @@ export async function detectBpm(buffer: AudioBuffer): Promise<BpmDetectionResult
   }
 
   const anchorEnvelope = buildEnvelope(lowSamples, ANCHOR_WINDOW)
-  const secondsPerBucket = ANCHOR_WINDOW / rendered.sampleRate
+  const secondsPerBucket = ANCHOR_WINDOW / sampleRate
   const bpm = refineBpm(anchorEnvelope, secondsPerBucket, best.bpm)
   const firstBeatOffset = estimateFirstBeatOffset(anchorEnvelope, secondsPerBucket, bpm)
 
   return { bpm, firstBeatOffset }
+}
+
+export async function detectBpm(buffer: AudioBuffer): Promise<BpmDetectionResult> {
+  if (buffer.duration <= 0) {
+    return { bpm: 0, firstBeatOffset: 0 }
+  }
+
+  const rendered = await renderLowpassed(buffer)
+  return detectBpmFromLowBand(rendered.getChannelData(0), rendered.sampleRate)
 }
