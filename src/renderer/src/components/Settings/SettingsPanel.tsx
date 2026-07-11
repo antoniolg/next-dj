@@ -137,9 +137,8 @@ export const SettingsPanel = memo(function SettingsPanel({
             <SlidersHorizontal size={18} strokeWidth={2.2} />
           </div>
           <div className="settings-header-copy">
-            <p>NextDJ / Audio</p>
             <h2 id="settings-title">Output settings</h2>
-            <span>Route the room and headphones independently.</span>
+            <span>Choose where the master and headphone signals play.</span>
           </div>
           <button
             ref={closeButtonRef}
@@ -177,7 +176,7 @@ export const SettingsPanel = memo(function SettingsPanel({
                 <strong>{Math.round(phonesVolume * 100)}%</strong>
               </div>
               <Fader
-                accent="#a5b4fc"
+                accent="#22d3ee"
                 hideLabel
                 label="Headphones level"
                 max={1}
