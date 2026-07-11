@@ -102,6 +102,15 @@
   will-change: transform;
 }
 
+.jog-wheel-playing .jog-rotor {
+  transition: transform 55ms linear;
+}
+
+.jog-wheel-platter-dragging .jog-rotor,
+.jog-wheel-rim-dragging .jog-rotor {
+  transition: none;
+}
+
 .jog-position-marker {
   position: absolute;
   top: 6.3%;
