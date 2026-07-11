@@ -80,11 +80,6 @@
   color: #fda4af;
 }
 
-.led-load {
-  flex: none;
-  align-self: flex-start;
-}
-
 .library-actions {
   display: flex;
   gap: 0.4rem;

@@ -115,14 +115,17 @@ describe('DeckPanel', () => {
     expect(document.querySelector('.deck-artwork-image')).toHaveAttribute('src', 'https://example.com/cover.jpg')
   })
 
-  it('loads files and track drops without changing visible load controls', () => {
+  it('loads files and tracks dropped onto the deck without a visible file picker', () => {
     const onLoad = vi.fn().mockResolvedValue(undefined)
     const onTrackDrop = vi.fn().mockResolvedValue(undefined)
     const { container } = renderDeck({ onLoad, onTrackDrop })
     const file = new File(['audio'], 'track.wav', { type: 'audio/wav' })
 
-    fireEvent.change(container.querySelector('input[type="file"]') as HTMLInputElement, {
-      target: { files: [file] }
+    fireEvent.drop(container.querySelector('.deck-panel') as HTMLElement, {
+      dataTransfer: {
+        files: [file],
+        getData: () => ''
+      }
     })
     fireEvent.drop(container.querySelector('.deck-panel') as HTMLElement, {
       dataTransfer: {
@@ -133,7 +136,7 @@ describe('DeckPanel', () => {
 
     expect(onLoad).toHaveBeenCalledWith(file)
     expect(onTrackDrop).toHaveBeenCalledWith('track-a')
-    expect(container.querySelector('.led-load')).toBeInTheDocument()
+    expect(container.querySelector('input[type="file"]')).not.toBeInTheDocument()
   })
 
   it('shows loading and empty states with disabled controls', () => {

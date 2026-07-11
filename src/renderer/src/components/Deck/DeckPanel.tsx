@@ -1,5 +1,5 @@
 import { memo, useCallback, useState } from 'react'
-import { FolderOpen, Pause, Play, X } from 'lucide-react'
+import { Pause, Play, X } from 'lucide-react'
 import { MAX_PITCH_PERCENT, MIN_PITCH_PERCENT } from '../../audio/deck'
 import type { LoopState } from '../../audio/deckTypes'
 import { Overview } from '../Waveform/Overview'
@@ -126,20 +126,6 @@ export const DeckPanel = memo(function DeckPanel({
   const phaseMeterOffset = Math.max(-1, Math.min(1, phaseOffset / 0.18))
   const showPhase = hasTrack && hasMaster && !isMaster && isPlaying
 
-  const handleFileChange = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
-      const input = event.currentTarget
-      const file = input.files?.[0]
-
-      if (file) {
-        await onLoad(file)
-      }
-
-      input.value = ''
-    },
-    [onLoad]
-  )
-
   const handlePlaybackClick = useCallback((): void => {
     void onTogglePlayback()
   }, [onTogglePlayback])
@@ -251,19 +237,6 @@ export const DeckPanel = memo(function DeckPanel({
             <span className="led-remaining">-{formatTime(remaining)}</span>
           </div>
         </div>
-        <label
-          className="icon-button led-load"
-          title={isLoading ? 'Deck is loading' : 'Load track'}
-        >
-          <FolderOpen size={15} strokeWidth={2.2} />
-          <input
-            accept="audio/*"
-            className="sr-only"
-            disabled={isLoading}
-            type="file"
-            onChange={handleFileChange}
-          />
-        </label>
       </div>
 
       <div className="deck-center">
