@@ -259,6 +259,10 @@
   min-height: 0;
 }
 
+.channel-fader-row .fader-thumb {
+  width: 34px;
+}
+
 .fader-fill {
   position: absolute;
   border-radius: 999px;
@@ -472,7 +476,7 @@
 
 .crossfader-well .fader-thumb {
   width: 30px;
-  height: 38px;
+  height: 46px;
 }
 
 .crossfader-side {
