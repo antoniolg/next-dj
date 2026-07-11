@@ -243,9 +243,9 @@ describe('Deck', () => {
 
     const clamped = deck.setPitch(25)
 
-    expect(clamped).toBe(8)
-    expect(context.sources[0].playbackRate.value).toBe(1.08)
-    expect(deck.getEffectiveBpm()).toBeCloseTo(129.6)
+    expect(clamped).toBe(16)
+    expect(context.sources[0].playbackRate.value).toBe(1.16)
+    expect(deck.getEffectiveBpm()).toBeCloseTo(139.2)
   })
 
   it('previews from the cue point and returns there on release', async () => {

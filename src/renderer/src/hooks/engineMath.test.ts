@@ -33,7 +33,7 @@ describe('engine math', () => {
 
   it('calculates bounded sync pitch', () => {
     expect(calculateSyncPitch(120, 126)).toBeCloseTo(5)
-    expect(calculateSyncPitch(120, 160)).toBe(8)
+    expect(calculateSyncPitch(120, 160)).toBe(16)
     expect(calculateSyncPitch(0, 120)).toBeNull()
   })
 

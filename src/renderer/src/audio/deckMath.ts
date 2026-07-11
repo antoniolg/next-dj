@@ -1,5 +1,5 @@
-export const MIN_PITCH_PERCENT = -8
-export const MAX_PITCH_PERCENT = 8
+export const MIN_PITCH_PERCENT = -16
+export const MAX_PITCH_PERCENT = 16
 export const MIN_EQ_DB = -26
 export const MAX_EQ_DB = 6
 export const JOG_CHASE_SECONDS = 0.15

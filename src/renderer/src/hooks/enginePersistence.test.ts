@@ -43,8 +43,8 @@ describe('engine persistence', () => {
     expect(parsed.mixer.crossfade).toBe(1)
     expect(parsed.mixer.cueMix).toBe(0)
     expect(parsed.mixer.phonesVolume).toBe(0)
-    expect(parsed.deckPitch.A).toBe(8)
-    expect(parsed.deckPitch.B).toBe(-8)
+    expect(parsed.deckPitch.A).toBe(16)
+    expect(parsed.deckPitch.B).toBe(-16)
   })
 
   it('round-trips persisted controls through localStorage', () => {

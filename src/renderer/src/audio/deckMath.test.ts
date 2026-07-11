@@ -17,10 +17,10 @@ describe('deck math', () => {
   })
 
   it('converts pitch percentages to playback rates within supported range', () => {
-    expect(clampPitchPercent(-20)).toBe(-8)
-    expect(clampPitchPercent(20)).toBe(8)
+    expect(clampPitchPercent(-20)).toBe(-16)
+    expect(clampPitchPercent(20)).toBe(16)
     expect(pitchPercentToRate(5)).toBe(1.05)
-    expect(pitchPercentToRate(20)).toBe(1.08)
+    expect(pitchPercentToRate(20)).toBe(1.16)
   })
 
   it('clamps EQ, fader and positive gain controls', () => {

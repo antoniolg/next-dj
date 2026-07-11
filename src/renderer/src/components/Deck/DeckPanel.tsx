@@ -1,6 +1,6 @@
 import { memo, useCallback, useState } from 'react'
 import { FolderOpen, Pause, Play, X } from 'lucide-react'
-import { MAX_PITCH_PERCENT } from '../../audio/deck'
+import { MAX_PITCH_PERCENT, MIN_PITCH_PERCENT } from '../../audio/deck'
 import type { LoopState } from '../../audio/deckTypes'
 import { Overview } from '../Waveform/Overview'
 import { ZoomWaveform } from '../Waveform/ZoomWaveform'
@@ -296,8 +296,8 @@ export const DeckPanel = memo(function DeckPanel({
             disabled={!hasTrack}
             hideLabel
             label="Pitch"
-            max={8}
-            min={-8}
+            max={MAX_PITCH_PERCENT}
+            min={MIN_PITCH_PERCENT}
             scale={PITCH_SCALE}
             step={0.1}
             value={pitch}
