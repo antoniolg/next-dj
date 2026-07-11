@@ -53,6 +53,12 @@ export default defineConfig({
           functions: 85,
           lines: 80
         },
+        'src/renderer/src/audio/bpm.ts': {
+          statements: 80,
+          branches: 70,
+          functions: 85,
+          lines: 80
+        },
         'src/renderer/src/audio/{deckChannel,deckLoops,deckPersistence,deckTrackLoader,deckTransport,monoSamples}.ts': {
           statements: 80,
           branches: 70,
