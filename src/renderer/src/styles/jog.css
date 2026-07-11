@@ -104,11 +104,11 @@
 
 .jog-position-marker {
   position: absolute;
-  top: 9.7%;
+  top: 6.3%;
   left: 50%;
   z-index: 3;
-  width: 10px;
-  height: 2px;
+  width: 2px;
+  height: 9px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--jog-accent), white 14%);
   box-shadow: 0 0 4px color-mix(in srgb, var(--jog-accent), transparent 56%);
