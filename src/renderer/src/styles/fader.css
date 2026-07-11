@@ -142,9 +142,9 @@
 
 .fader-vertical .fader-thumb-backplate {
   top: 5px;
-  right: -4px;
+  right: 2px;
   bottom: 5px;
-  left: -4px;
+  left: 2px;
 }
 
 .fader-vertical .fader-thumb-face {
@@ -177,9 +177,9 @@
 }
 
 .fader-horizontal .fader-thumb-backplate {
-  top: -4px;
+  top: 2px;
   right: 5px;
-  bottom: -4px;
+  bottom: 2px;
   left: 5px;
   background: linear-gradient(90deg, #5b6672 0, #303945 24%, #11171e 52%, #343d48 78%, #0b0f14 100%);
 }
