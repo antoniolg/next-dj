@@ -144,7 +144,7 @@ describe('useEngine', () => {
     expect(result.current.decks.A.pitch).toBe(0)
   })
 
-  it('wires deck.onEnded to flip isPlaying and clears it on unmount', async () => {
+  it('wires deck.onEnded to mark the deck stopped and clears it on unmount', async () => {
     persistenceMock.readPersistedControls.mockReturnValue(null)
 
     const useEngine = await loadUseEngine()
