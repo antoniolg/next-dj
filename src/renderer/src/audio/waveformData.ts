@@ -255,6 +255,11 @@ function getWorker(): Worker {
       pending.reject(event.error ?? new Error(event.message || 'Waveform worker error'))
       pendingRequests.delete(requestId)
     }
+
+    instance.terminate()
+    if (worker === instance) {
+      worker = null
+    }
   }
 
   worker = instance

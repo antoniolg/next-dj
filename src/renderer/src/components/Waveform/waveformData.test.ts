@@ -220,4 +220,40 @@ describe('computeWaveformDataAsync', () => {
     expect(getPeakAt(asyncResult.overview, 0)).toEqual({ min: -1, max: -1 })
     expect(getPeakAt(asyncResult.overview, 3)).toEqual({ min: 0.75, max: 0.75 })
   })
+
+  it('discards a failed worker so the next request can create a fresh one', async () => {
+    const instances: Array<{
+      onerror: ((event: ErrorEvent) => void) | null
+      postMessage: ReturnType<typeof vi.fn>
+      terminate: ReturnType<typeof vi.fn>
+    }> = []
+
+    class FakeWorker {
+      onmessage: ((event: MessageEvent) => void) | null = null
+      onerror: ((event: ErrorEvent) => void) | null = null
+      postMessage = vi.fn()
+      terminate = vi.fn()
+
+      constructor() {
+        instances.push(this)
+      }
+    }
+
+    vi.stubGlobal('Worker', FakeWorker)
+    const buffer = createAudioBuffer([[-1, 0, 1]], 3)
+    const firstRequest = computeWaveformDataAsync(buffer)
+    const firstWorker = instances[0]
+
+    firstWorker.onerror?.({ message: 'worker crashed', error: new Error('worker crashed') } as ErrorEvent)
+
+    await expect(firstRequest).rejects.toThrow('worker crashed')
+    expect(firstWorker.terminate).toHaveBeenCalledOnce()
+
+    const secondRequest = computeWaveformDataAsync(buffer)
+    expect(instances).toHaveLength(2)
+    instances[1].onerror?.({ message: 'cleanup', error: new Error('cleanup') } as ErrorEvent)
+    await expect(secondRequest).rejects.toThrow('cleanup')
+
+    vi.unstubAllGlobals()
+  })
 })
