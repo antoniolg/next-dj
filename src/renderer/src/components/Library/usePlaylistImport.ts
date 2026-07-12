@@ -11,6 +11,7 @@ interface PlaylistImportState {
   playlistStatus: string | null
   playlistInput: string
   setPlaylistInput: (input: string) => void
+  handleSelectPlaylistFile: () => Promise<void>
   handlePlaylistImport: () => Promise<void>
 }
 
@@ -81,12 +82,26 @@ export function usePlaylistImport({ onAddPlaylistImportTracks }: UsePlaylistImpo
     }
   }, [onAddPlaylistImportTracks, playlistInput])
 
+  const handleSelectPlaylistFile = useCallback(async (): Promise<void> => {
+    try {
+      const selectedPath = await window.nextdj?.selectPlaylistImportFile()
+
+      if (selectedPath) {
+        setPlaylistInput(selectedPath)
+        setPlaylistStatus(null)
+      }
+    } catch (error) {
+      setPlaylistStatus(describePlaylistImportError(error))
+    }
+  }, [])
+
   return {
     hasPlaylistImportProviders,
     isImportingPlaylist,
     playlistStatus,
     playlistInput,
     setPlaylistInput,
+    handleSelectPlaylistFile,
     handlePlaylistImport
   }
 }

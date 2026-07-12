@@ -63,6 +63,7 @@ function installBridge() {
     appName: 'NextDJ',
     checkForUpdate: vi.fn(),
     openUpdateDownload: vi.fn(),
+    selectPlaylistImportFile: vi.fn(),
     listPlaylistImportProviders: vi.fn(),
     listPlaylistImportTracks: vi.fn(),
     resolvePlaylistImportTrack: vi.fn(),

@@ -1,4 +1,4 @@
-import { app, ipcMain } from 'electron'
+import { app, dialog, ipcMain } from 'electron'
 import { readFile } from 'node:fs/promises'
 import { isAbsolute, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -288,6 +288,15 @@ export async function createConfiguredPlaylistImportRegistry(
 }
 
 export function registerPlaylistImportIpc(registryPromise = createConfiguredPlaylistImportRegistry()): void {
+  ipcMain.handle('playlist-import:select-file', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile'],
+      filters: [{ name: 'M3U playlists', extensions: ['m3u', 'm3u8'] }]
+    })
+
+    return result.canceled ? null : (result.filePaths[0] ?? null)
+  })
+
   ipcMain.handle('playlist-import:list-providers', async () => {
     const registry = await registryPromise
     return registry.listProviders()

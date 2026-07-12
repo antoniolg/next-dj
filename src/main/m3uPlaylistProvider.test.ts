@@ -90,6 +90,14 @@ describe('createM3uPlaylistProvider canHandle', () => {
     await expect(provider.canHandle(playlistPath)).resolves.toBe(true)
   })
 
+  it('accepts mixed-case playlist extensions', async () => {
+    const dir = await createTemporaryDirectory()
+    const playlistPath = join(dir, 'playlist.M3u')
+    await writeFile(playlistPath, '#EXTM3U\n')
+
+    await expect(createM3uPlaylistProvider().canHandle(playlistPath)).resolves.toBe(true)
+  })
+
   it('rejects a nonexistent path', async () => {
     const provider = createM3uPlaylistProvider()
 
@@ -110,6 +118,27 @@ describe('createM3uPlaylistProvider canHandle', () => {
 })
 
 describe('createM3uPlaylistProvider listTracks/resolveTrack', () => {
+  it('does not resolve an arbitrary path that was not authorized by listTracks', async () => {
+    const dir = await createTemporaryDirectory()
+    const audioPath = join(dir, 'private.mp3')
+    await writeFile(audioPath, new Uint8Array([1, 2, 3]))
+
+    await expect(createM3uPlaylistProvider().resolveTrack(audioPath)).rejects.toThrow(
+      'Invalid playlist track reference.'
+    )
+  })
+
+  it('does not expose non-audio entries from a playlist', async () => {
+    const dir = await createTemporaryDirectory()
+    const playlistPath = join(dir, 'playlist.m3u')
+    await writeFile(playlistPath, ['notes.txt', 'song.mp3'].join('\n'))
+
+    const tracks = await createM3uPlaylistProvider().listTracks(playlistPath)
+
+    expect(tracks).toHaveLength(1)
+    expect(tracks[0].title).toBe('song')
+  })
+
   it('lists and resolves a track end-to-end', async () => {
     const dir = await createTemporaryDirectory()
     const audioPath = join(dir, 'song.mp3')

@@ -56,6 +56,7 @@ export interface NextDjBridge {
   appName: string
   checkForUpdate: () => Promise<AppUpdateInfo>
   openUpdateDownload: () => Promise<void>
+  selectPlaylistImportFile: () => Promise<string | null>
   listPlaylistImportProviders: () => Promise<PlaylistImportProviderSummary[]>
   listPlaylistImportTracks: (input: string) => Promise<PlaylistImportTrack[]>
   resolvePlaylistImportTrack: (providerId: string, externalRef: string) => Promise<PlaylistImportResolvedFile>

@@ -17,6 +17,7 @@ const MIME_TYPES_BY_EXTENSION: Record<string, string> = {
   '.opus': 'audio/opus',
   '.wma': 'audio/x-ms-wma'
 }
+const PLAYLIST_EXTENSION_PATTERN = /\.m3u8?$/i
 
 export interface M3uPlaylistEntry {
   path: string
@@ -158,6 +159,8 @@ function normalizeCandidatePath(input: string): string | null {
 }
 
 export function createM3uPlaylistProvider(): PlaylistImportProvider {
+  let authorizedTrackPaths = new Set<string>()
+
   return {
     id: PROVIDER_ID,
     displayName: PROVIDER_DISPLAY_NAME,
@@ -165,7 +168,7 @@ export function createM3uPlaylistProvider(): PlaylistImportProvider {
     canHandle: async (input) => {
       const trimmed = input.trim()
 
-      if (!/\.(m3u8?|M3U8?)$/.test(trimmed)) {
+      if (!PLAYLIST_EXTENSION_PATTERN.test(trimmed)) {
         return false
       }
 
@@ -187,7 +190,10 @@ export function createM3uPlaylistProvider(): PlaylistImportProvider {
       }
 
       const content = await readFile(playlistPath, 'utf8')
-      const entries = parseM3uPlaylist(content, dirname(playlistPath))
+      const entries = parseM3uPlaylist(content, dirname(playlistPath)).filter((entry) =>
+        Object.hasOwn(MIME_TYPES_BY_EXTENSION, extname(entry.path).toLowerCase())
+      )
+      authorizedTrackPaths = new Set(entries.map((entry) => entry.path))
 
       return entries.map((entry) => ({
         id: entry.path,
@@ -201,7 +207,7 @@ export function createM3uPlaylistProvider(): PlaylistImportProvider {
     resolveTrack: async (externalRef, context) => {
       const filePath = externalRef.trim()
 
-      if (!filePath || !isAbsolute(filePath)) {
+      if (!filePath || !isAbsolute(filePath) || !authorizedTrackPaths.has(filePath)) {
         throw new Error('Invalid playlist track reference.')
       }
 

@@ -38,6 +38,7 @@ export const LibraryPanel = memo(function LibraryPanel({
   const [playlistImportOpen, setPlaylistImportOpen] = useState(false)
   const {
     handlePlaylistImport,
+    handleSelectPlaylistFile,
     hasPlaylistImportProviders,
     isImportingPlaylist,
     playlistInput,
@@ -328,6 +329,7 @@ export const LibraryPanel = memo(function LibraryPanel({
               input={playlistInput}
               status={playlistStatus}
               onInputChange={setPlaylistInput}
+              onSelectFile={() => void handleSelectPlaylistFile()}
               onSubmit={() => void handlePlaylistImport()}
             />
           ) : null}

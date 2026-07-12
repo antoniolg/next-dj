@@ -15,6 +15,7 @@ const bridge: NextDjBridge = {
   appName: 'NextDJ',
   checkForUpdate: (): Promise<AppUpdateInfo> => ipcRenderer.invoke('app-update:check'),
   openUpdateDownload: (): Promise<void> => ipcRenderer.invoke('app-update:open-download'),
+  selectPlaylistImportFile: (): Promise<string | null> => ipcRenderer.invoke('playlist-import:select-file'),
   listPlaylistImportProviders: (): Promise<PlaylistImportProviderSummary[]> =>
     ipcRenderer.invoke('playlist-import:list-providers'),
   listPlaylistImportTracks: (input: string): Promise<PlaylistImportTrack[]> =>

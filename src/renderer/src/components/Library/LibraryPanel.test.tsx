@@ -113,6 +113,7 @@ describe('LibraryPanel', () => {
       appName: 'NextDJ',
       checkForUpdate: vi.fn(),
       openUpdateDownload: vi.fn(),
+      selectPlaylistImportFile: vi.fn(),
       listPlaylistImportProviders: vi.fn().mockResolvedValue([{ id: 'demo-local', displayName: 'Demo Local' }]),
       listPlaylistImportTracks: vi.fn().mockResolvedValue(importTracks),
       resolvePlaylistImportTrack: vi.fn(),
@@ -143,6 +144,7 @@ describe('LibraryPanel', () => {
       appName: 'NextDJ',
       checkForUpdate: vi.fn(),
       openUpdateDownload: vi.fn(),
+      selectPlaylistImportFile: vi.fn(),
       listPlaylistImportProviders: vi.fn().mockResolvedValue([{ id: 'youtube', displayName: 'YouTube' }]),
       listPlaylistImportTracks: vi.fn().mockRejectedValue(
         new Error(

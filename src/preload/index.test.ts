@@ -36,6 +36,7 @@ describe('preload bridge', () => {
         appName: 'NextDJ',
         checkForUpdate: expect.any(Function),
         openUpdateDownload: expect.any(Function),
+        selectPlaylistImportFile: expect.any(Function),
         listPlaylistImportProviders: expect.any(Function),
         listPlaylistImportTracks: expect.any(Function),
         resolvePlaylistImportTrack: expect.any(Function),
@@ -57,6 +58,7 @@ describe('preload bridge', () => {
 
     await bridge.checkForUpdate()
     await bridge.openUpdateDownload()
+    await bridge.selectPlaylistImportFile()
     await bridge.listPlaylistImportProviders()
     await bridge.listPlaylistImportTracks('demo:playlist')
     await bridge.resolvePlaylistImportTrack('demo', 'track-1')
@@ -68,14 +70,15 @@ describe('preload bridge', () => {
 
     expect(electronMock.invoke).toHaveBeenNthCalledWith(1, 'app-update:check')
     expect(electronMock.invoke).toHaveBeenNthCalledWith(2, 'app-update:open-download')
-    expect(electronMock.invoke).toHaveBeenNthCalledWith(3, 'playlist-import:list-providers')
-    expect(electronMock.invoke).toHaveBeenNthCalledWith(4, 'playlist-import:list-tracks', 'demo:playlist')
-    expect(electronMock.invoke).toHaveBeenNthCalledWith(5, 'playlist-import:resolve-track', 'demo', 'track-1')
-    expect(electronMock.invoke).toHaveBeenNthCalledWith(6, 'recording:start', { extension: 'webm', video: false })
-    expect(electronMock.invoke).toHaveBeenNthCalledWith(7, 'recording:append-chunk', 'recording-1', chunk)
-    expect(electronMock.invoke).toHaveBeenNthCalledWith(8, 'recording:stop', 'recording-1')
-    expect(electronMock.invoke).toHaveBeenNthCalledWith(9, 'recording:cancel', 'recording-1', true)
-    expect(electronMock.invoke).toHaveBeenNthCalledWith(10, 'recording:reveal', '/tmp/set.webm')
+    expect(electronMock.invoke).toHaveBeenNthCalledWith(3, 'playlist-import:select-file')
+    expect(electronMock.invoke).toHaveBeenNthCalledWith(4, 'playlist-import:list-providers')
+    expect(electronMock.invoke).toHaveBeenNthCalledWith(5, 'playlist-import:list-tracks', 'demo:playlist')
+    expect(electronMock.invoke).toHaveBeenNthCalledWith(6, 'playlist-import:resolve-track', 'demo', 'track-1')
+    expect(electronMock.invoke).toHaveBeenNthCalledWith(7, 'recording:start', { extension: 'webm', video: false })
+    expect(electronMock.invoke).toHaveBeenNthCalledWith(8, 'recording:append-chunk', 'recording-1', chunk)
+    expect(electronMock.invoke).toHaveBeenNthCalledWith(9, 'recording:stop', 'recording-1')
+    expect(electronMock.invoke).toHaveBeenNthCalledWith(10, 'recording:cancel', 'recording-1', true)
+    expect(electronMock.invoke).toHaveBeenNthCalledWith(11, 'recording:reveal', '/tmp/set.webm')
   })
 
   it('returns an unsubscribe function for recording write errors', async () => {
