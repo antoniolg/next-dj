@@ -5,6 +5,21 @@ All notable changes to NextDJ will be documented in this file.
 The format is based on Keep a Changelog, and this project uses Semantic
 Versioning once public releases begin.
 
+## [0.1.5] - 2026-07-16
+
+This corrective release restores low-latency playback for the default master
+output in packaged desktop builds. These early builds remain unsigned, so
+macOS and Windows may show security warnings.
+
+### Fixed
+
+- Removed the several-second delay between pressing Play and hearing the master output in packaged builds.
+- Kept the system-default master route inside WebAudio instead of passing it through an additional buffered media element.
+- Preserved selectable non-default output devices and prevented stale device changes from replacing a newer route.
+
+These early builds are unsigned. macOS and Windows may show security warnings.
+You can build from source if you prefer to inspect the app before running it.
+
 ## [0.1.4] - 2026-07-11
 
 This release expands the hands-on DJ workflow and brings the desktop console

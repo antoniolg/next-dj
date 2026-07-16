@@ -16,6 +16,10 @@ class FakeNode {
     this.connections.push(node)
     return node
   }
+
+  disconnect(): void {
+    this.connections = []
+  }
 }
 
 class FakeGain extends FakeNode {
@@ -30,6 +34,7 @@ class FakeAnalyser extends FakeNode {
 function createContext(): AudioContext {
   return {
     currentTime: 2,
+    destination: new FakeNode() as unknown as AudioDestinationNode,
     createGain: () => new FakeGain() as unknown as GainNode,
     createAnalyser: () => new FakeAnalyser() as unknown as AnalyserNode,
     createMediaStreamDestination: () => {
