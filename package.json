@@ -39,7 +39,7 @@
     "verify:mac-signature": "node scripts/verify-macos-signature.mjs"
   },
   "dependencies": {
-    "lucide-react": "^1.23.0",
+    "lucide-react": "^1.25.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
