@@ -5,6 +5,21 @@ All notable changes to NextDJ will be documented in this file.
 The format is based on Keep a Changelog, and this project uses Semantic
 Versioning once public releases begin.
 
+## [0.1.6] - 2026-11-11
+
+This security release updates the bundled Electron runtime and other
+dependencies with published security fixes. It contains no functional
+changes. These early builds remain unsigned, so macOS and Windows may show
+security warnings.
+
+### Security
+
+- Updated Electron to 43.8.8, which includes upstream security fixes for the bundled Chromium and Node.js runtime.
+- Updated undici, fast-uri, @xmldom/xmldom, vite, postcss, js-yaml and other build dependencies to patched versions.
+
+These early builds are unsigned. macOS and Windows may show security warnings.
+You can build from source if you prefer to inspect the app before running it.
+
 ## [0.1.5] - 2026-07-16
 
 This corrective release restores low-latency playback for the default master
