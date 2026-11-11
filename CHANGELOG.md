@@ -5,6 +5,21 @@ All notable changes to NextDJ will be documented in this file.
 The format is based on Keep a Changelog, and this project uses Semantic
 Versioning once public releases begin.
 
+## [0.1.7] - 2026-11-11
+
+This maintenance release moves NextDJ to current build tooling. The interface
+looks and behaves the same. These early builds remain unsigned, so macOS and
+Windows may show security warnings.
+
+### Changed
+
+- Updated the build stack to Tailwind CSS 4, Vite 8, electron-vite 6 and the React plugin 6.
+- Updated lucide-react, Vitest and other development dependencies.
+- Updated the GitHub Actions used to build and publish releases.
+
+These early builds are unsigned. macOS and Windows may show security warnings.
+You can build from source if you prefer to inspect the app before running it.
+
 ## [0.1.6] - 2026-11-11
 
 This security release updates the bundled Electron runtime and other
