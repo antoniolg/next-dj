@@ -1,13 +1,12 @@
 import { resolve } from 'node:path'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
+// electron-vite 6 externalizes main and preload dependencies by default (build.externalizeDeps).
 export default defineConfig({
-  main: {
-    plugins: [externalizeDepsPlugin()]
-  },
+  main: {},
   preload: {
-    plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: {
         output: {
@@ -18,7 +17,7 @@ export default defineConfig({
     }
   },
   renderer: {
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src'),

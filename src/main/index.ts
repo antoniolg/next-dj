@@ -10,10 +10,8 @@ import {
 import { registerPlaylistImportIpc } from './playlistImport.js'
 import { registerRecordingIpc } from './recording.js'
 import { createMainWindow } from './window.js'
-import { fileURLToPath } from 'node:url'
-import { dirname } from 'node:path'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
+const mainDirectory = import.meta.dirname
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL)
 const perfUserDataDir = readPerfUserDataDir()
 const rendererPerformanceEnabled = isRendererPerfEnabled()
@@ -38,7 +36,7 @@ app.whenReady().then(() => {
   registerPlaylistImportIpc()
   registerRecordingIpc()
   createMainWindow({
-    dirname: __dirname,
+    dirname: mainDirectory,
     enablePerformanceTracing: rendererPerformanceEnabled,
     isDev,
     rendererUrl: appendRendererPerfFlag(process.env.ELECTRON_RENDERER_URL)
@@ -47,7 +45,7 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMainWindow({
-        dirname: __dirname,
+        dirname: mainDirectory,
         enablePerformanceTracing: rendererPerformanceEnabled,
         isDev,
         rendererUrl: appendRendererPerfFlag(process.env.ELECTRON_RENDERER_URL)
